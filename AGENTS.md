@@ -1,4 +1,4 @@
-# AGENTS.md — Vazir Font for WordPress (v1.0)
+# AGENTS.md — Vazir Font for WordPress (v5.2)
 
 Welcome! This document encodes the repository rules for both human contributors and autonomous agents. Follow every instruction in this file when you touch any file in this project.
 
