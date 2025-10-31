@@ -1,0 +1,98 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Vazir Font for WordPress 1.1.0\n"
+"POT-Creation-Date: 2024-06-10 00:00:00+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Manual\n"
+
+msgid "Are you sure you want to reset settings?"
+msgstr ""
+
+msgid "تنظیمات فونت وزیر"
+msgstr ""
+
+msgid "فونت وزیر"
+msgstr ""
+
+msgid "تنظیمات عمومی"
+msgstr ""
+
+msgid "فعال‌سازی در فرانت‌اند"
+msgstr ""
+
+msgid "فونت وزیر در تمام صفحات سایت اعمال شود"
+msgstr ""
+
+msgid "فعال‌سازی در پنل مدیریت"
+msgstr ""
+
+msgid "فونت وزیر در پنل مدیریت وردپرس اعمال شود"
+msgstr ""
+
+msgid "فعال‌سازی در گرویتی فرمز"
+msgstr ""
+
+msgid "فونت وزیر در فرم‌های گرویتی فرمز اعمال شود"
+msgstr ""
+
+msgid "وزن‌های فونت"
+msgstr ""
+
+msgid "وزن‌های مورد استفاده"
+msgstr ""
+
+msgid "تنظیمات پیشرفته"
+msgstr ""
+
+msgid "استثناء انتخابگرها"
+msgstr ""
+
+msgid "انتخابگرهای CSS که نباید فونت وزیر روی آن‌ها اعمال شود (هر کدام در خط جداگانه)"
+msgstr ""
+
+msgid "شما دسترسی لازم برای مشاهده این صفحه را ندارید."
+msgstr ""
+
+msgid "این افزونه فونت وزیر را به تمام بخش‌های وردپرس شما اضافه می‌کند."
+msgstr ""
+
+msgid "ذخیره تنظیمات"
+msgstr ""
+
+msgid "پیش‌نمایش فونت"
+msgstr ""
+
+msgid "300 (Light)"
+msgstr ""
+
+msgid "400 (Regular)"
+msgstr ""
+
+msgid "500 (Medium)"
+msgstr ""
+
+msgid "700 (Bold)"
+msgstr ""
+
+msgid "900 (Black)"
+msgstr ""
+
+msgid "حداقل یک وزن فونت باید انتخاب شود. وزن 400 به صورت پیش‌فرض انتخاب شد."
+msgstr ""
+
+msgid "انتخاب کنید فونت در کدام بخش‌ها فعال باشد."
+msgstr ""
+
+msgid "وزن‌های مورد نیاز را انتخاب کنید تا فقط فونت‌های ضروری بارگذاری شوند."
+msgstr ""
+
+msgid "انتخابگرهایی که باید از اعمال فونت مستثنی شوند را تعیین کنید."
+msgstr ""
+
+msgid "تنظیمات"
+msgstr ""
+
+msgid "Once Weekly"
+msgstr ""

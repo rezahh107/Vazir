@@ -49,7 +49,12 @@
         resetToDefaults: function(e) {
             e.preventDefault();
             
-            if (confirm('آیا مطمئن هستید که می‌خواهید تنظیمات را به حالت پیش‌فرض بازگردانید؟')) {
+            var message = (window.vazirFontAdminL10n && window.vazirFontAdminL10n.confirmReset) ? window.vazirFontAdminL10n.confirmReset : '';
+            if (!message) {
+                message = 'Are you sure you want to reset settings?';
+            }
+
+            if (confirm(message)) {
                 $('input[name="vazir_font_options[enable_frontend]"]').prop('checked', true);
                 $('input[name="vazir_font_options[enable_admin]"]').prop('checked', true);
                 $('input[name="vazir_font_options[enable_gravity_forms]"]').prop('checked', true);
