@@ -1,190 +1,111 @@
-# AGENTS.md — Vazir Font for WordPress (v1.1)
+# AGENTS.md — Vazir Font for WordPress (v1.0)
 
 Welcome! This document encodes the repository rules for both human contributors and autonomous agents. Follow every instruction in this file when you touch any file in this project.
 
 ## 1. Repository Snapshot
-- **Plugin slug:** `vazir-font-wp`
-- **Primary entrypoint:** `vazir-font-wp.php`
+- **Plugin slug:** `vazir-font-plugin`
+- **Primary entrypoint:** `vazir-font-plugin.php`
 - **PHP namespace/prefix:** `VazirFont_`
-- **Current plugin version:** `1.1.0` (keep header + `VAZIR_FONT_VERSION` synchronized)
+- **Current plugin version:** `1.1.0` (update header + `VAZIR_FONT_VERSION` together)
 - **Text domain:** `vazir-font-wp`
-- **Domain Path:** `/languages`
-- **Assets path:** `assets/`
-- **Autoloader:** Anonymous SPL autoloader registered in the bootstrap file with the `VazirFont_` prefix
+- **Assets:** fonts/CSS/JS live under `assets/`
+- **Autoloader:** anonymous SPL autoloader registered in the main plugin file (PSR-4-like).
 
 ## 2. Directory Expectations
 | Path | Purpose | Notes |
 | ---- | ------- | ----- |
-| `includes/` | PHP classes (`class-*.php`) | Guard every file with `defined( 'ABSPATH' ) || exit;`. |
-| `assets/css/` | Shared stylesheets | Keep `vazir-fonts.css` generic; scope admin-only rules to `admin.css`. |
-| `assets/js/` | Admin scripts | Wrap logic in an IIFE and enqueue only through `VazirFont_Admin_Settings::enqueueAdminAssets()`. |
-| `assets/fonts/` | Bundled Vazir font binaries | Ship the SIL OFL license file (`OFL.txt`) whenever fonts change. |
-| `languages/` | Translation sources (`.pot`, `.po`, `.mo`) | Create the directory before shipping translations. |
+| `includes/` | PHP classes (`class-*.php`) | Guard every file with `defined( 'ABSPATH' ) || exit;`.
+| `assets/css/` | Shared stylesheets | Keep `vazir-fonts.css` generic; scope admin-only rules to `admin.css`.
+| `assets/js/` | Admin scripts | Wrap logic in IIFE; enqueue via `VazirFont_Admin_Settings::enqueueAdminAssets()` only where needed.
+| `assets/fonts/` | Bundled Vazir font binaries | Ship the SIL OFL license file when adding fonts.
+| `languages/` | Translation sources (`.pot`, `.po`, `.mo`) | Create if missing before shipping translations.
 
-## 3. Font-Specific Standards (ویژه فونت وزیر)
-
-### فونت فیس‌ها و فرمت‌ها
-```php
-@font-face {
-    font-family: "Vazir";
-    src: url('../fonts/vazir-400.woff2') format('woff2'),
-         url('../fonts/vazir-400.woff') format('woff');
-    font-display: swap;
-    font-weight: 400;
-    font-style: normal;
-}
-```
-- Use `woff2` as the primary format; add complementary formats only when the binaries exist.
-- Always include `font-display: swap` to avoid FOIT.
-- Keep the `font-family` name exactly `"Vazir"`.
-
-### مدیریت وزن‌های فونت
-```php
-$font_weights = [ '300', '400', '500', '700', '900' ];
-```
-- Keep loaded weights aligned with saved options to avoid unnecessary asset requests.
-- Extend excluded selectors through the `vazir_font_exclude_selectors` filter to prevent conflicts with icon fonts.
-
-### محلی‌سازی هوشمند فونت
-- Apply fonts only for Persian and Arabic locales (e.g., via `is_rtl()` or `get_locale()` checks) within enqueue hooks.
-- If the user disables a context or the locale is not Persian/Arabic, do not enqueue any font assets.
-
-## 4. Local Environment & Tooling
-1. PHP ≥ 7.4 and WordPress ≥ 5.8 for runtime validation.
-2. Install development dependencies via Composer:
+## 3. Local Environment & Tooling
+1. PHP ≥ 7.4, WordPress ≥ 5.8 for runtime testing.
+2. Install dev tools via Composer:
    ```bash
    composer install
    ```
-3. Run linting with WPCS + PHPCompatibility:
+3. Run linting with WordPress Coding Standards and PHPCompatibility:
    ```bash
    vendor/bin/phpcs --standard=WordPress --extensions=php,inc .
    ```
-4. JavaScript and CSS linting is manual—keep changes small and document any deviations.
-5. Generate translations when strings change:
-   ```bash
-   wp i18n make-pot . languages/vazir-font-wp.pot --domain=vazir-font-wp
-   ```
+   > For larger diffs add a project-specific `phpcs.xml.dist`; keep `vendor/` and `node_modules/` excluded.
+4. JavaScript/CSS linting is manual—keep changes small and document deviations in PRs.
+5. Optional: generate translations with `wp i18n make-pot` (WP-CLI) targeting `languages/vazir-font-wp.pot`.
 
-## 5. RTL & Persian Language Guidance
-### CSS RTL Handling
-```css
-.vazir-font-element {
-    text-align: start;
-    padding-inline-start: 1rem;
-}
+## 4. Coding Standards
+### PHP
+- Follow **PSR-12** formatting plus **WordPress Core/Docs/Extra** rules.
+- Use tabs for indentation, spaces for alignment.
+- Escape all output (`esc_html()`, `esc_attr()`, `esc_url()`, `wp_kses()` as appropriate).
+- Sanitize all option input via `sanitize_text_field`, `absint`, etc., before persisting.
+- Always check capabilities (`current_user_can( 'manage_options' )`) before rendering admin screens or mutating settings.
+- Prefer dependency-free solutions over new libraries unless justified.
+- Maintain Yoda conditions when comparing with literals.
 
-[dir="rtl"] .vazir-font-admin-notice {
-    margin-inline-start: 0;
-    margin-inline-end: 10px;
-}
-```
-- Prefer logical properties to keep RTL/LTR parity.
-- Test admin notices and settings screens with Persian content.
+### JavaScript
+- Keep code ES5-compatible (for WordPress admin). No transpilation steps exist.
+- Wrap admin scripts in `(function( $ ) { ... })( jQuery );` and enable strict mode.
+- Provide translation-ready strings via `wp_localize_script()` before using them in JS (no hard-coded Persian strings).
 
-### Persian Text Conventions
-- Wrap all user-facing strings with translation helpers using `vazir-font-wp`.
-- Save files as UTF-8 without BOM.
-- Provide translator comments when strings include placeholders or context.
+### CSS
+- Use BEM-ish utility classes prefixed with `.vazir-font-` for plugin-specific styling.
+- Place reusable variables in `:root` and prefer logical properties for RTL friendliness.
 
-## 6. Security Checklist
-- Block direct access at the top of every PHP file except `vazir-font-wp.php`.
-- Sanitize every option and request before persistence; escape output on render.
-- Require capability checks (`current_user_can( 'manage_options' )`) for admin mutations.
-- Ensure nonces guard every state-changing action or AJAX endpoint.
-- Database access must use `$wpdb->prepare()` or higher-level APIs.
-- For font file handling, validate file types and sanitize any dynamic CSS emitted.
+## 5. Security Checklist
+- Block direct access at top of every PHP file (except the main plugin bootstrap).
+- Never echo unsanitized request data or option values.
+- Nonces are required for every state-changing admin action or AJAX endpoint.
+- Database access must go through `$wpdb->prepare()` or higher-level APIs.
+- Do not introduce arbitrary file operations; rely on WordPress APIs for uploads and filesystem writes.
 
-## 7. Performance Guidelines
-- Avoid global cache flushes; expose granular hooks like `vazir_font_clear_cache` instead.
-- Respect user toggles for frontend/admin/login/Gravity Forms contexts when enqueuing fonts.
-- Keep assets lightweight; prefer minified variants when introducing new dependencies.
-- Register custom cron schedules before scheduling them.
-- Implement `<link rel="preload">` only for critical weights (e.g., 400, 700).
+## 6. Performance Guidelines
+- Avoid flushing the global object cache unless absolutely necessary; provide granular hooks instead.
+- Load fonts conditionally: respect the user options that toggle frontend, admin, login, and Gravity Forms contexts.
+- Keep enqueued assets small; use `.min` variants if you introduce heavy dependencies.
+- Any scheduled events must register their schedule (`cron_schedules`) before use.
 
-## 8. Testing Checklist
-### Manual
-- [ ] Font loads on frontend RTL theme.
-- [ ] Admin settings render Persian strings correctly.
-- [ ] Gravity Forms integration works when enabled.
-- [ ] No PHP notices under `WP_DEBUG = true`.
-- [ ] Font weight toggles reflect on frontend output.
-- [ ] Cache clearing hook fires on option updates.
+## 7. Internationalization & RTL
+- Wrap every user-facing string with translation functions using the `vazir-font-wp` text domain.
+- Update/generate `languages/vazir-font-wp.pot` whenever strings change.
+- CSS must respect RTL context via `[dir="rtl"]` selectors or logical properties.
+- For JavaScript prompts, source localized strings via `wp_localize_script()` object keys.
 
-### Browser Coverage
-- Verify Chrome, Firefox, Safari, and Edge on Windows and macOS.
-- Confirm mobile responsiveness with Persian content.
+## 8. Accessibility
+- Provide accessible labels for admin form controls (use `<label>` or `aria-` attributes).
+- Avoid color-only signals; ensure sufficient contrast.
+- Keyboard interactions in admin screens must remain functional.
 
-## 9. Release Checklist
-1. Bump version in `vazir-font-wp.php` header and the `VAZIR_FONT_VERSION` constant.
-2. Update `README.md` and `CHANGELOG.md` (if present).
-3. Regenerate translations: `wp i18n make-pot . languages/vazir-font-wp.pot`.
-4. Ensure `assets/fonts/` includes required binaries plus `OFL.txt`.
-5. Run smoke tests with `WP_DEBUG = true` enabled on WordPress 6.5+ / PHP 8.1.
-6. Tag release with semantic versioning.
+## 9. Asset & License Rules
+- Fonts are licensed under **SIL Open Font License 1.1**; do not rename the typeface.
+- The plugin code is **GPLv2+**. All bundled third-party assets must be GPL-compatible.
+- `VazirFont_Loader::generateFontFaces()` currently emits `woff2`, `woff`, and `ttf` sources—ensure matching binaries exist (or update the method) whenever you adjust fonts.
 
-## 10. Git & PR Guidelines
-### Commit Messages
-```
-feat: add new font weight support
-fix: resolve RTL alignment in admin
-docs: update installation instructions
-perf: optimize font loading sequence
-```
-- Keep commits focused and well-described (English preferred).
-- Split multi-scope changes into logical commits when possible.
-- Summarize changes, testing evidence, and impacts in PR descriptions.
-- Include screenshots for UI changes and note manual verification steps.
+## 10. Testing Expectations
+When touching business logic, provide at least one of:
+- Manual verification notes (steps, WP version, browser).
+- Automated tests (PHPUnit or integration) if feasible.
+- Screenshots for UI-affecting changes (attach via PR description or artifacts).
 
-## 11. File-Specific Notes
-- `includes/class-loader.php`: handle context-aware font enqueuing and ensure dynamic CSS honors excluded selectors.
-- `includes/class-admin-settings.php`: sanitize all user inputs, guard with nonces/capability checks, and localize JS strings.
-- `includes/class-gravity-forms-integration.php`: hook only when `class_exists( 'GFForms' )` and sanitize output.
-- `VazirFont_Loader::generateFontFaces()`: currently emits `woff2`, `woff`, and `ttf` sources; keep binaries synchronized or drop unused formats and update this document.
-- Any structural, licensing, or core-behavior change must be accompanied by an update to `AGENTS.md` reflecting the new rules.
+All tests must pass with `WP_DEBUG` enabled.
 
-## 12. Emergency Protocols
-### Breaking Changes
-- Do not remove supported font weights without a major version bump.
-- Maintain backward compatibility for stored settings; provide migrations when schema changes.
+## 11. Release Checklist
+1. Bump version in `vazir-font-plugin.php` header and `VAZIR_FONT_VERSION` constant.
+2. Update documentation (`README.md`, changelog section if added).
+3. Regenerate translation template (`languages/vazir-font-wp.pot`).
+4. Confirm fonts + OFL license are present and unchanged.
+5. Tag the release using semantic versioning (major.minor.patch).
 
-### Security Issues
-- Prioritize fixes for font asset exposure or capability escalation.
-- Communicate transparently about compatibility or security regressions.
+## 12. Git & PR Guidance
+- Keep commits scoped and well-described (English preferred for commit messages).
+- When modifying multiple areas (PHP, assets, docs) split into logical commits if possible.
+- Reference related issues or tickets in commit bodies.
+- Every PR must summarize changes, testing evidence, and potential impacts.
 
----
+## 13. File-Specific Notes
+- `includes/class-gravity-forms-integration.php` is currently a placeholder. If you implement functionality, ensure Gravity Forms is loaded (`class_exists( 'GFForms' )`) before hooking and cover sanitization/escaping.
+- `assets/css/admin.css` is intentionally empty; populate only with admin-specific styles.
+- Avoid altering font binary filenames—they map directly to enqueue logic.
 
 Adhering to this AGENTS.md keeps the plugin compliant with WordPress standards and ensures smooth collaboration. When in doubt, add clarifying comments or extend this file with new rules.
-
-## 13. Automated Testing Setup
-
-### PHPUnit Configuration
-```xml
-<!-- phpunit.xml.dist -->
-<phpunit bootstrap="tests/bootstrap.php">
-    <testsuites>
-        <testsuite name="vazir-font-plugin">
-            <directory>tests</directory>
-        </testsuite>
-    </testsuites>
-</phpunit>
-```
-
-### Test Coverage Expectations
-- Cover core classes (`VazirFont_Loader`, `VazirFont_Admin_Settings`) for option toggles and sanitization paths.
-- Validate option sanitization with both valid and invalid payloads.
-- Ensure conditional font enqueuing works for frontend, admin, login, and Gravity Forms contexts.
-- Add integration smoke tests when adding new subsystems.
-
-## 14. Compatibility Notes
-
-### WordPress Multisite
-- The plugin ships with `Network: false`; settings remain per-site by default.
-- During uninstall/cleanup, remove only the active site's options unless network support is explicitly implemented.
-
-### Caching Plugins
-- Use the `vazir_font_clear_cache` action so integrators can tie into cache purges (WP Rocket, W3 Total Cache, etc.).
-- Avoid calling `wp_cache_flush()` directly; stick to plugin-scoped cache invalidation.
-
-### Page Builders
-- Tested against Elementor, Gutenberg, and Classic Editor; fonts should apply across editors.
-- Provide filters or settings to disable fonts on specific builder pages if compatibility issues arise.
