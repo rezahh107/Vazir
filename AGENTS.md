@@ -3,13 +3,14 @@
 Welcome! This document encodes the repository rules for both human contributors and autonomous agents. Follow every instruction in this file when you touch any file in this project.
 
 ## 1. Repository Snapshot
-- **Plugin slug:** `vazir-font-plugin`
-- **Primary entrypoint:** `vazir-font-plugin.php`
+- **Plugin slug:** `vazir-font-wp` (matches directory name)
+- **Primary entrypoint:** `vazir-font-wp.php`
 - **PHP namespace/prefix:** `VazirFont_`
 - **Current plugin version:** `1.1.0` (update header + `VAZIR_FONT_VERSION` together)
 - **Text domain:** `vazir-font-wp`
-- **Assets:** fonts/CSS/JS live under `assets/`
-- **Autoloader:** anonymous SPL autoloader registered in the main plugin file (PSR-4-like).
+- **Domain Path:** `/languages`
+- **Assets path:** `assets/`
+- **Autoloader:** SPL autoloader with `VazirFont_` prefix
 
 ## 2. Directory Expectations
 | Path | Purpose | Notes |
@@ -104,8 +105,21 @@ All tests must pass with `WP_DEBUG` enabled.
 - Every PR must summarize changes, testing evidence, and potential impacts.
 
 ## 13. File-Specific Notes
-- `includes/class-gravity-forms-integration.php` is currently a placeholder. If you implement functionality, ensure Gravity Forms is loaded (`class_exists( 'GFForms' )`) before hooking and cover sanitization/escaping.
-- `assets/css/admin.css` is intentionally empty; populate only with admin-specific styles.
-- Avoid altering font binary filenames—they map directly to enqueue logic.
+- `includes/class-gravityforms-integration.php` - Currently checks `class_exists('GFForms')` before integration
+- `assets/css/admin.css` - Intentionally minimal; populate only with admin-specific styles
+- `assets/fonts/` - Contains Vazir font files (300,400,500,700,900 weights) + OFL.txt
+- Main plugin file: `vazir-font-wp.php` - Contains singleton pattern and option management
+
+## 14. Font Implementation Standards
+
+### Font Loading Strategy
+- Primary format: `woff2` with `woff` fallbacks
+- Use `font-display: swap` in all @font-face declarations
+- Implement conditional loading based on `enable_frontend`, `enable_admin`, `enable_gravity_forms` options
+
+### RTL Optimization
+- Respect `is_rtl()` for CSS direction handling
+- Use logical properties in CSS when possible
+- Test with both LTR and RTL themes
 
 Adhering to this AGENTS.md keeps the plugin compliant with WordPress standards and ensures smooth collaboration. When in doubt, add clarifying comments or extend this file with new rules.
