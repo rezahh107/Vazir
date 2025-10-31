@@ -1,0 +1,28 @@
+/* Vazir Font for WordPress - Main CSS */
+:root {
+    --vazir-font-family: 'Vazir', 'Tahoma', 'Iranian Sans', system-ui, -apple-system, sans-serif;
+}
+
+/* Base font styling */
+.vazir-font {
+    font-family: var(--vazir-font-family);
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Loading state */
+.vazir-font-loading {
+    font-family: 'Tahoma', 'Iranian Sans', system-ui, -apple-system, sans-serif;
+}
+
+/* RTL support */
+[dir="rtl"] .vazir-font,
+.vazir-font[dir="rtl"] {
+    direction: rtl;
+    text-align: right;
+    letter-spacing: 0;
+}
+
+/* Font faces will be added inline by PHP */

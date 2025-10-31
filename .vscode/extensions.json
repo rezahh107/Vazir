@@ -1,0 +1,14 @@
+{
+    "recommendations": [
+        "wordpress.wordpress",
+        "tungvn.wordpress-smarthooks",
+        "ikappas.phpcs",
+        "esbenp.prettier-vscode",
+        "stylelint.vscode-stylelint",
+        "felixfbecker.php-debug",
+        "bmewburn.vscode-intelephense-client",
+        "mikestead.dotenv",
+        "github.vscode-pull-request-github",
+        "eamodio.gitlens"
+    ]
+}
