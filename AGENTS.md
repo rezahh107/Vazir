@@ -3,14 +3,13 @@
 Welcome! This document encodes the repository rules for both human contributors and autonomous agents. Follow every instruction in this file when you touch any file in this project.
 
 ## 1. Repository Snapshot
-- **Plugin slug:** `vazir-font-wp`
-- **Primary entrypoint:** `vazir-font-wp.php`
+- **Plugin slug:** `vazir-font-plugin`
+- **Primary entrypoint:** `vazir-font-plugin.php`
 - **PHP namespace/prefix:** `VazirFont_`
 - **Current plugin version:** `1.1.0` (update header + `VAZIR_FONT_VERSION` together)
 - **Text domain:** `vazir-font-wp`
-- **Domain Path:** `/languages`
-- **Assets path:** `assets/`
-- **Autoloader:** SPL autoloader with `VazirFont_` prefix registered in the main plugin file.
+- **Assets:** fonts/CSS/JS live under `assets/`
+- **Autoloader:** anonymous SPL autoloader registered in the main plugin file (PSR-4-like).
 
 ## 2. Directory Expectations
 | Path | Purpose | Notes |
@@ -92,12 +91,11 @@ When touching business logic, provide at least one of:
 All tests must pass with `WP_DEBUG` enabled.
 
 ## 11. Release Checklist
-1. Bump version in `vazir-font-wp.php` header and `VAZIR_FONT_VERSION` constant.
-2. Update `README.md` and `CHANGELOG.md` (if present) with the new version details.
-3. Regenerate the translation template: `wp i18n make-pot . languages/vazir-font-wp.pot`.
-4. Confirm `assets/fonts/` contains all required binaries plus the `OFL.txt` license.
-5. Run smoke tests with `WP_DEBUG = true` enabled.
-6. Tag the release using semantic versioning (major.minor.patch).
+1. Bump version in `vazir-font-plugin.php` header and `VAZIR_FONT_VERSION` constant.
+2. Update documentation (`README.md`, changelog section if added).
+3. Regenerate translation template (`languages/vazir-font-wp.pot`).
+4. Confirm fonts + OFL license are present and unchanged.
+5. Tag the release using semantic versioning (major.minor.patch).
 
 ## 12. Git & PR Guidance
 - Keep commits scoped and well-described (English preferred for commit messages).
@@ -109,56 +107,5 @@ All tests must pass with `WP_DEBUG` enabled.
 - `includes/class-gravity-forms-integration.php` is currently a placeholder. If you implement functionality, ensure Gravity Forms is loaded (`class_exists( 'GFForms' )`) before hooking and cover sanitization/escaping.
 - `assets/css/admin.css` is intentionally empty; populate only with admin-specific styles.
 - Avoid altering font binary filenames—they map directly to enqueue logic.
-
-## 14. Font-Specific Standards (ویژه فونت وزیر)
-
-### فونت فیس‌ها و فرمت‌ها
-- از فرمت `woff2` به عنوان گزینهٔ پیش‌فرض استفاده کنید و در صورت نیاز فرمت‌های مکمل را همگام با باینری‌های موجود به‌روز نگه دارید.
-- تمام تعریف‌های `@font-face` باید شامل `font-display: swap` باشند تا از بروز FOIT جلوگیری شود.
-- مقدار `font-family` را به‌صورت انگلیسی و ثابت با عنوان `"Vazir"` نگه دارید.
-
-### مدیریت وزن‌های فونت
-```php
-$font_weights = [ '300', '400', '500', '700', '900' ];
-```
-- وزن‌های فعال باید با گزینهٔ ذخیره‌شده همگام شوند و از بارگذاری فایل‌های اضافه خودداری شود.
-- سلکتورهای مستثنی‌شده را از طریق فیلتر `vazir_font_exclude_selectors` توسعه دهید تا از تداخل با فونت‌آیکن‌ها جلوگیری شود.
-
-### محلی‌سازی هوشمند فونت
-- فونت را فقط برای زبان‌های فارسی و عربی فعال کنید؛ به عنوان مثال `is_rtl()` یا بررسی `get_locale()` را در هوک `wp_enqueue_scripts` اعمال کنید.
-- در صورت غیرفعال بودن گزینهٔ کاربر یا عدم تطابق زبان، هیچ دارایی فونتی را بارگذاری نکنید.
-
-## 15. Automated Testing Setup
-
-### PHPUnit Configuration
-```xml
-<!-- phpunit.xml.dist -->
-<phpunit bootstrap="tests/bootstrap.php">
-    <testsuites>
-        <testsuite name="vazir-font-plugin">
-            <directory>tests</directory>
-        </testsuite>
-    </testsuites>
-</phpunit>
-```
-
-### Test Coverage Requirements
-- کلاس‌های هسته‌ای `VazirFont_Loader` و `VazirFont_Admin_Settings` را برای سناریوهای فعال/غیرفعال‌سازی گزینه‌ها پوشش دهید.
-- اعتبارسنجی و پاکسازی گزینه‌ها را با داده‌های ورودی معتبر و نامعتبر تست کنید.
-- بارگذاری شرطی فونت‌ها را برای فرانت‌اند، ادمین، صفحه ورود و ادغام گرویتی فرمز بررسی کنید.
-
-## 16. Compatibility Notes
-
-### WordPress Multisite
-- پلاگین با پرچم `Network: false` منتشر می‌شود و تنظیمات در هر سایت به‌صورت مستقل ذخیره می‌شوند.
-- در زمان پاک‌سازی، تنها گزینه‌های سایت فعال را حذف کنید مگر آنکه به‌صراحت برای شبکه پیاده‌سازی شود.
-
-### Caching Plugins
-- از اکشن `vazir_font_clear_cache` برای همگام‌سازی با افزونه‌های کش مانند WP Rocket و W3 Total Cache استفاده کنید.
-- از فراخوانی مستقیم `wp_cache_flush()` خودداری کنید؛ پاک‌سازی باید محدود به دارایی‌های پلاگین باشد.
-
-### Page Builders
-- پلاگین با Elementor، Gutenberg و Classic Editor تست شده است؛ انتظار می‌رود فونت در تمام ادیتورها اعمال شود.
-- در صورت بروز ناسازگاری با صفحه‌سازهای ثالث، امکان غیرفعال‌سازی فونت در صفحات خاص را از طریق فیلترها فراهم کنید.
 
 Adhering to this AGENTS.md keeps the plugin compliant with WordPress standards and ensures smooth collaboration. When in doubt, add clarifying comments or extend this file with new rules.
