@@ -108,7 +108,7 @@ class VazirFont_Loader {
 		// Admin.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_fonts' ), 5 );
 		add_action( 'admin_head', array( $this, 'add_font_preload' ), 1 );
-		add_action( 'admin_head', array( $this, 'add_admin_styles' ), 20 );
+		add_action( 'admin_head', array( $this, 'add_admin_styles' ), 99 );
 
 		// Login.
 		add_action( 'login_enqueue_scripts', array( $this, 'enqueue_login_fonts' ), 5 );
@@ -155,6 +155,7 @@ class VazirFont_Loader {
 	 */
 	public function add_frontend_styles() {
 		$this->output_custom_styles( 'frontend' );
+		$this->output_custom_styles( 'frontend', $this->get_base_font_css( 'frontend' ) );
 	}
 
 	/**
@@ -162,6 +163,7 @@ class VazirFont_Loader {
 	 */
 	public function add_admin_styles() {
 		$this->output_custom_styles( 'admin' );
+		$this->output_custom_styles( 'admin', $this->get_base_font_css( 'admin' ) );
 	}
 
 	/**
@@ -230,33 +232,36 @@ class VazirFont_Loader {
 	/**
 	 * Output context-specific inline CSS.
 	 *
-	 * @param string $context Context identifier.
+	 * @param string      $context Context identifier.
+	 * @param string|null $css     Custom CSS to output. Optional.
 	 */
-	private function output_custom_styles( $context ) {
+	private function output_custom_styles( $context, $css = null ) {
 		if ( ! $this->should_load_context( $context ) ) {
 			return;
 		}
 
-		$options           = VazirFontPlugin::get_options();
-		$exclude_selectors = isset( $options['exclude_selectors'] ) ? (array) $options['exclude_selectors'] : array();
-		$css               = '';
+		if ( null === $css ) {
+			$options           = VazirFontPlugin::get_options();
+			$exclude_selectors = isset( $options['exclude_selectors'] ) ? (array) $options['exclude_selectors'] : array();
+			$css               = '';
 
-		switch ( $context ) {
-			case 'frontend':
-				$css = $this->get_frontend_css( $exclude_selectors );
-				break;
-			case 'admin':
-				$css = $this->get_admin_css( $exclude_selectors );
-				break;
-			case 'login':
-				$css = $this->get_login_css( $exclude_selectors );
-				break;
-			case 'gravityforms':
-				$css = $this->get_gravityforms_css( $exclude_selectors );
-				break;
+			switch ( $context ) {
+				case 'frontend':
+					$css = $this->get_frontend_css( $exclude_selectors );
+					break;
+				case 'admin':
+					$css = $this->get_admin_css( $exclude_selectors );
+					break;
+				case 'login':
+					$css = $this->get_login_css( $exclude_selectors );
+					break;
+				case 'gravityforms':
+					$css = $this->get_gravityforms_css( $exclude_selectors );
+					break;
+			}
 		}
 
-		if ( '' === trim( $css ) ) {
+		if ( ! is_string( $css ) || '' === trim( $css ) ) {
 			return;
 		}
 
@@ -471,6 +476,25 @@ class VazirFont_Loader {
 				'.gform_wrapper .gfield_label',
 			)
 		);
+	}
+
+	/**
+	 * Build base font CSS for the supplied context.
+	 *
+	 * @param string $context Context identifier.
+	 * @return string
+	 */
+	private function get_base_font_css( $context ) {
+		$family = apply_filters(
+			'vazir_font_family',
+			"'Vazir', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif"
+		);
+
+		if ( 'admin' === $context ) {
+			return "html body.wp-admin, #wpwrap, .wrap, input, textarea, select, button { font-family: {$family} !important; }\n";
+		}
+
+		return "html body, input, textarea, select, button { font-family: {$family}; }\n";
 	}
 
 	/**
