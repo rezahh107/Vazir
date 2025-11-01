@@ -42,6 +42,13 @@ class VazirFont_Loader {
 	private $selected_weights = null;
 
 	/**
+	 * Flag indicating if Gravity Forms assets were requested.
+	 *
+	 * @var bool
+	 */
+	private $gravityforms_requested = false;
+
+	/**
 	 * Normalise the supplied font weight selections.
 	 *
 	 * @param array $weights Raw option values.
@@ -87,6 +94,13 @@ class VazirFont_Loader {
 	 */
 	private function get_active_weights() {
 		return $this->get_selected_option_weights();
+	}
+
+	/**
+	 * Mark Gravity Forms request for current page load.
+	 */
+	public function mark_gravityforms_request() {
+		$this->gravityforms_requested = true;
 	}
 
 	/**
@@ -200,7 +214,16 @@ class VazirFont_Loader {
 	 * Output Gravity Forms inline styles.
 	 */
 	public function add_gravityforms_styles() {
-		$this->output_custom_styles( 'gravityforms' );
+		$this->mark_gravityforms_request();
+		$this->apply_styles_for_context( 'gravityforms' );
+	}
+
+	/**
+	 * Output Gravity Forms styles for admin contexts.
+	 */
+	public function add_gf_admin_styles() {
+		$this->mark_gravityforms_request();
+		$this->apply_styles_for_context( 'gravityforms' );
 	}
 
 	/**
@@ -214,6 +237,12 @@ class VazirFont_Loader {
 		}
 
 		$weights = $this->get_active_weights();
+		$css     = $this->get_inline_css( $context );
+
+		if ( '' === $css ) {
+			return;
+		}
+
 		$version = VAZIR_FONT_VERSION . '.' . implode( '', $weights );
 		$handle  = 'vazir-font-' . $context;
 
@@ -225,31 +254,46 @@ class VazirFont_Loader {
 		);
 		wp_enqueue_style( $handle );
 
-		$font_css = self::generate_font_faces( $weights );
-		$context_css = $this->get_context_css( $context );
-		$base_css = $this->get_base_font_css( $context );
-
-		$css_parts = array();
-
-		foreach ( array( $font_css, $context_css, $base_css ) as $part ) {
-			if ( is_string( $part ) ) {
-				$part = trim( $part );
-			} else {
-				$part = '';
-			}
-
-			if ( '' !== $part ) {
-				$css_parts[] = $part;
-			}
-		}
-
-		if ( empty( $css_parts ) ) {
-			return;
-		}
-
-		$css = implode( "\n", $css_parts );
-
 		$this->output_custom_styles( $context, $css );
+	}
+
+	/**
+	 * Retrieve combined inline CSS for a given context.
+	 *
+	 * @param string $context Context identifier.
+	 * @return string
+	 */
+	public function get_inline_css( $context ) {
+		if ( ! $this->should_load_context( $context ) ) {
+			return '';
+		}
+
+		$weights = $this->get_active_weights();
+
+		$parts = array(
+			self::generate_font_faces( $weights ),
+			$this->get_context_css( $context ),
+			$this->get_base_font_css( $context ),
+		);
+
+		$parts = array_filter(
+			array_map(
+				static function ( $part ) {
+					if ( ! is_string( $part ) ) {
+						return '';
+					}
+
+					return trim( $part );
+				},
+				$parts
+			)
+		);
+
+		if ( empty( $parts ) ) {
+			return '';
+		}
+
+		return implode( "\n", $parts );
 	}
 
 	/**
@@ -450,7 +494,10 @@ class VazirFont_Loader {
 			$classes = array();
 		}
 
-		if ( $this->should_load_context( 'frontend' ) ) {
+		$enable_frontend = $this->should_load_context( 'frontend' );
+		$enable_gf       = $this->gravityforms_requested && $this->should_load_context( 'gravityforms' );
+
+		if ( $enable_frontend || $enable_gf ) {
 			$classes[] = 'vazir-font-enabled';
 		}
 
@@ -468,7 +515,10 @@ class VazirFont_Loader {
 			$classes = '';
 		}
 
-		if ( $this->should_load_context( 'admin' ) ) {
+		$enable_admin = $this->should_load_context( 'admin' );
+		$enable_gf    = $this->gravityforms_requested && $this->should_load_context( 'gravityforms' );
+
+		if ( $enable_admin || $enable_gf ) {
 			$classes = trim( $classes );
 
 			if ( '' !== $classes ) {
@@ -629,10 +679,132 @@ class VazirFont_Loader {
 			$exclude_selectors,
 			array(
 				'.gform_wrapper',
-				'.gform_wrapper input',
-				'.gform_wrapper select',
-				'.gform_wrapper textarea',
+				'.gform_wrapper .gform_heading',
+				'.gform_wrapper .gform_body',
+				'.gform_wrapper .gfield',
 				'.gform_wrapper .gfield_label',
+				'.gform_wrapper .gfield_description',
+				'.gform_wrapper .gfield_description p',
+				'.gform_wrapper .ginput_container',
+				'.gform_wrapper .ginput_container input[type="text"]',
+				'.gform_wrapper .ginput_container input[type="email"]',
+				'.gform_wrapper .ginput_container input[type="tel"]',
+				'.gform_wrapper .ginput_container input[type="url"]',
+				'.gform_wrapper .ginput_container input[type="number"]',
+				'.gform_wrapper .ginput_container input[type="password"]',
+				'.gform_wrapper .ginput_container input[type="search"]',
+				'.gform_wrapper .ginput_container input[type="date"]',
+				'.gform_wrapper .ginput_container input[type="time"]',
+				'.gform_wrapper .ginput_container input[type="datetime-local"]',
+				'.gform_wrapper .ginput_container input[type="month"]',
+				'.gform_wrapper .ginput_container input[type="week"]',
+				'.gform_wrapper .ginput_container textarea',
+				'.gform_wrapper .ginput_container select',
+				'.gform_wrapper .ginput_container select option',
+				'.gform_wrapper .ginput_container select optgroup',
+				'.gform_wrapper .ginput_container input::placeholder',
+				'.gform_wrapper .ginput_container textarea::placeholder',
+				'.gform_wrapper .ginput_container input::-webkit-input-placeholder',
+				'.gform_wrapper .ginput_container textarea::-webkit-input-placeholder',
+				'.gform_wrapper .ginput_container input::-moz-placeholder',
+				'.gform_wrapper .ginput_container textarea::-moz-placeholder',
+				'.gform_wrapper .ginput_container input:-ms-input-placeholder',
+				'.gform_wrapper .ginput_container textarea:-ms-input-placeholder',
+				'.gform_wrapper .ginput_container input:-moz-placeholder',
+				'.gform_wrapper .ginput_container textarea:-moz-placeholder',
+				'.gform_wrapper .gchoice label',
+				'.gform_wrapper .gchoice input[type="checkbox"] + label',
+				'.gform_wrapper .gchoice input[type="radio"] + label',
+				'.gform_wrapper .ginput_container_consent label',
+				'.gform_wrapper .gform_footer',
+				'.gform_wrapper .gform_footer input[type="submit"]',
+				'.gform_wrapper .gform_footer input[type="button"]',
+				'.gform_wrapper .gform_footer button',
+				'.gform_wrapper .gform_footer .button',
+				'.gform_wrapper .gform_footer .gform_button',
+				'.gform_wrapper .gform_page_footer',
+				'.gform_wrapper .gform_page_footer .gform_next_button',
+				'.gform_wrapper .gform_page_footer .gform_previous_button',
+				'.gform_wrapper .gform_page_footer .gform_page_button',
+				'.gform_wrapper .gform_page_footer input[type="submit"]',
+				'.gform_wrapper .gform_page_footer input[type="button"]',
+				'.gform_wrapper .gform_page_footer button',
+				'.gform_wrapper .gsection_title',
+				'.gform_wrapper .gsection_description',
+				'.gform_wrapper .gf_step span',
+				'.gform_wrapper .gf_step span.step_label',
+				'.gform_wrapper .gf_progressbar',
+				'.gform_wrapper .gf_progressbar span',
+				'.gform_wrapper .validation_message',
+				'.gform_wrapper .validation_error',
+				'.gform_wrapper .gfield_validation_message',
+				'.gform_wrapper .instruction',
+				'.gform_wrapper .gfield_required',
+				'.gform_wrapper .gform_save_link',
+				'.gform_wrapper .gform_save_message',
+				'.gform_wrapper .gform_page .gform_fields li',
+				'.gform_wrapper .gform_page_title',
+				'.gform_wrapper .gform_page_description',
+				'.gform_confirmation_message',
+				'.gform_confirmation_wrapper',
+				'.gform_wrapper .gform_ajax_spinner',
+				'.gform_wrapper .gquiz-container',
+				'.gform_wrapper .gform_fileupload_multifile .gform_drop_area',
+				'.gform_wrapper .gform_fileupload_multifile .gform_button_select_files',
+				'.gform_wrapper .chzn-container',
+				'.gform_wrapper .chzn-container .chzn-single',
+				'.gform_wrapper .chzn-container .chzn-results li',
+				'.gform_wrapper .select2-container',
+				'.gform_wrapper .select2-container .select2-selection',
+				'.gform_wrapper .select2-container .select2-selection__rendered',
+				'.gform_wrapper .select2-container .select2-results__option',
+				'.gform_wrapper .gform_wrapper.gravity-theme .gfield_label',
+				'.gform_wrapper.gravity-theme .gfield_label',
+				'.gform_wrapper.gravity-theme .gfield_description',
+				'.gform_wrapper.gravity-theme .ginput_complex span label',
+				'.gform_wrapper.gravity-theme .gfield_consent_description',
+				'.gform_wrapper.gravity-theme .gform_footer input[type="submit"]',
+				'.gform_wrapper.gravity-theme .gform_footer .button',
+				'.gform_wrapper.gravity-theme .gform_button',
+				'.gform_wrapper.gravity-theme .gform_save_link',
+				'.gform_wrapper.gravity-theme .gform_page_footer input',
+				'.gform_wrapper.gravity-theme .gform_page_footer .button',
+				'.gform_wrapper.gravity-theme .ginput_complex input',
+				'.gform_wrapper.gravity-theme .ginput_complex select',
+				'.gform_wrapper.gravity-theme .ginput_complex textarea',
+				'.gform_wrapper.gravity-theme .ginput_container_address .ginput_full',
+				'.gform_wrapper.gravity-theme .ginput_container input[type="text"]',
+				'.gform_wrapper.gravity-theme .ginput_container select',
+				'.gform_wrapper.gravity-theme .ginput_container textarea',
+				'.gform_wrapper.gravity-theme .gfield_list_group',
+				'.gform_wrapper.gravity-theme .gfield_list_group input',
+				'.gform_wrapper.gravity-theme .gfield_list_group select',
+				'.gform_wrapper.gravity-theme .gfield_list_group textarea',
+				'.gform_wrapper.gravity-theme .gfield_list_header th',
+				'.gform_wrapper.gravity-theme .gfield_list_cell input',
+				'.gform_wrapper.gravity-theme .gfield_list_cell select',
+				'.gform_wrapper.gravity-theme .gfield_list_cell textarea',
+				'.gform_wrapper.gravity-theme .gfield_checkbox label',
+				'.gform_wrapper.gravity-theme .gfield_radio label',
+				'.gform_wrapper.gravity-theme .ginput_product_price',
+				'.gform_wrapper.gravity-theme .ginput_product_total',
+				'.gform_wrapper.gravity-theme .ginput_product_price_label',
+				'.gform_wrapper.gravity-theme .ginput_product_price_value',
+				'.gform_wrapper.gravity-theme .gfield_time_hour input',
+				'.gform_wrapper.gravity-theme .gfield_time_minute input',
+				'.gform_wrapper.gravity-theme .gfield_time_ampm select',
+				'.gform_wrapper.gravity-theme .gform-card',
+				'.gform_wrapper.gravity-theme .gform-card__header',
+				'.gform_wrapper.gravity-theme .gform-card__body',
+				'.gform_wrapper.gravity-theme .gform-card__footer',
+				'.gform_wrapper.gravity-theme .gform-field-label',
+				'.gform_wrapper.gravity-theme .gform-field-label--type-inline',
+				'.gform_wrapper.gravity-theme .gform-fileupload-filename',
+				'.gform_wrapper.gravity-theme .gform-field__description',
+				'.gform_wrapper.gravity-theme .gform-field__label',
+				'.gform_wrapper.gravity-theme .gform-field__input-wrapper',
+				'.gform_wrapper.gravity-theme .gform-field__error-message',
+				'.gform_wrapper.gravity-theme .gform-field__instruction-message',
 			)
 		);
 	}
@@ -758,6 +930,27 @@ class VazirFont_Loader {
 	 * Placeholder for regenerating cached font files.
 	 */
 	private function regenerate_font_files() {
-		// Intentionally left blank. Extend if caching is introduced.
+		if ( class_exists( 'GFCache' ) ) {
+			GFCache::flush();
+		}
+
+		if ( function_exists( 'wp_get_upload_dir' ) ) {
+			$uploads = wp_get_upload_dir();
+
+			if ( ! empty( $uploads['basedir'] ) ) {
+				$pattern = trailingslashit( $uploads['basedir'] ) . 'gravity_forms/*/css/*.css';
+				$files   = glob( $pattern );
+
+				if ( is_array( $files ) ) {
+					foreach ( $files as $file ) {
+						if ( is_string( $file ) && is_file( $file ) && is_readable( $file ) ) {
+							wp_delete_file( $file );
+						}
+					}
+				}
+			}
+		}
+
+		delete_transient( 'gforms_css_version' );
 	}
 }
