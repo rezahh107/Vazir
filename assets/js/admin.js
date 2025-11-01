@@ -49,10 +49,13 @@
         resetToDefaults: function(e) {
             e.preventDefault();
             
-            var message = (window.vazirFontAdminL10n && window.vazirFontAdminL10n.confirmReset) ? window.vazirFontAdminL10n.confirmReset : '';
-            if (!message) {
-                message = 'Are you sure you want to reset settings?';
+            var l10n = window.vazirFontAdminL10n;
+
+            if (!l10n || !l10n.confirmReset) {
+                return;
             }
+
+            var message = l10n.confirmReset;
 
             if (confirm(message)) {
                 $('input[name="vazir_font_options[enable_frontend]"]').prop('checked', true);

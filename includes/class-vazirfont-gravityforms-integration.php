@@ -44,8 +44,10 @@ class VazirFont_GravityForms_Integration {
 	/**
 	 * Enqueue fonts for Gravity Forms when enabled.
 	 */
-	public function enqueue_gravityforms_assets() {
-		$options = VazirFontPlugin::get_options();
+        public function enqueue_gravityforms_assets( $form = array(), $is_ajax = false ) {
+                unset( $form, $is_ajax );
+
+                $options = VazirFontPlugin::get_options();
 
 		if ( empty( $options['enable_gravity_forms'] ) ) {
 			return;
