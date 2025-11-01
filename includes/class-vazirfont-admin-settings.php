@@ -241,39 +241,118 @@ class VazirFont_Admin_Settings {
 	 * @return array
 	 */
 	public function sanitize_options( $input ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$this->log_security_event( 'Unauthorized settings update blocked.', 'critical' );
+			wp_die( esc_html__( 'Unauthorized access.', 'vazir-font-wp' ) );
+		}
+
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( $_POST['_wpnonce'], 'vazir_font_settings-options' ) ) {
+			$this->log_security_event( 'Nonce verification failed during settings save.', 'warning' );
+			add_settings_error(
+				'vazir_font_options',
+				'nonce_failed',
+				esc_html__( 'Security verification failed.', 'vazir-font-wp' ),
+				'error'
+			);
+
+			return VazirFontPlugin::get_options();
+		}
+
+		$current_user_id = get_current_user_id();
+		$transient_key   = 'vazir_font_save_count_' . ( $current_user_id ? $current_user_id : 'guest' );
+		$save_count      = (int) get_transient( $transient_key );
+
+		if ( $save_count > 10 ) {
+			$this->log_security_event( 'Rate limit triggered for settings save.', 'warning' );
+			add_settings_error(
+				'vazir_font_options',
+				'rate_limit',
+				esc_html__( 'Too many save attempts. Please wait a minute.', 'vazir-font-wp' ),
+				'error'
+			);
+
+			return VazirFontPlugin::get_options();
+		}
+
+		set_transient( $transient_key, $save_count + 1, MINUTE_IN_SECONDS );
+
 		$sanitized       = array();
 		$current_options = VazirFontPlugin::get_options();
 
 		$checkboxes = array( 'enable_frontend', 'enable_admin', 'enable_gravity_forms' );
 		foreach ( $checkboxes as $checkbox ) {
-			$sanitized[ $checkbox ] = ! empty( $input[ $checkbox ] );
+			$value = false;
+
+			if ( isset( $input[ $checkbox ] ) ) {
+				$filtered = filter_var( $input[ $checkbox ], FILTER_VALIDATE_BOOLEAN, array( 'flags' => FILTER_NULL_ON_FAILURE ) );
+				$value    = ( null === $filtered ) ? false : (bool) $filtered;
+			}
+
+			$sanitized[ $checkbox ] = $value;
 		}
 
 		if ( isset( $input['font_weights'] ) && is_array( $input['font_weights'] ) ) {
-			$allowed_weights           = array( '300', '400', '500', '700', '900' );
-			$selected_weights          = array_map( 'sanitize_text_field', $input['font_weights'] );
-			$sanitized['font_weights'] = array_values( array_intersect( $selected_weights, $allowed_weights ) );
+			$allowed_weights  = array( '300', '400', '500', '700', '900' );
+			$selected_weights = array_map( 'sanitize_text_field', $input['font_weights'] );
 
-			if ( empty( $sanitized['font_weights'] ) ) {
-				$sanitized['font_weights'] = array( '400' );
+			$valid_weights = array();
+
+			foreach ( $selected_weights as $weight ) {
+				if ( in_array( $weight, $allowed_weights, true ) ) {
+					$valid_weights[] = $weight;
+				}
+			}
+
+			$valid_weights = array_values( array_unique( $valid_weights ) );
+
+			if ( empty( $valid_weights ) ) {
+				$valid_weights[] = '400';
 				add_settings_error(
 					'vazir_font_options',
 					'no_weights_selected',
-					__( 'حداقل یک وزن فونت باید انتخاب شود. وزن 400 به صورت پیش‌فرض انتخاب شد.', 'vazir-font-wp' ),
+					esc_html__( 'At least one font weight must be selected. Weight 400 was enabled automatically.', 'vazir-font-wp' ),
 					'warning'
 				);
+				$this->log_security_event( 'No font weights selected; defaulted to 400.', 'notice' );
 			}
+			$sanitized['font_weights'] = $valid_weights;
 		} else {
 			$sanitized['font_weights'] = isset( $current_options['font_weights'] ) ? (array) $current_options['font_weights'] : array( '400' );
 		}
 
+		$sanitized['exclude_selectors'] = isset( $current_options['exclude_selectors'] ) ? (array) $current_options['exclude_selectors'] : array();
+
 		if ( isset( $input['exclude_selectors'] ) ) {
-			$selectors                      = explode( "\n", (string) $input['exclude_selectors'] );
-			$selectors                      = array_map( 'sanitize_text_field', $selectors );
-			$selectors                      = array_filter( $selectors );
-			$sanitized['exclude_selectors'] = array_values( array_unique( $selectors ) );
-		} else {
-			$sanitized['exclude_selectors'] = isset( $current_options['exclude_selectors'] ) ? (array) $current_options['exclude_selectors'] : array();
+			$raw_selectors = explode( "\n", (string) $input['exclude_selectors'] );
+			$raw_selectors = array_map( 'trim', $raw_selectors );
+			$raw_selectors = array_filter( $raw_selectors );
+
+			$clean_selectors = array();
+
+			foreach ( $raw_selectors as $selector ) {
+				$sanitized_selector = $this->sanitize_css_selector( $selector );
+
+				if ( '' === $sanitized_selector ) {
+					$this->log_security_event( sprintf( 'CSS selector rejected during sanitization: %s', $selector ), 'critical' );
+					continue;
+				}
+
+				$validated_selector = $this->validate_css_selector( $sanitized_selector );
+
+				if ( '' === $validated_selector ) {
+					$this->log_security_event( sprintf( 'CSS selector failed validation: %s', $selector ), 'critical' );
+					continue;
+				}
+
+				$clean_selectors[] = $validated_selector;
+			}
+
+			if ( ! empty( $clean_selectors ) ) {
+				$clean_selectors = array_values( array_unique( $clean_selectors ) );
+				$sanitized['exclude_selectors'] = array_slice( $clean_selectors, 0, 50 );
+			} else {
+				$sanitized['exclude_selectors'] = array();
+			}
 		}
 
 		if ( $sanitized !== $current_options ) {
@@ -281,6 +360,84 @@ class VazirFont_Admin_Settings {
 		}
 
 		return $sanitized;
+	}
+
+	/**
+	 * Sanitize CSS selectors received from settings.
+	 *
+	 * @param string $selector Raw selector input.
+	 * @return string
+	 */
+	private function sanitize_css_selector( $selector ) {
+		$selector = (string) $selector;
+		$selector = str_ireplace( array( '@import', 'url(' ), '', $selector );
+		$selector = preg_replace( '/\/\*.*?\*\//', '', $selector );
+		$selector = str_replace( array( '{', '}', ';' ), ' ', $selector );
+		$selector = preg_replace( '/[^a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~]/', '', $selector );
+		$selector = trim( preg_replace( '/\s+/', ' ', $selector ) );
+
+		if ( strlen( $selector ) > 200 ) {
+			$selector = substr( $selector, 0, 200 );
+		}
+
+		return $selector;
+	}
+
+	/**
+	 * Validate a sanitized CSS selector.
+	 *
+	 * @param string $selector Sanitized selector.
+	 * @return string
+	 */
+	private function validate_css_selector( $selector ) {
+		if ( '' === $selector ) {
+			return '';
+		}
+
+		if ( false !== strpos( $selector, '{' ) || false !== strpos( $selector, '}' ) || false !== strpos( $selector, ';' ) ) {
+			return '';
+		}
+
+		if ( preg_match( '/\/\*/', $selector ) ) {
+			return '';
+		}
+
+		if ( ! preg_match( '/^[a-zA-Z.#]/', $selector ) ) {
+			return '';
+		}
+
+		if ( ! preg_match( '/^[a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~]+$/', $selector ) ) {
+			return '';
+		}
+
+		$invalid_sequences = array( '##', '..', ',,', '>>', '++', '~~', '**' );
+
+		foreach ( $invalid_sequences as $sequence ) {
+			if ( false !== strpos( $selector, $sequence ) ) {
+				return '';
+			}
+		}
+
+		return $selector;
+	}
+
+	/**
+	 * Log security-sensitive events to the debug log when enabled.
+	 *
+	 * @param string $event    Event description.
+	 * @param string $severity Severity level.
+	 */
+	private function log_security_event( $event, $severity = 'warning' ) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log(
+				sprintf(
+					'[Vazir Font Security] [%1$s] User %2$d: %3$s',
+					$severity,
+					get_current_user_id(),
+					$event
+				)
+			);
+		}
 	}
 
 	/**

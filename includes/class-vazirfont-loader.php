@@ -857,6 +857,65 @@ class VazirFont_Loader {
 	}
 
 	/**
+	 * Sanitize a CSS selector to a safe subset.
+	 *
+	 * @param string $selector Raw selector.
+	 * @return string
+	 */
+	private function sanitize_css_selector( $selector ) {
+		$selector = (string) $selector;
+		$selector = str_ireplace( array( '@import', 'url(' ), '', $selector );
+		$selector = preg_replace( '/\/\*.*?\*\//', '', $selector );
+		$selector = str_replace( array( '{', '}', ';' ), ' ', $selector );
+		$selector = preg_replace( '/[^a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~]/', '', $selector );
+		$selector = trim( preg_replace( '/\s+/', ' ', $selector ) );
+
+		if ( strlen( $selector ) > 200 ) {
+			$selector = substr( $selector, 0, 200 );
+		}
+
+		return $selector;
+	}
+
+	/**
+	 * Confirm a sanitized selector is valid for output.
+	 *
+	 * @param string $selector Sanitized selector.
+	 * @return bool
+	 */
+	private function is_valid_css_selector( $selector ) {
+		if ( '' === $selector ) {
+			return false;
+		}
+
+		if ( false !== strpos( $selector, '{' ) || false !== strpos( $selector, '}' ) || false !== strpos( $selector, ';' ) ) {
+			return false;
+		}
+
+		if ( preg_match( '/\/\*/', $selector ) ) {
+			return false;
+		}
+
+		if ( ! preg_match( '/^[a-zA-Z.#]/', $selector ) ) {
+			return false;
+		}
+
+		if ( ! preg_match( '/^[a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~]+$/', $selector ) ) {
+			return false;
+		}
+
+		$invalid_sequences = array( '##', '..', ',,', '>>', '++', '~~', '**' );
+
+		foreach ( $invalid_sequences as $sequence ) {
+			if ( false !== strpos( $selector, $sequence ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
 	 * Build CSS rules applying the font stack.
 	 *
 	 * @param array $exclude_selectors Selectors to exclude.
@@ -869,29 +928,31 @@ class VazirFont_Loader {
 
 		foreach ( $base_selectors as $selector ) {
 			$scoped = $this->scope_selector( $selector );
+			$scoped = $this->sanitize_css_selector( $scoped );
 
-			if ( '' === $scoped ) {
+			if ( '' === $scoped || ! $this->is_valid_css_selector( $scoped ) ) {
 				continue;
 			}
 
-			$rules .= $scoped . " {\n\tfont-family: {$family};\n}\n";
+			$rules .= esc_attr( $scoped ) . " {\n\tfont-family: {$family};\n}\n";
 		}
 
 		if ( ! empty( $exclude_selectors ) ) {
 			foreach ( $exclude_selectors as $selector ) {
-				$sanitized = sanitize_text_field( $selector );
+				$sanitized = $this->sanitize_css_selector( $selector );
 
 				if ( '' === $sanitized ) {
 					continue;
 				}
 
 				$scoped = $this->scope_selector( $sanitized );
+				$scoped = $this->sanitize_css_selector( $scoped );
 
-				if ( '' === $scoped ) {
+				if ( '' === $scoped || ! $this->is_valid_css_selector( $scoped ) ) {
 					continue;
 				}
 
-				$rules .= $scoped . " {\n\tfont-family: inherit;\n}\n";
+				$rules .= esc_attr( $scoped ) . " {\n\tfont-family: inherit;\n}\n";
 			}
 		}
 
