@@ -292,11 +292,6 @@ class VazirFont_Loader {
 			$src       = array(
 				"url('" . VAZIR_FONT_FONTS_URL . $font_name . ".woff2') format(\"woff2\")",
 			);
-			$woff_path = VAZIR_FONT_PLUGIN_DIR . 'assets/fonts/' . $font_name . '.woff';
-
-			if ( file_exists( $woff_path ) ) {
-				$src[] = "url('" . VAZIR_FONT_FONTS_URL . $font_name . ".woff') format(\"woff\")";
-			}
 
 			$css .= "@font-face {\n";
 			$css .= "\tfont-family: 'Vazir';\n";
