@@ -103,7 +103,7 @@ class VazirFont_Loader {
 		// Frontend.
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_fonts' ), 5 );
 		add_action( 'wp_head', array( $this, 'add_font_preload' ), 1 );
-		add_action( 'wp_head', array( $this, 'add_frontend_styles' ), 20 );
+		add_action( 'wp_head', array( $this, 'add_frontend_styles' ), 99 );
 
 		// Admin.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_fonts' ), 5 );
@@ -256,15 +256,33 @@ class VazirFont_Loader {
 				break;
 		}
 
-		if ( '' === $css ) {
+		if ( '' === trim( $css ) ) {
 			return;
 		}
 
-				printf(
-					'<style id="vazir-font-%1$s-styles">%2$s</style>' . "\n",
-					esc_attr( $context ),
-					esc_html( wp_strip_all_tags( $css ) )
+		$handle = 'vazir-font-' . $context;
+
+		if ( ! wp_style_is( $handle, 'enqueued' ) ) {
+			if ( defined( 'VAZIR_FONT_ASSETS_URL' ) ) {
+				wp_register_style(
+					$handle,
+					VAZIR_FONT_ASSETS_URL . 'css/vazir-fonts.css',
+					array(),
+					VAZIR_FONT_VERSION
 				);
+			} else {
+				wp_register_style(
+					$handle,
+					false,
+					array(),
+					VAZIR_FONT_VERSION
+				);
+			}
+
+			wp_enqueue_style( $handle );
+		}
+
+		wp_add_inline_style( $handle, $css );
 	}
 
 	/**
@@ -310,7 +328,7 @@ class VazirFont_Loader {
 
 			foreach ( $sources as $extension => $source ) {
 				if ( file_exists( $source['path'] ) ) {
-					$src[] = "url('" . esc_url_raw( VAZIR_FONT_FONTS_URL . $font_name . '.' . $extension ) . "') format(\"{$source['format']}\")";
+					$src[] = "url('" . esc_url( VAZIR_FONT_FONTS_URL . $font_name . '.' . $extension ) . "') format(\"{$source['format']}\")";
 				}
 			}
 
