@@ -35,6 +35,48 @@ class VazirFont_Loader {
 	);
 
 	/**
+	 * Cached sanitised font weights selected by the user.
+	 *
+	 * @var array<string>|null
+	 */
+	private $selected_weights = null;
+
+	/**
+	 * Normalise the supplied font weight selections.
+	 *
+	 * @param array $weights Raw option values.
+	 * @return array<string>
+	 */
+	private static function get_selected_weights( $weights ) {
+		$allowed_weights = array( '300', '400', '500', '700', '900' );
+
+		$weights = array_map( 'strval', (array) $weights );
+		$weights = array_map( 'trim', $weights );
+		$weights = array_values( array_unique( array_intersect( $weights, $allowed_weights ) ) );
+
+		if ( empty( $weights ) ) {
+			$weights = array( '400' );
+		}
+
+		return $weights;
+	}
+
+	/**
+	 * Retrieve the sanitised font weights from stored options.
+	 *
+	 * @return array<string>
+	 */
+	private function get_selected_option_weights() {
+		if ( null === $this->selected_weights ) {
+			$options     = VazirFontPlugin::get_options();
+			$raw_weights = isset( $options['font_weights'] ) ? $options['font_weights'] : array();
+			$this->selected_weights = self::get_selected_weights( $raw_weights );
+		}
+
+		return $this->selected_weights;
+	}
+
+	/**
 	 * Retrieve singleton instance.
 	 *
 	 * @return VazirFont_Loader
@@ -146,8 +188,8 @@ class VazirFont_Loader {
 			return;
 		}
 
-		$options = VazirFontPlugin::get_options();
-		$weights = isset( $options['font_weights'] ) ? (array) $options['font_weights'] : array( '400' );
+		$weights = $this->get_selected_option_weights();
+
 		$version = VAZIR_FONT_VERSION . '.' . implode( '', $weights );
 
 		wp_enqueue_style(
@@ -171,12 +213,12 @@ class VazirFont_Loader {
 			return;
 		}
 
-		$options       = VazirFontPlugin::get_options();
-		$weights       = isset( $options['font_weights'] ) ? (array) $options['font_weights'] : array( '400' );
-		$preload_order = array_intersect( array( '400', '700', '500', '300', '900' ), $weights );
+		$weights = $this->get_selected_option_weights();
+
+		$preload_order = array_values( array_intersect( array( '400', '700', '500', '300', '900' ), $weights ) );
 
 		foreach ( $preload_order as $weight ) {
-			$font_name = ( '400' === $weight ) ? 'vazir' : 'vazir-' . $weight;
+			$font_name = 'vazir-' . $weight;
 
 			printf(
 				'<link rel="preload" href="%1$s" as="font" type="font/woff2" crossorigin="anonymous" />' . "\n",
@@ -234,11 +276,27 @@ class VazirFont_Loader {
 	public static function generate_font_faces( $weights ) {
 		$css = '';
 
-		foreach ( (array) $weights as $weight ) {
-			$font_name = ( '400' === $weight ) ? 'vazir' : 'vazir-' . $weight;
+		$weights = array_map( 'strval', (array) $weights );
+		$weights = array_values( array_unique( $weights ) );
+
+		if ( empty( $weights ) ) {
+			$weights = array( '400' );
+		}
+
+		foreach ( $weights as $weight ) {
+			if ( '' === $weight ) {
+				continue;
+			}
+
+			$font_name = 'vazir-' . $weight;
 			$src       = array(
 				"url('" . VAZIR_FONT_FONTS_URL . $font_name . ".woff2') format(\"woff2\")",
 			);
+			$woff_path = VAZIR_FONT_PLUGIN_DIR . 'assets/fonts/' . $font_name . '.woff';
+
+			if ( file_exists( $woff_path ) ) {
+				$src[] = "url('" . VAZIR_FONT_FONTS_URL . $font_name . ".woff') format(\"woff\")";
+			}
 
 			$css .= "@font-face {\n";
 			$css .= "\tfont-family: 'Vazir';\n";
