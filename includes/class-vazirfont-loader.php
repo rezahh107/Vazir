@@ -58,6 +58,10 @@ class VazirFont_Loader {
 			$weights = array( '400' );
 		}
 
+		if ( ! in_array( '400', $weights, true ) ) {
+			array_unshift( $weights, '400' );
+		}
+
 		return $weights;
 	}
 
@@ -103,12 +107,12 @@ class VazirFont_Loader {
 		// Frontend.
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_fonts' ), 5 );
 		add_action( 'wp_head', array( $this, 'add_font_preload' ), 1 );
-		add_action( 'wp_head', array( $this, 'add_frontend_styles' ), 99 );
+		add_action( 'wp_head', array( $this, 'add_frontend_styles' ), 20 );
 
 		// Admin.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_fonts' ), 5 );
 		add_action( 'admin_head', array( $this, 'add_font_preload' ), 1 );
-		add_action( 'admin_head', array( $this, 'add_admin_styles' ), 99 );
+		add_action( 'admin_head', array( $this, 'add_admin_styles' ), 20 );
 
 		// Login.
 		add_action( 'login_enqueue_scripts', array( $this, 'enqueue_login_fonts' ), 5 );
@@ -120,6 +124,10 @@ class VazirFont_Loader {
 
 		// Cache clearing.
 		add_action( 'vazir_font_clear_cache', array( $this, 'clear_cache' ) );
+
+		add_filter( 'body_class', array( $this, 'filter_body_class' ) );
+		add_filter( 'admin_body_class', array( $this, 'filter_admin_body_class' ) );
+		add_filter( 'login_body_class', array( $this, 'filter_login_body_class' ) );
 	}
 
 	/**
@@ -194,15 +202,21 @@ class VazirFont_Loader {
 
 		$version = VAZIR_FONT_VERSION . '.' . implode( '', $weights );
 
-		wp_enqueue_style(
-			'vazir-font-' . $context,
-			VAZIR_FONT_ASSETS_URL . 'css/vazir-fonts.css',
-			array(),
+		$handle = 'vazir-font-' . $context;
+
+		wp_register_style(
+			$handle,
+			false,
+			$this->get_style_dependencies( $context ),
 			$version
 		);
+		wp_enqueue_style( $handle );
 
 		$css = self::generate_font_faces( $weights );
-		wp_add_inline_style( 'vazir-font-' . $context, $css );
+
+		if ( '' !== trim( $css ) ) {
+			wp_add_inline_style( $handle, $css );
+		}
 	}
 
 	/**
@@ -268,21 +282,12 @@ class VazirFont_Loader {
 		$handle = 'vazir-font-' . $context;
 
 		if ( ! wp_style_is( $handle, 'enqueued' ) ) {
-			if ( defined( 'VAZIR_FONT_ASSETS_URL' ) ) {
-				wp_register_style(
-					$handle,
-					VAZIR_FONT_ASSETS_URL . 'css/vazir-fonts.css',
-					array(),
-					VAZIR_FONT_VERSION
-				);
-			} else {
-				wp_register_style(
-					$handle,
-					false,
-					array(),
-					VAZIR_FONT_VERSION
-				);
-			}
+			wp_register_style(
+				$handle,
+				false,
+				$this->get_style_dependencies( $context ),
+				VAZIR_FONT_VERSION
+			);
 
 			wp_enqueue_style( $handle );
 		}
@@ -384,6 +389,66 @@ class VazirFont_Loader {
 	}
 
 	/**
+	 * Ensure body class reflects enabled contexts on the frontend.
+	 *
+	 * @param array<string> $classes Existing body classes.
+	 * @return array<string>
+	 */
+	public function filter_body_class( $classes ) {
+		if ( ! is_array( $classes ) ) {
+			$classes = array();
+		}
+
+		if ( $this->should_load_context( 'frontend' ) ) {
+			$classes[] = 'vazir-font-enabled';
+		}
+
+		return array_values( array_unique( $classes ) );
+	}
+
+	/**
+	 * Append admin body class when enabled.
+	 *
+	 * @param string $classes Existing admin body classes.
+	 * @return string
+	 */
+	public function filter_admin_body_class( $classes ) {
+		if ( ! is_string( $classes ) ) {
+			$classes = '';
+		}
+
+		if ( $this->should_load_context( 'admin' ) ) {
+			$classes = trim( $classes );
+
+			if ( '' !== $classes ) {
+				$classes .= ' ';
+			}
+
+			$classes .= 'vazir-font-enabled';
+		}
+
+		return $classes;
+	}
+
+	/**
+	 * Append login body class when enabled.
+	 *
+	 * @param array<string> $classes Login body classes.
+	 * @return array<string>
+	 */
+	public function filter_login_body_class( $classes ) {
+		if ( ! is_array( $classes ) ) {
+			$classes = array();
+		}
+
+		if ( $this->should_load_context( 'login' ) ) {
+			$classes[] = 'vazir-font-enabled';
+		}
+
+		return array_values( array_unique( $classes ) );
+	}
+
+	/**
 	 * Map the current filter to a loader context.
 	 *
 	 * @param string $filter Current filter name.
@@ -400,6 +465,20 @@ class VazirFont_Loader {
 			default:
 				return 'frontend';
 		}
+	}
+
+	/**
+	 * Retrieve style dependencies for the supplied context.
+	 *
+	 * @param string $context Context identifier.
+	 * @return array<string>
+	 */
+	private function get_style_dependencies( $context ) {
+		if ( 'admin' === $context ) {
+			return array( 'wp-admin', 'dashicons' );
+		}
+
+		return array();
 	}
 
 	/**
@@ -479,22 +558,50 @@ class VazirFont_Loader {
 	}
 
 	/**
+	 * Retrieve the font-family stack for Vazir fonts.
+	 *
+	 * @return string
+	 */
+	private function get_font_family() {
+		return apply_filters(
+			'vazir_font_family',
+			"'Vazir', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif"
+		);
+	}
+
+	/**
 	 * Build base font CSS for the supplied context.
 	 *
 	 * @param string $context Context identifier.
 	 * @return string
 	 */
 	private function get_base_font_css( $context ) {
-		$family = apply_filters(
-			'vazir_font_family',
-			"'Vazir', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif"
-		);
+		$family = $this->get_font_family();
 
 		if ( 'admin' === $context ) {
-			return "html body.wp-admin, #wpwrap, .wrap, input, textarea, select, button { font-family: {$family} !important; }\n";
+			return ".vazir-font-enabled,\n"
+				. ".vazir-font-enabled #wpwrap,\n"
+				. ".vazir-font-enabled .wrap,\n"
+				. ".vazir-font-enabled input,\n"
+				. ".vazir-font-enabled textarea,\n"
+				. ".vazir-font-enabled select,\n"
+				. ".vazir-font-enabled button {\n"
+				. "\tfont-family: {$family} !important;\n"
+				. "}\n"
+				. ".vazir-font-enabled .dashicons,\n"
+				. ".vazir-font-enabled .dashicons:before,\n"
+				. ".vazir-font-enabled .dashicons-before:before {\n"
+				. "\tfont-family: 'dashicons' !important;\n"
+				. "}\n";
 		}
 
-		return "html body, input, textarea, select, button { font-family: {$family}; }\n";
+		return ".vazir-font-enabled,\n"
+			. ".vazir-font-enabled input,\n"
+			. ".vazir-font-enabled textarea,\n"
+			. ".vazir-font-enabled select,\n"
+			. ".vazir-font-enabled button {\n"
+			. "\tfont-family: {$family};\n"
+			. "}\n";
 	}
 
 	/**
@@ -505,11 +612,17 @@ class VazirFont_Loader {
 	 * @return string
 	 */
 	private function build_font_css( $exclude_selectors, $base_selectors ) {
-		$font_stack = "font-family: 'Vazir', 'Tahoma', 'Iranian Sans', system-ui, -apple-system, sans-serif;";
-		$rules      = '';
+		$family = $this->get_font_family();
+		$rules  = '';
 
 		foreach ( $base_selectors as $selector ) {
-			$rules .= sprintf( '%1$s { %2$s }\n', $selector, $font_stack );
+			$scoped = $this->scope_selector( $selector );
+
+			if ( '' === $scoped ) {
+				continue;
+			}
+
+			$rules .= $scoped . " {\n\tfont-family: {$family};\n}\n";
 		}
 
 		if ( ! empty( $exclude_selectors ) ) {
@@ -520,15 +633,45 @@ class VazirFont_Loader {
 					continue;
 				}
 
-				$rules .= sprintf( '%1$s { font-family: inherit; }\n', $sanitized );
+				$scoped = $this->scope_selector( $sanitized );
+
+				if ( '' === $scoped ) {
+					continue;
+				}
+
+				$rules .= $scoped . " {\n\tfont-family: inherit;\n}\n";
 			}
 		}
 
 		if ( is_rtl() ) {
-			$rules .= "[dir='rtl'] body { letter-spacing: normal; }\n";
+			$rules .= "[dir='rtl'] .vazir-font-enabled {\n\tletter-spacing: normal;\n}\n";
 		}
 
 		return $rules;
+	}
+
+	/**
+	 * Scope a selector to the Vazir font enabled context.
+	 *
+	 * @param string $selector CSS selector.
+	 * @return string
+	 */
+	private function scope_selector( $selector ) {
+		$selector = trim( $selector );
+
+		if ( '' === $selector ) {
+			return '';
+		}
+
+		if ( 0 === strpos( $selector, '.vazir-font-enabled' ) ) {
+			return $selector;
+		}
+
+		if ( 0 === strpos( $selector, 'body' ) ) {
+			return '.vazir-font-enabled' . substr( $selector, 4 );
+		}
+
+		return '.vazir-font-enabled ' . $selector;
 	}
 
 	/**
