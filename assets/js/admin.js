@@ -21,7 +21,7 @@
         },
 
         handleWeightChange: function() {
-            var $preview = $('.font-preview-text p');
+            var $preview = $('.vazir-font-preview__text p');
             var selectedWeights = $('input[name="vazir_font_options[font_weights][]"]:checked').map(function() {
                 return $(this).val();
             }).get();
@@ -71,7 +71,7 @@
         },
 
         initFontPreview: function() {
-            var $preview = $('.font-preview-text');
+            var $preview = $('.vazir-font-preview__text');
             
             if ($preview.length) {
                 this.handleWeightChange();
