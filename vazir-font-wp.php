@@ -4,7 +4,7 @@
  * Plugin Name: Vazir Font for WordPress
  * Plugin URI: https://github.com/your-username/vazir-font-wp
  * Description: اضافه کردن فونت وزیر به تمام بخش‌های وردپرس شامل فرانت، ادمین و گرویتی فرمز
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: Your Name
  * Author URI: https://yoursite.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'VAZIR_FONT_VERSION', '1.1.0' );
+define( 'VAZIR_FONT_VERSION', '1.1.1' );
 define( 'VAZIR_FONT_PLUGIN_FILE', __FILE__ );
 define( 'VAZIR_FONT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'VAZIR_FONT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
