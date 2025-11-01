@@ -81,6 +81,15 @@ class VazirFont_Loader {
 	}
 
 	/**
+	 * Retrieve the active font weights for CSS generation.
+	 *
+	 * @return array<string>
+	 */
+	private function get_active_weights() {
+		return $this->get_selected_option_weights();
+	}
+
+	/**
 	 * Retrieve singleton instance.
 	 *
 	 * @return VazirFont_Loader
@@ -162,16 +171,22 @@ class VazirFont_Loader {
 	 * Output frontend inline styles.
 	 */
 	public function add_frontend_styles() {
-		$this->output_custom_styles( 'frontend' );
-		$this->output_custom_styles( 'frontend', $this->get_base_font_css( 'frontend' ) );
+		if ( ! $this->should_load_context( 'frontend' ) ) {
+			return;
+		}
+
+		$this->apply_styles_for_context( 'frontend' );
 	}
 
 	/**
 	 * Output admin inline styles.
 	 */
 	public function add_admin_styles() {
-		$this->output_custom_styles( 'admin' );
-		$this->output_custom_styles( 'admin', $this->get_base_font_css( 'admin' ) );
+		if ( ! $this->should_load_context( 'admin' ) ) {
+			return;
+		}
+
+		$this->apply_styles_for_context( 'admin' );
 	}
 
 	/**
@@ -189,6 +204,55 @@ class VazirFont_Loader {
 	}
 
 	/**
+	 * Apply font styles for the supplied context.
+	 *
+	 * @param string $context Context identifier.
+	 */
+	private function apply_styles_for_context( $context ) {
+		if ( ! $this->should_load_context( $context ) ) {
+			return;
+		}
+
+		$weights = $this->get_active_weights();
+		$version = VAZIR_FONT_VERSION . '.' . implode( '', $weights );
+		$handle  = 'vazir-font-' . $context;
+
+		wp_register_style(
+			$handle,
+			false,
+			$this->get_style_dependencies( $context ),
+			$version
+		);
+		wp_enqueue_style( $handle );
+
+		$font_css = self::generate_font_faces( $weights );
+		$context_css = $this->get_context_css( $context );
+		$base_css = $this->get_base_font_css( $context );
+
+		$css_parts = array();
+
+		foreach ( array( $font_css, $context_css, $base_css ) as $part ) {
+			if ( is_string( $part ) ) {
+				$part = trim( $part );
+			} else {
+				$part = '';
+			}
+
+			if ( '' !== $part ) {
+				$css_parts[] = $part;
+			}
+		}
+
+		if ( empty( $css_parts ) ) {
+			return;
+		}
+
+		$css = implode( "\n", $css_parts );
+
+		$this->output_custom_styles( $context, $css );
+	}
+
+	/**
 	 * Enqueue font files for the supplied context.
 	 *
 	 * @param string $context Context identifier.
@@ -201,6 +265,10 @@ class VazirFont_Loader {
 		$weights = $this->get_selected_option_weights();
 
 		$version = VAZIR_FONT_VERSION . '.' . implode( '', $weights );
+
+		if ( in_array( $context, array( 'frontend', 'admin' ), true ) ) {
+			return;
+		}
 
 		$handle = 'vazir-font-' . $context;
 
@@ -255,24 +323,7 @@ class VazirFont_Loader {
 		}
 
 		if ( null === $css ) {
-			$options           = VazirFontPlugin::get_options();
-			$exclude_selectors = isset( $options['exclude_selectors'] ) ? (array) $options['exclude_selectors'] : array();
-			$css               = '';
-
-			switch ( $context ) {
-				case 'frontend':
-					$css = $this->get_frontend_css( $exclude_selectors );
-					break;
-				case 'admin':
-					$css = $this->get_admin_css( $exclude_selectors );
-					break;
-				case 'login':
-					$css = $this->get_login_css( $exclude_selectors );
-					break;
-				case 'gravityforms':
-					$css = $this->get_gravityforms_css( $exclude_selectors );
-					break;
-			}
+			$css = $this->get_context_css( $context );
 		}
 
 		if ( ! is_string( $css ) || '' === trim( $css ) ) {
@@ -479,6 +530,35 @@ class VazirFont_Loader {
 		}
 
 		return array();
+	}
+
+	/**
+	 * Retrieve context-specific CSS.
+	 *
+	 * @param string $context Context identifier.
+	 * @return string
+	 */
+	private function get_context_css( $context ) {
+		$options           = VazirFontPlugin::get_options();
+		$exclude_selectors = isset( $options['exclude_selectors'] ) ? (array) $options['exclude_selectors'] : array();
+		$css               = '';
+
+		switch ( $context ) {
+			case 'frontend':
+				$css = $this->get_frontend_css( $exclude_selectors );
+				break;
+			case 'admin':
+				$css = $this->get_admin_css( $exclude_selectors );
+				break;
+			case 'login':
+				$css = $this->get_login_css( $exclude_selectors );
+				break;
+			case 'gravityforms':
+				$css = $this->get_gravityforms_css( $exclude_selectors );
+				break;
+		}
+
+		return $css;
 	}
 
 	/**
