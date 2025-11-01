@@ -283,15 +283,40 @@ class VazirFont_Loader {
 			$weights = array( '400' );
 		}
 
+		$font_dir = trailingslashit( VAZIR_FONT_PLUGIN_DIR ) . 'assets/fonts/';
+
 		foreach ( $weights as $weight ) {
 			if ( '' === $weight ) {
 				continue;
 			}
 
 			$font_name = 'vazir-' . $weight;
-			$src       = array(
-				"url('" . VAZIR_FONT_FONTS_URL . $font_name . ".woff2') format(\"woff2\")",
+			$sources   = array(
+				'woff2' => array(
+					'path'   => $font_dir . $font_name . '.woff2',
+					'format' => 'woff2',
+				),
+				'woff'  => array(
+					'path'   => $font_dir . $font_name . '.woff',
+					'format' => 'woff',
+				),
+				'ttf'   => array(
+					'path'   => $font_dir . $font_name . '.ttf',
+					'format' => 'truetype',
+				),
 			);
+
+			$src = array();
+
+			foreach ( $sources as $extension => $source ) {
+				if ( file_exists( $source['path'] ) ) {
+					$src[] = "url('" . esc_url_raw( VAZIR_FONT_FONTS_URL . $font_name . '.' . $extension ) . "') format(\"{$source['format']}\")";
+				}
+			}
+
+			if ( empty( $src ) ) {
+				continue;
+			}
 
 			$css .= "@font-face {\n";
 			$css .= "\tfont-family: 'Vazir';\n";
@@ -301,7 +326,6 @@ class VazirFont_Loader {
 			$css .= "\tsrc: " . implode( ",\n\t\t", $src ) . ";\n";
 			$css .= "}\n\n";
 		}
-
 		return $css;
 	}
 
