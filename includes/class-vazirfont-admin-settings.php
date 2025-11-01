@@ -210,7 +210,7 @@ class VazirFont_Admin_Settings {
 
 <div class="vazir-font-preview">
 <h3><?php esc_html_e( 'پیش‌نمایش فونت', 'vazir-font-wp' ); ?></h3>
-<div class="font-preview-text">
+<div class="vazir-font-preview__text">
 		<?php
 		$weights = array(
 			'300' => __( '300 (Light)', 'vazir-font-wp' ),
