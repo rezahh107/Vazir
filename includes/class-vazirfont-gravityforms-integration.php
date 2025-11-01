@@ -127,11 +127,12 @@ class VazirFont_GravityForms_Integration {
 
 	/**
 	 * Add Vazir styles into the Gravity Forms preview output.
+	 * Updated to ensure return type is always array.
 	 *
-	 * @param string $styles Existing preview styles.
+	 * @param array|string $styles Existing preview styles.
 	 * @param array  $form   Current form.
 	 * @param mixed  $lead   Submitted entry or null.
-	 * @return string
+	 * @return array
 	 */
 	public function filter_preview_styles( $styles, $form, $lead = null ) {
 		unset( $form, $lead );
@@ -151,13 +152,17 @@ class VazirFont_GravityForms_Integration {
 			return $styles;
 		}
 
-		$styles = trim( (string) $styles );
-
-		if ( '' !== $styles ) {
-			$styles .= "\n";
+		// Ensure $styles is an array
+		if ( is_string( $styles ) ) {
+			$styles = array( $styles );
+		} elseif ( ! is_array( $styles ) ) {
+			$styles = array();
 		}
 
-		return $styles . $css;
+		// Add the CSS as a new array item
+		$styles[] = $css;
+
+		return $styles;
 	}
 
 	/**
