@@ -18,15 +18,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Core plugin constants.
+ * Core plugin constants that are compile-time safe.
  */
 const VAZIR_FONT_VERSION        = '1.2.0';
 const VAZIR_FONT_PLUGIN_FILE    = __FILE__;
 const VAZIR_FONT_PLUGIN_DIR     = __DIR__ . '/';
-const VAZIR_FONT_PLUGIN_URL     = plugin_dir_url( __FILE__ );
-const VAZIR_FONT_ASSETS_URL     = VAZIR_FONT_PLUGIN_URL . 'assets/';
-const VAZIR_FONT_FONTS_URL      = VAZIR_FONT_ASSETS_URL . 'fonts/';
 
+/**
+ * Dynamic constants that require runtime functions.
+ */
+define( 'VAZIR_FONT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'VAZIR_FONT_ASSETS_URL', VAZIR_FONT_PLUGIN_URL . 'assets/' );
+define( 'VAZIR_FONT_FONTS_URL',  VAZIR_FONT_ASSETS_URL . 'fonts/' );
+
+/**
+ * Option and schedule constants (compile-time safe).
+ */
 const VAZIR_FONT_OPTION_NAME    = 'vazir_font_options';
 const VAZIR_FONT_CRON_HOOK      = 'vazir_font_clear_cache';
 const VAZIR_FONT_CRON_SCHEDULE  = 'weekly';
