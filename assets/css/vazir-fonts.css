@@ -1,28 +1,21 @@
-/* Vazir Font for WordPress - Main CSS */
-:root {
-    --vazir-font-family: 'Vazir', 'Tahoma', 'Iranian Sans', system-ui, -apple-system, sans-serif;
-}
+/* Vazir Font for WordPress – Fallback styles for legacy compatibility */
+/* Main styles are now injected inline by the plugin. */
 
-/* Base font styling */
-.vazir-font {
-    font-family: var(--vazir-font-family);
+/* Legacy class support – maps to new body class behavior */
+.vazir-font,
+.vazir-font-enabled {
     font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Loading state */
-.vazir-font-loading {
-    font-family: 'Tahoma', 'Iranian Sans', system-ui, -apple-system, sans-serif;
-}
-
-/* RTL support */
+/* RTL direction */
 [dir="rtl"] .vazir-font,
-.vazir-font[dir="rtl"] {
+[dir="rtl"] .vazir-font-enabled,
+.vazir-font[dir="rtl"],
+.vazir-font-enabled[dir="rtl"] {
     direction: rtl;
     text-align: right;
     letter-spacing: 0;
 }
-
-/* Font faces will be added inline by PHP */
