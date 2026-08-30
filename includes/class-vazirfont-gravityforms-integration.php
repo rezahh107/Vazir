@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class VazirFont_GravityForms_Integration {
 	private const STYLE_HANDLE = 'vazir-font-gravity-forms';
+	private const ADMIN_STYLE_HANDLE = 'vazir-font-admin-runtime';
 
 	private static ?self $instance = null;
 	private bool $gf_available = false;
@@ -103,11 +104,11 @@ final class VazirFont_GravityForms_Integration {
 	}
 
 	/**
-	 * Allowlist our registered style handle in Gravity Forms No Conflict Mode.
+	 * Allowlist plugin typography handles in Gravity Forms No Conflict Mode.
 	 *
-	 * The actual enqueue occurs through admin_enqueue_scripts on Gravity Forms
-	 * admin screens; this filter only grants the handle permission to survive
-	 * No Conflict Mode.
+	 * The Gravity Forms handle provides form-specific typography. When general
+	 * admin typography is enabled, the wp-admin runtime handle is also retained
+	 * so No Conflict Mode cannot remove typography from the Form Editor UI.
 	 *
 	 * @param string[] $styles Existing allowed handles.
 	 * @return string[]
@@ -116,8 +117,16 @@ final class VazirFont_GravityForms_Integration {
 		if ( ! $this->is_enabled() ) {
 			return $styles;
 		}
+
 		$this->register_style();
 		$styles[] = self::STYLE_HANDLE;
+
+		$options = VazirFontPlugin::get_options();
+		if ( ! empty( $options['enable_admin'] ) ) {
+			VazirFont_Loader::get_instance()->enqueue_admin_fonts();
+			$styles[] = self::ADMIN_STYLE_HANDLE;
+		}
+
 		return array_values( array_unique( $styles ) );
 	}
 
