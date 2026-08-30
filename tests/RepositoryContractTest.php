@@ -25,6 +25,16 @@ final class RepositoryContractTest extends TestCase {
 		$this->assertStringNotContainsString( "add_action( 'enqueue_block_editor_assets'", $source );
 	}
 
+	public function test_exclusions_are_negative_scope_not_font_resets(): void {
+		$source = file_get_contents( VAZIR_TEST_ROOT . '/includes/class-vazirfont-loader.php' );
+		$this->assertIsString( $source );
+		$this->assertStringContainsString( 'apply_exclusion_boundary', $source );
+		$this->assertStringContainsString( "':not(:where('", $source );
+		$this->assertStringContainsString( 'selector_targets_pseudo_element', $source );
+		$this->assertStringNotContainsString( '$rules .= $candidate . " {\\n\\tfont-family: inherit;\\n}\\n";', $source );
+		$this->assertStringContainsString( 'font-family: inherit !important;', $source );
+	}
+
 	public function test_unowned_gravity_forms_cache_and_cron_operations_are_absent(): void {
 		$source = file_get_contents( VAZIR_TEST_ROOT . '/includes/class-vazirfont-loader.php' );
 		$bootstrap = file_get_contents( VAZIR_TEST_ROOT . '/vazir-font-wp.php' );
