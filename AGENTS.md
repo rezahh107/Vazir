@@ -1,125 +1,159 @@
-# AGENTS.md — Vazir Font for WordPress (v5.2)
+# AGENTS.md — Vazir Font for WordPress
 
-Welcome! This document encodes the repository rules for both human contributors and autonomous agents. Follow every instruction in this file when you touch any file in this project.
+This document defines repository-specific contribution rules for human contributors and autonomous agents. Keep it synchronized with the runtime, CI, and release documentation.
 
 ## 1. Repository Snapshot
-- **Plugin slug:** `vazir-font-wp` (matches directory name)
+
+- **Plugin slug:** `vazir-font-wp`
 - **Primary entrypoint:** `vazir-font-wp.php`
-- **PHP namespace/prefix:** `VazirFont_`
-- **Current plugin version:** `1.1.0` (update header + `VAZIR_FONT_VERSION` together)
+- **Current plugin version:** `1.3.0`
+- **Minimum WordPress:** `6.7`
+- **Minimum PHP:** `7.4`
 - **Text domain:** `vazir-font-wp`
 - **Domain Path:** `/languages`
-- **Assets path:** `assets/`
-- **Autoloader:** SPL autoloader with `VazirFont_` prefix
+- **Class prefix:** `VazirFont_`
+- **Autoloader:** bounded SPL autoloader in `vazir-font-wp.php`
+- **Persisted option:** `vazir_font_options`
+- **Optional integration:** Gravity Forms
 
-## 2. Directory Expectations
-| Path | Purpose | Notes |
-| ---- | ------- | ----- |
-| `includes/` | PHP classes (`class-*.php`) | Guard every file with `defined( 'ABSPATH' ) || exit;`.
-| `assets/css/` | Shared stylesheets | Keep `vazir-fonts.css` generic; scope admin-only rules to `admin.css`.
-| `assets/js/` | Admin scripts | Wrap logic in IIFE; enqueue via `VazirFont_Admin_Settings::enqueueAdminAssets()` only where needed.
-| `assets/fonts/` | Bundled Vazir font binaries | Ship the SIL OFL license file when adding fonts.
-| `languages/` | Translation sources (`.pot`, `.po`, `.mo`) | Create if missing before shipping translations.
+When changing version metadata, update the plugin header and `VAZIR_FONT_VERSION` in `vazir-font-wp.php` together.
 
-## 3. Local Environment & Tooling
-1. PHP ≥ 7.4, WordPress ≥ 5.8 for runtime testing.
-2. Install dev tools via Composer:
-   ```bash
-   composer install
-   ```
-3. Run linting with WordPress Coding Standards and PHPCompatibility:
-   ```bash
-   vendor/bin/phpcs --standard=WordPress --extensions=php,inc .
-   ```
-   > For larger diffs add a project-specific `phpcs.xml.dist`; keep `vendor/` and `node_modules/` excluded.
-4. JavaScript/CSS linting is manual—keep changes small and document deviations in PRs.
-5. Optional: generate translations with `wp i18n make-pot` (WP-CLI) targeting `languages/vazir-font-wp.pot`.
+## 2. Runtime Architecture
 
-## 4. Coding Standards
-### PHP
-- Follow **PSR-12** formatting plus **WordPress Core/Docs/Extra** rules.
-- Use tabs for indentation, spaces for alignment.
-- Escape all output (`esc_html()`, `esc_attr()`, `esc_url()`, `wp_kses()` as appropriate).
-- Sanitize all option input via `sanitize_text_field`, `absint`, etc., before persisting.
-- Always check capabilities (`current_user_can( 'manage_options' )`) before rendering admin screens or mutating settings.
-- Prefer dependency-free solutions over new libraries unless justified.
-- Maintain Yoda conditions when comparing with literals.
+The plugin owns typography only. Preserve these boundaries:
 
-### JavaScript
-- Keep code ES5-compatible (for WordPress admin). No transpilation steps exist.
-- Wrap admin scripts in `(function( $ ) { ... })( jQuery );` and enable strict mode.
-- Provide translation-ready strings via `wp_localize_script()` before using them in JS (no hard-coded Persian strings).
+- WordPress frontend, wp-admin, login, Block Editor, and Site Editor typography is handled by `VazirFont_Loader`.
+- Editor content uses the current `enqueue_block_assets` path.
+- Gravity Forms compatibility is handled by `VazirFont_GravityForms_Integration` through WordPress/Gravity Forms style hooks and registered handles.
+- Do not introduce a second settings authority, JavaScript DOM typography engine, or Gravity Forms cache/file ownership.
+- Do not flush `GFCache`, delete Gravity Forms-generated CSS/transients, or add periodic Gravity Forms/font cleanup jobs.
 
-### CSS
-- Use BEM-ish utility classes prefixed with `.vazir-font-` for plugin-specific styling.
-- Place reusable variables in `:root` and prefer logical properties for RTL friendliness.
+## 3. Font Delivery Invariants
 
-## 5. Security Checklist
-- Block direct access at top of every PHP file (except the main plugin bootstrap).
-- Never echo unsanitized request data or option values.
-- Nonces are required for every state-changing admin action or AJAX endpoint.
-- Database access must go through `$wpdb->prepare()` or higher-level APIs.
-- Do not introduce arbitrary file operations; rely on WordPress APIs for uploads and filesystem writes.
+Bundled font assets are static Vazir WOFF2 files for weights `300`, `400`, `500`, `700`, and `900`.
 
-## 6. Performance Guidelines
-- Avoid flushing the global object cache unless absolutely necessary; provide granular hooks instead.
-- Load fonts conditionally: respect the user options that toggle frontend, admin, login, and Gravity Forms contexts.
-- Keep enqueued assets small; use `.min` variants if you introduce heavy dependencies.
-- Any scheduled events must register their schedule (`cron_schedules`) before use.
+Required behavior:
 
-## 7. Internationalization & RTL
-- Wrap every user-facing string with translation functions using the `vazir-font-wp` text domain.
-- Update/generate `languages/vazir-font-wp.pot` whenever strings change.
-- CSS must respect RTL context via `[dir="rtl"]` selectors or logical properties.
-- For JavaScript prompts, source localized strings via `wp_localize_script()` object keys.
+- generate `@font-face` sources only for packaged `.woff2` files;
+- retain `font-display: swap`;
+- do not add WOFF/TTF fallbacks unless matching packaged binaries are intentionally introduced and characterized;
+- do not add default preload behavior without measured justification;
+- keep the public `Vazir` family identity and `vazir_font_family` filter unless a separately characterized migration changes them;
+- keep `assets/fonts/OFL.txt` with bundled font files.
 
-## 8. Accessibility
-- Provide accessible labels for admin form controls (use `<label>` or `aria-` attributes).
-- Avoid color-only signals; ensure sufficient contrast.
-- Keyboard interactions in admin screens must remain functional.
+A Vazirmatn migration is a separate typography migration, not a cleanup side effect.
 
-## 9. Asset & License Rules
-- Fonts are licensed under **SIL Open Font License 1.1**; do not rename the typeface.
-- The plugin code is **GPLv2+**. All bundled third-party assets must be GPL-compatible.
-- `VazirFont_Loader::generateFontFaces()` currently emits `woff2`, `woff`, and `ttf` sources—ensure matching binaries exist (or update the method) whenever you adjust fonts.
+## 4. Exclusion Semantics
 
-## 10. Testing Expectations
-When touching business logic, provide at least one of:
-- Manual verification notes (steps, WP version, browser).
-- Automated tests (PHPUnit or integration) if feasible.
-- Screenshots for UI-affecting changes (attach via PR description or artifacts).
+`exclude_selectors` is the single exclusion authority.
 
-All tests must pass with `WP_DEBUG` enabled.
+Element-level exclusions are negative applicability boundaries: Vazir `font-family` enforcement must not target an excluded root or its descendants. Do not implement generic exclusions by emitting competing `font-family: inherit`, `initial`, `revert`, or `revert-layer` rules.
 
-## 11. Release Checklist
-1. Bump version in `vazir-font-plugin.php` header and `VAZIR_FONT_VERSION` constant.
-2. Update documentation (`README.md`, changelog section if added).
-3. Regenerate translation template (`languages/vazir-font-wp.pot`).
-4. Confirm fonts + OFL license are present and unchanged.
-5. Tag the release using semantic versioning (major.minor.patch).
+Pseudo-element exclusions must not be forced into relational element guards. Dedicated icon-family protections remain responsible for Dashicons and equivalent icon contexts.
 
-## 12. Git & PR Guidance
-- Keep commits scoped and well-described (English preferred for commit messages).
-- When modifying multiple areas (PHP, assets, docs) split into logical commits if possible.
-- Reference related issues or tickets in commit bodies.
-- Every PR must summarize changes, testing evidence, and potential impacts.
+The Gravity Forms adapter must consume the same `vazir_font_options['exclude_selectors']` authority. Do not introduce a second selector model or a PHP/DOM imitation of arbitrary CSS selector matching.
 
-## 13. File-Specific Notes
-- `includes/class-gravityforms-integration.php` - Currently checks `class_exists('GFForms')` before integration
-- `assets/css/admin.css` - Intentionally minimal; populate only with admin-specific styles
-- `assets/fonts/` - Contains Vazir font files (300,400,500,700,900 weights) + OFL.txt
-- Main plugin file: `vazir-font-wp.php` - Contains singleton pattern and option management
+## 5. Gravity Forms Compatibility
 
-## 14. Font Implementation Standards
+Preserve the registered-style-handle architecture around:
 
-### Font Loading Strategy
-- Primary format: `woff2` with `woff` fallbacks
-- Use `font-display: swap` in all @font-face declarations
-- Implement conditional loading based on `enable_frontend`, `enable_admin`, `enable_gravity_forms` options
+- `gform_enqueue_scripts`;
+- `gform_preview_styles`;
+- `gform_noconflict_styles`.
 
-### RTL Optimization
-- Respect `is_rtl()` for CSS direction handling
-- Use logical properties in CSS when possible
-- Test with both LTR and RTL themes
+`gform_field_content`, `gform_field_css_class`, and scoped Gravity Forms `!important` compatibility rules remain provisional compatibility mechanisms until licensed real-Gravity-Forms browser characterization proves they can be narrowed or removed safely.
 
-Adhering to this AGENTS.md keeps the plugin compliant with WordPress standards and ensures smooth collaboration. When in doubt, add clarifying comments or extend this file with new rules.
+Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms runtime proof. If licensed characterization is unavailable, report it as unavailable rather than PASS.
+
+## 6. Directory Expectations
+
+| Path | Purpose |
+| --- | --- |
+| `vazir-font-wp.php` | Plugin bootstrap, constants, options, autoloading |
+| `includes/class-vazirfont-loader.php` | WordPress typography loading and generated CSS |
+| `includes/class-vazirfont-admin-settings.php` | Admin settings and validation |
+| `includes/class-vazirfont-gravityforms-integration.php` | Optional Gravity Forms compatibility adapter |
+| `assets/fonts/` | Packaged Vazir WOFF2 binaries and OFL license |
+| `assets/css/` | Shared/static CSS assets |
+| `assets/js/` | Admin-side JavaScript |
+| `languages/` | Translation template/resources |
+| `tests/` | Runtime, repository, WordPress smoke, and browser characterization tests |
+| `docs/CHARACTERIZATION.md` | Evidence boundaries and characterization status |
+| `RELEASE.md` | Release verification checklist |
+
+## 7. Local Tooling
+
+Install development dependencies:
+
+```bash
+composer install
+```
+
+Run the repository checks:
+
+```bash
+composer test
+composer lint
+composer compat
+```
+
+`composer test` runs the standalone runtime contract and PHPUnit repository contracts. `composer lint` uses the repository PHPCS ruleset. `composer compat` checks the production PHP surfaces against the configured PHP compatibility range.
+
+## 8. Coding Standards
+
+The authoritative PHPCS configuration is `.phpcs.xml.dist`.
+
+- Follow `WordPress-Core` plus `PHPCompatibilityWP` as configured there.
+- Runtime PHP must remain compatible with PHP `7.4+` unless project requirements are deliberately changed.
+- Escape rendered output and sanitize persisted/admin input with appropriate WordPress APIs.
+- Require capabilities and nonces for state-changing admin operations.
+- Prefer bounded, dependency-free changes over new runtime libraries.
+- Keep production changes scoped; avoid unrelated refactors during defect repair.
+
+## 9. CI Expectations
+
+GitHub Actions runs on both `push` and `pull_request`.
+
+Current CI coverage includes:
+
+- PHP `7.4`, `8.3`, `8.4`, and `8.5`: syntax checks, `tests/runtime-contract.php`, PHPUnit;
+- standards: `composer lint` and `composer compat`;
+- WordPress smoke: `6.7/PHP 7.4`, `7.1/PHP 8.3`, `7.1/PHP 8.5`;
+- Chromium computed-style characterization on WordPress `7.1` with Twenty Twenty-One and Twenty Twenty-Five.
+
+The browser fixture covers WordPress typography/exclusion behavior and Dashicons. It does not install licensed Gravity Forms and must not be described as licensed Gravity Forms characterization.
+
+## 10. Testing Rules for Changes
+
+- Production behavior changes require a deterministic contract test where feasible.
+- CSS/typography changes that depend on cascade or computed style require browser characterization, not source inspection alone.
+- Changes to Gravity Forms compatibility should preserve Preview/No Conflict registered handles and include deterministic repository/runtime contracts.
+- Any claim about real Orbital/Theme Framework, Legacy Markup, Preview, Form Editor, AJAX, multi-page, validation rerender, conditional logic, or Gravity Forms icons requires a licensed Gravity Forms environment.
+- Keep exact-Head CI evidence bound to the commit being evaluated.
+
+## 11. Internationalization, Security, and Accessibility
+
+- Wrap user-facing strings with WordPress translation functions using `vazir-font-wp`.
+- Regenerate `languages/vazir-font-wp.pot` when translatable strings change.
+- Block direct access to include files with the established `ABSPATH` guard.
+- Do not add arbitrary filesystem operations or unowned cache cleanup.
+- Preserve accessible labels, keyboard behavior, and non-color-only status cues in admin UI.
+
+## 12. Release Rules
+
+Use `RELEASE.md` as the release gate.
+
+At minimum:
+
+- keep version metadata consistent;
+- run all repository checks;
+- verify packaged font URLs/assets;
+- run WordPress computed-style characterization;
+- run licensed current Gravity Forms characterization when making Gravity Forms release claims;
+- do not promote unavailable or stub-only Gravity Forms evidence to PASS;
+- build the production artifact without development-only tooling unless explicitly required;
+- publish only with Owner authorization.
+
+## 13. Documentation Maintenance
+
+When runtime behavior, supported versions, test matrices, option semantics, or release evidence changes, update the relevant documentation in the same change. Do not leave branch-specific language in long-lived `main` documentation after a change has merged.
