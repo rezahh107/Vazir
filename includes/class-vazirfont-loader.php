@@ -292,10 +292,10 @@ final class VazirFont_Loader {
 			. "\tfont-family: {$family};\n"
 			. "}\n"
 			// Twenty Twenty-One and similar classic themes set font-family directly
-			// on headings/text. Browser characterization proves a normal scoped
-			// inheritance rule loses that cascade; the !important is deliberately
-			// limited to textual elements and excludes icon-bearing generic nodes.
-			. $text_selector . " {\n\tfont-family: inherit !important;\n}\n";
+			// on headings/text. Browser characterization proves inheritance alone
+			// can resolve through a theme-styled ancestor, so this !important rule
+			// directly enforces Vazir only on non-excluded textual elements.
+			. $text_selector . " {\n\tfont-family: {$family} !important;\n}\n";
 	}
 
 	private function get_font_family(): string {
