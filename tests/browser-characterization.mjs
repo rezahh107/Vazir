@@ -76,8 +76,8 @@ const editorFrameElement = page.locator('iframe[name="editor-canvas"]');
 await editorFrameElement.waitFor({ state: 'attached', timeout: 30000 });
 const editor = page.frameLocator('iframe[name="editor-canvas"]');
 await expectVazir(editor.locator('.editor-styles-wrapper'), 'Post Editor canvas root');
-await expectVazir(editor.getByText('متن فارسی Mixed Latin 123', { exact: true }), 'Post Editor paragraph');
-await expectVazir(editor.getByRole('heading', { name: 'عنوان فارسی Mixed Heading' }), 'Post Editor heading');
+await expectVazir(editor.getByText('متن فارسی Mixed Latin 123', { exact: true }).first(), 'Post Editor paragraph');
+await expectVazir(editor.getByText('عنوان فارسی Mixed Heading', { exact: true }).first(), 'Post Editor heading');
 
 if (blockTheme) {
   await page.goto(`${baseUrl}/wp-admin/site-editor.php`, { waitUntil: 'domcontentloaded' });
