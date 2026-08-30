@@ -55,6 +55,16 @@ function vf_assert( bool $condition, string $message ): void {
 	fwrite( STDOUT, "PASS: {$message}\n" );
 }
 
+function vf_reset_gf_css_state( VazirFont_GravityForms_Integration $gf ): void {
+	$reflection = new ReflectionClass( $gf );
+	foreach ( [ 'cached_css' => null, 'inline_attached' => false ] as $property_name => $value ) {
+		$property = $reflection->getProperty( $property_name );
+		$property->setAccessible( true );
+		$property->setValue( $gf, $value );
+	}
+	$GLOBALS['vf_inline']['vazir-font-gravity-forms'] = [];
+}
+
 require dirname( __DIR__ ) . '/vazir-font-wp.php';
 VazirFontPlugin::get_instance()->init();
 
@@ -107,17 +117,36 @@ vf_assert( in_array( 'vazir-font-gravity-forms', $styles, true ), 'gform_preview
 $noconflict = $gf->add_noconflict_styles( [] );
 vf_assert( in_array( 'vazir-font-gravity-forms', $noconflict, true ), 'gform_noconflict_styles allowlists the same style handle' );
 
+VazirFontPlugin::update_options( [ 'exclude_selectors' => [ '.gform_wrapper', '[data-icon]:before' ] ] );
+vf_reset_gf_css_state( $gf );
 $gf->enqueue_gravityforms_assets( [], true );
-vf_assert( ! empty( $GLOBALS['vf_styles']['vazir-font-gravity-forms']['enqueued'] ), 'Gravity Forms frontend enqueue path runs without private-method fatal' );
-$gf_css = implode( "\n", $GLOBALS['vf_inline']['vazir-font-gravity-forms'] ?? [] );
-vf_assert( false !== strpos( $gf_css, '--gf-font-family-base' ), 'current Gravity Forms base font CSS API property is emitted' );
-vf_assert( false !== strpos( $gf_css, '.gform_wrapper' ), 'legacy/current wrapper compatibility CSS is retained' );
+vf_assert( ! empty( $GLOBALS['vf_styles']['vazir-font-gravity-forms']['enqueued'] ), 'Gravity Forms frontend enqueue path runs through the registered style handle' );
+$gf_root_css = implode( "\n", $GLOBALS['vf_inline']['vazir-font-gravity-forms'] ?? [] );
+$gf_root_guard = ':not(:where(.gform_wrapper, .gform_wrapper *)):not(:has(:where(.gform_wrapper)))';
+vf_assert( false !== strpos( $gf_root_css, '.gform_wrapper' . $gf_root_guard ), 'excluded .gform_wrapper cannot be a Gravity Forms Vazir enforcement root' );
+vf_assert( false !== strpos( $gf_root_css, '--gf-font-family-base' ), 'Theme Framework CSS-variable path remains emitted under exclusion-aware scope' );
+vf_assert( false === strpos( $gf_root_css, ".gform_wrapper {\n\tfont-family:" ), 'no unguarded Gravity Forms wrapper font-family rule remains' );
+
+VazirFontPlugin::update_options( [ 'exclude_selectors' => [ '.gfield_label', '.dashicons', '[data-icon]:before' ] ] );
+vf_reset_gf_css_state( $gf );
+$gf->enqueue_gravityforms_assets( [], true );
+$gf_descendant_css = implode( "\n", $GLOBALS['vf_inline']['vazir-font-gravity-forms'] ?? [] );
+$gf_descendant_guard = ':not(:where(.gfield_label, .gfield_label *, .dashicons, .dashicons *)):not(:has(:where(.gfield_label, .dashicons)))';
+vf_assert( false !== strpos( $gf_descendant_css, '.gform_wrapper .gfield_label' . $gf_descendant_guard ), 'excluded .gfield_label is removed from Gravity Forms font-family applicability' );
+vf_assert( false !== strpos( $gf_descendant_css, '.gform_wrapper .ginput_container input' . $gf_descendant_guard ), 'non-excluded Gravity Forms controls retain Vazir enforcement' );
+vf_assert( false !== strpos( $gf_descendant_css, "font-family: 'Vazir'" ), 'non-excluded Gravity Forms typography still receives Vazir' );
+vf_assert( false !== strpos( $gf_descendant_css, '--gf-font-family-base' ), 'Theme Framework CSS variable remains present for safe scopes' );
+vf_assert( false === strpos( $gf_descendant_css, '[data-icon]:before' . $gf_descendant_guard ), 'Gravity Forms negative guards do not force pseudo-elements into relational selectors' );
 
 $field_html = '<div style="color:red;font-family:Arial;font-size:14px">X</div>';
-$filtered = $gf->remove_inline_font_styles( $field_html, null, null, 0, 1 );
-vf_assert( false === stripos( $filtered, 'font-family' ) && false !== stripos( $filtered, 'color:red' ), 'field-content compatibility removes only inline font-family' );
+$preserved = $gf->remove_inline_font_styles( $field_html, null, null, 0, 1 );
+vf_assert( $field_html === $preserved, 'field-content compatibility preserves inline font-family whenever element-level exclusions are active' );
 
-vf_assert( isset( $GLOBALS['vf_filters']['gform_field_content'] ), 'field-content compatibility hook is retained pending browser characterization' );
+VazirFontPlugin::update_options( [ 'exclude_selectors' => [ '[data-icon]:before' ] ] );
+$filtered = $gf->remove_inline_font_styles( $field_html, null, null, 0, 1 );
+vf_assert( false === stripos( $filtered, 'font-family' ) && false !== stripos( $filtered, 'color:red' ), 'field-content compatibility removes only inline font-family when no element-level exclusion requires selector matching' );
+
+vf_assert( isset( $GLOBALS['vf_filters']['gform_field_content'] ), 'field-content compatibility hook remains registered with exclusion-safe behavior' );
 vf_assert( isset( $GLOBALS['vf_filters']['gform_field_css_class'] ), 'field-class compatibility hook is retained pending browser characterization' );
 
 $_POST['_wpnonce'] = 'test-nonce';
