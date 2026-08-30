@@ -37,6 +37,12 @@ await expectVazir(page.locator('#vf-textarea'), 'frontend textarea');
 await expectVazir(page.locator('#vf-select'), 'frontend select');
 await expectVazir(page.locator('#vf-button'), 'frontend button');
 
+const excludedText = page.locator('#vf-excluded-text');
+await excludedText.waitFor({ state: 'visible' });
+const excludedFamily = await familyOf(excludedText);
+assert.doesNotMatch(excludedFamily, /Vazir/i, `excluded component text must not resolve to Vazir; got ${excludedFamily}`);
+assert.match(excludedFamily, /monospace/i, `excluded component text must retain its explicit non-Vazir family; got ${excludedFamily}`);
+
 const pluginPreloads = await page.locator('link[rel="preload"][as="font"]').evaluateAll(nodes =>
   nodes.map(node => node.href).filter(href => /\/assets\/fonts\/vazir-/i.test(href))
 );
