@@ -13,7 +13,7 @@ The plugin is designed to cover:
 - Gravity Forms frontend, Preview, Form Editor, and No Conflict Mode through registered WordPress style handles;
 - currently supported Gravity Forms legacy/current wrapper markup.
 
-Automated PHP and repository contracts verify the loading/API paths. A real-WordPress smoke lane verifies bootstrap and enqueue behavior. Full browser/computed-style equivalence, icon rendering, and licensed Gravity Forms visual coverage remain separate characterization requirements; see `docs/CHARACTERIZATION.md`.
+Automated PHP and repository contracts verify the loading/API paths. Real-WordPress smoke lanes verify bootstrap and enqueue behavior, and Chromium computed-style lanes exercise WordPress frontend/login/admin/editor coverage on classic and block themes. Licensed Gravity Forms visual coverage remains a separate characterization requirement; see `docs/CHARACTERIZATION.md`.
 
 ## Font delivery
 
@@ -37,7 +37,7 @@ The adapter uses current Gravity Forms APIs for stylesheet delivery:
 - `gform_preview_styles`;
 - `gform_noconflict_styles`.
 
-`gform_field_content`, `gform_field_css_class`, and narrowly scoped Gravity Forms `!important` rules remain compatibility mechanisms until browser characterization proves equivalent rendering without them. They are not treated as permanently required.
+`gform_field_content`, `gform_field_css_class`, and narrowly scoped Gravity Forms `!important` rules remain compatibility mechanisms until licensed browser characterization proves equivalent rendering without them. They are not treated as permanently required.
 
 The plugin does not flush `GFCache`, delete Gravity Forms-generated CSS, delete Gravity Forms transients, or schedule periodic Gravity Forms/font cleanup.
 
@@ -62,6 +62,8 @@ The existing option schema is preserved:
 - `font_weights`;
 - `exclude_selectors`.
 
+`exclude_selectors` means that Vazir `font-family` enforcement must not target matching element roots or their descendants. The runtime implements this as a negative selector boundary; it does not emit competing `font-family` reset declarations for generic element exclusions.
+
 ## Development
 
 ```bash
@@ -71,7 +73,7 @@ composer lint
 composer compat
 ```
 
-`tests/runtime-contract.php` is a standalone contract harness that runs without a WordPress database. `tests/wordpress-smoke.php` is executed by CI against real WordPress installations. Full browser/visual and licensed Gravity Forms characterization are intentionally not represented by these smoke tests.
+`tests/runtime-contract.php` is a standalone contract harness that runs without a WordPress database. `tests/wordpress-smoke.php` is executed by CI against real WordPress installations. `tests/browser-characterization.mjs` verifies computed typography and icon behavior for current WordPress fixtures. Licensed Gravity Forms characterization is intentionally not represented by the unlicensed smoke/browser lanes.
 
 ## Licensing
 
