@@ -15,7 +15,7 @@ jobs:
       matrix:
         php: ['7.4', '8.3', '8.4', '8.5']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
@@ -29,12 +29,12 @@ jobs:
   standards:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           coverage: none
           tools: composer:v2
       - run: composer install --no-interaction --prefer-dist
-      - run: vendor/bin/phpcs -p
-      - run: vendor/bin/phpcs -p --standard=PHPCompatibilityWP --runtime-set testVersion 7.4-8.3 --extensions=php .
+      - run: composer lint
+      - run: composer compat
