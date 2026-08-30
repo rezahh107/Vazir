@@ -3,8 +3,7 @@
   <description>Production runtime coding and PHP-compatibility checks.</description>
 
   <file>vazir-font-wp.php</file>
-  <file>includes/class-vazirfont-loader.php</file>
-  <file>includes/class-vazirfont-gravityforms-integration.php</file>
+  <file>includes</file>
 
   <exclude-pattern>vendor/*</exclude-pattern>
   <exclude-pattern>tests/*</exclude-pattern>
