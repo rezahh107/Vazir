@@ -19,6 +19,7 @@ final class VazirFont_GravityForms_Integration {
 	private bool $gf_available = false;
 	private ?string $cached_css = null;
 	private bool $style_registered = false;
+	private bool $inline_attached = false;
 
 	private function __construct() {
 		$this->gf_available = $this->is_gravity_forms_active();
@@ -96,13 +97,17 @@ final class VazirFont_GravityForms_Integration {
 		}
 
 		VazirFont_Loader::get_instance()->mark_gravityforms_request();
-		$this->register_style();
+		$this->enqueue_style();
 		$styles[] = self::STYLE_HANDLE;
 		return array_values( array_unique( $styles ) );
 	}
 
 	/**
 	 * Allowlist our registered style handle in Gravity Forms No Conflict Mode.
+	 *
+	 * The actual enqueue occurs through admin_enqueue_scripts on Gravity Forms
+	 * admin screens; this filter only grants the handle permission to survive
+	 * No Conflict Mode.
 	 *
 	 * @param string[] $styles Existing allowed handles.
 	 * @return string[]
@@ -150,6 +155,11 @@ final class VazirFont_GravityForms_Integration {
 	private function enqueue_style(): void {
 		$this->register_style();
 		wp_enqueue_style( self::STYLE_HANDLE );
+
+		if ( ! $this->inline_attached ) {
+			wp_add_inline_style( self::STYLE_HANDLE, $this->get_gravityforms_css() );
+			$this->inline_attached = true;
+		}
 	}
 
 	private function register_style(): void {
@@ -158,7 +168,6 @@ final class VazirFont_GravityForms_Integration {
 		}
 
 		wp_register_style( self::STYLE_HANDLE, false, [], VAZIR_FONT_VERSION );
-		wp_add_inline_style( self::STYLE_HANDLE, $this->get_gravityforms_css() );
 		$this->style_registered = true;
 	}
 
