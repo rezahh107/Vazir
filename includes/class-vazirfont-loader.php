@@ -431,8 +431,8 @@ final class VazirFont_Loader {
 
 	/**
 	 * Prevent a Vazir enforcement selector from matching an excluded root or any
-	 * element below an excluded root. :where() keeps the exclusion list at zero
-	 * specificity so settings do not accidentally strengthen plugin selectors.
+	 * element below an excluded root. :where() accepts a complex selector list and
+	 * contributes zero specificity, so settings do not strengthen plugin rules.
 	 *
 	 * @param string[] $exclude_selectors Valid element-level exclusions.
 	 */
@@ -441,10 +441,13 @@ final class VazirFont_Loader {
 			return $selector;
 		}
 
-		$exclusion_list = implode( ', ', $exclude_selectors );
-		return $selector
-			. ':not(:where(' . $exclusion_list . '))'
-			. ':not(:where(' . $exclusion_list . ') *)';
+		$blocked_selectors = [];
+		foreach ( $exclude_selectors as $exclude_selector ) {
+			$blocked_selectors[] = $exclude_selector;
+			$blocked_selectors[] = $exclude_selector . ' *';
+		}
+
+		return $selector . ':not(:where(' . implode( ', ', $blocked_selectors ) . '))';
 	}
 
 	/**
