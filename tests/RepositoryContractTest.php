@@ -32,7 +32,7 @@ final class RepositoryContractTest extends TestCase {
 		$this->assertStringContainsString( "':not(:where('", $source );
 		$this->assertStringContainsString( 'selector_targets_pseudo_element', $source );
 		$this->assertStringNotContainsString( '$rules .= $candidate . " {\\n\\tfont-family: inherit;\\n}\\n";', $source );
-		$this->assertStringContainsString( 'font-family: inherit !important;', $source );
+		$this->assertStringContainsString( '$text_selector . " {\\n\\tfont-family: {$family} !important;\\n}\\n";', $source );
 	}
 
 	public function test_unowned_gravity_forms_cache_and_cron_operations_are_absent(): void {
