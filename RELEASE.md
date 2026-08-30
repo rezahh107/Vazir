@@ -12,9 +12,10 @@
 4. Verify every generated `@font-face` URL resolves to a packaged WOFF2 asset.
 5. Verify default output contains no font preload unless a measured release requirement explicitly adds one.
 6. Test WordPress frontend, wp-admin, login, Block Editor iframe, and Site Editor canvas.
-7. With a licensed current Gravity Forms build, test Orbital/Theme Framework, supported Legacy Markup, Preview, Form Editor, No Conflict Mode, AJAX, multi-page navigation, validation rerenders, and conditional logic.
-8. Inspect computed `font-family` on representative text/form controls and verify Dashicons/Gravity Forms icons remain intact.
-9. Compare font request count/bytes and ensure no duplicate downloads.
-10. Verify no Gravity Forms cache/file deletion and no periodic font cleanup cron are present.
-11. Build the production artifact without `vendor/`, tests, CI files, or development tooling unless explicitly required by the release process.
-12. Do not publish or merge without Owner authorization.
+7. Verify `exclude_selectors` as a negative applicability boundary: an excluded component with an explicit non-Vazir family must retain that family while neighboring text remains Vazir; no generic exclusion `font-family` reset may be emitted.
+8. With a licensed current Gravity Forms build, test Orbital/Theme Framework, supported Legacy Markup, Preview, Form Editor, No Conflict Mode, AJAX, multi-page navigation, validation rerenders, and conditional logic.
+9. Inspect computed `font-family` on representative text/form controls and verify Dashicons/Gravity Forms icons remain intact.
+10. Compare font request count/bytes and ensure no duplicate downloads.
+11. Verify no Gravity Forms cache/file deletion and no periodic font cleanup cron are present.
+12. Build the production artifact without `vendor/`, tests, CI files, or development tooling unless explicitly required by the release process.
+13. Do not publish or merge without Owner authorization.
