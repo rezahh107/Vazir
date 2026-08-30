@@ -78,7 +78,7 @@ vf_assert( ! isset( $GLOBALS['vf_actions']['gform_post_render'] ), 'deprecated J
 
 VazirFontPlugin::update_options(
 	[
-		'exclude_selectors' => [ '.vf-excluded-component', '.dashicons', '[data-icon]:before' ],
+		'exclude_selectors' => [ '.vf-excluded-component, [data-icon]:before', '.dashicons' ],
 	]
 );
 
@@ -87,7 +87,7 @@ vf_assert( isset( $GLOBALS['vf_styles']['vazir-font-frontend'] ) && $GLOBALS['vf
 vf_assert( ! isset( $GLOBALS['vf_preloads'] ), 'no default preload path is emitted' );
 
 $frontend_css = implode( "\n", $GLOBALS['vf_inline']['vazir-font-frontend'] ?? [] );
-vf_assert( false !== strpos( $frontend_css, ':not(:where(.vf-excluded-component, .dashicons))' ), 'frontend Vazir rules exclude configured element roots by predicate' );
+vf_assert( false !== strpos( $frontend_css, ':not(:where(.vf-excluded-component, .dashicons))' ), 'frontend Vazir rules preserve element selectors from mixed lists and exclude configured roots by predicate' );
 vf_assert( false !== strpos( $frontend_css, ':not(:where(.vf-excluded-component, .dashicons) *)' ), 'frontend Vazir rules exclude descendants below configured roots' );
 vf_assert( false === strpos( $frontend_css, ".vazir-font-enabled .vf-excluded-component {\n\tfont-family: inherit;" ), 'frontend exclusions do not emit competing font-family reset rules' );
 vf_assert( false !== strpos( $frontend_css, 'font-family: inherit !important;' ), 'narrow frontend theme override remains present for non-excluded text' );
