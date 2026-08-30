@@ -6,34 +6,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Loads Vazir font assets and inline CSS across WordPress contexts.
+ * Loads bundled Vazir font assets across WordPress contexts.
  *
- * @package Vazir_Font_WP
+ * The broad admin rules are intentionally retained as compatibility behavior
+ * until browser characterization can prove a lower-specificity replacement is
+ * rendering-equivalent across wp-admin and third-party controls.
  */
 final class VazirFont_Loader {
-
-	/**
-	 * Singleton instance.
-	 */
 	private static ?self $instance = null;
-
-	/**
-	 * Cached selected font weights for current request.
-	 *
-	 * @var string[]|null
-	 */
 	private ?array $selected_weights = null;
-
-	/**
-	 * Whether Gravity Forms assets were requested in this request.
-	 */
 	private bool $gravityforms_requested = false;
+	private array $inline_handles = [];
 
-	/**
-	 * Supported font weights.
-	 *
-	 * @var array<string, string>
-	 */
 	private array $supported_weights = [
 		'300' => 'Light',
 		'400' => 'Regular',
@@ -42,28 +26,16 @@ final class VazirFont_Loader {
 		'900' => 'Black',
 	];
 
-	/**
-	 * Private constructor.
-	 */
 	private function __construct() {
 		$this->init_hooks();
 	}
 
-	/**
-	 * Prevent cloning.
-	 */
 	private function __clone() {}
 
-	/**
-	 * Prevent unserialization.
-	 */
 	public function __wakeup(): void {
 		throw new RuntimeException( 'Cannot unserialize VazirFont_Loader singleton.' );
 	}
 
-	/**
-	 * Get singleton instance.
-	 */
 	public static function get_instance(): self {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
@@ -71,202 +43,87 @@ final class VazirFont_Loader {
 		return self::$instance;
 	}
 
-	/**
-	 * Register all hooks.
-	 */
 	private function init_hooks(): void {
-		// Frontend.
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_frontend_fonts' ], 5 );
-		add_action( 'wp_head', [ $this, 'print_frontend_inline_css' ], 20 );
-
-		// Admin.
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_fonts' ], 5 );
-		add_action( 'admin_head', [ $this, 'print_admin_inline_css' ], 20 );
-
-		// Login.
 		add_action( 'login_enqueue_scripts', [ $this, 'enqueue_login_fonts' ], 5 );
-		add_action( 'login_head', [ $this, 'print_login_inline_css' ], 20 );
 
-		// Block editor.
-		add_action( 'enqueue_block_editor_assets', [ $this, 'enqueue_block_editor_fonts' ], 5 );
+		// WordPress 6.3+ loads enqueue_block_assets into the editor content iframe.
+		// WordPress 7.1 always iframes the post editor, matching Site Editor behavior.
+		add_action( 'enqueue_block_assets', [ $this, 'enqueue_editor_content_fonts' ], 5 );
 
-		// Cache clearing hook.
-		add_action( VAZIR_FONT_CRON_HOOK, [ $this, 'clear_cache' ] );
-
-		// Body classes.
 		add_filter( 'body_class', [ $this, 'filter_body_class' ] );
 		add_filter( 'admin_body_class', [ $this, 'filter_admin_body_class' ] );
 		add_filter( 'login_body_class', [ $this, 'filter_login_body_class' ] );
 	}
 
-	/**
-	 * Mark that Gravity Forms is being rendered (used for body classes).
-	 */
 	public function mark_gravityforms_request(): void {
 		$this->gravityforms_requested = true;
 	}
 
-	/**
-	 * Enqueue frontend assets (preload + font files).
-	 */
 	public function enqueue_frontend_fonts(): void {
 		if ( ! $this->should_load_context( 'frontend' ) ) {
 			return;
 		}
-		$this->enqueue_font_files( 'frontend' );
-		$this->add_font_preload();
+		$this->enqueue_inline_style( 'vazir-font-frontend', $this->get_inline_css( 'frontend' ) );
 	}
 
-	/**
-	 * Enqueue admin assets.
-	 */
 	public function enqueue_admin_fonts(): void {
 		if ( ! $this->should_load_context( 'admin' ) ) {
 			return;
 		}
-		$this->enqueue_font_files( 'admin' );
+		$this->enqueue_inline_style( 'vazir-font-admin-runtime', $this->get_inline_css( 'admin' ) );
 	}
 
-	/**
-	 * Enqueue login assets.
-	 */
 	public function enqueue_login_fonts(): void {
 		if ( ! $this->should_load_context( 'login' ) ) {
 			return;
 		}
-		$this->enqueue_font_files( 'login' );
+		$this->enqueue_inline_style( 'vazir-font-login', $this->get_inline_css( 'login' ) );
 	}
 
 	/**
-	 * Enqueue block editor assets.
+	 * Enqueue typography inside the block/Site Editor content canvas.
+	 *
+	 * enqueue_block_assets runs on both frontend and editor; this plugin already
+	 * has a dedicated frontend loader, so the admin check keeps this copy limited
+	 * to editor content and avoids duplicate frontend output.
 	 */
-	public function enqueue_block_editor_fonts(): void {
-		if ( ! $this->should_load_context( 'block_editor' ) ) {
+	public function enqueue_editor_content_fonts(): void {
+		if ( ! is_admin() || ! $this->should_load_context( 'block_editor' ) ) {
 			return;
 		}
-		$this->enqueue_font_files( 'block_editor' );
-
-		$handle = 'vazir-font-block-editor-inline';
-		wp_register_style( $handle, false, [], VAZIR_FONT_VERSION );
-		wp_enqueue_style( $handle );
-		wp_add_inline_style( $handle, $this->get_inline_css( 'frontend' ) );
+		$this->enqueue_inline_style( 'vazir-font-editor-content', $this->get_inline_css( 'editor' ) );
 	}
 
 	/**
-	 * Print frontend inline CSS.
+	 * Public read-only font-face surface for compatibility adapters.
 	 */
-	public function print_frontend_inline_css(): void {
-		if ( ! $this->should_load_context( 'frontend' ) ) {
-			return;
-		}
-		$this->print_inline_style_tag( 'frontend' );
+	public function get_font_face_css(): string {
+		return $this->generate_font_faces( $this->get_selected_weights() );
 	}
 
 	/**
-	 * Print admin inline CSS.
-	 */
-	public function print_admin_inline_css(): void {
-		if ( ! $this->should_load_context( 'admin' ) ) {
-			return;
-		}
-		$this->print_inline_style_tag( 'admin' );
-	}
-
-	/**
-	 * Print login inline CSS.
-	 */
-	public function print_login_inline_css(): void {
-		if ( ! $this->should_load_context( 'login' ) ) {
-			return;
-		}
-		$this->print_inline_style_tag( 'login' );
-	}
-
-	/**
-	 * Render inline style tag for a given context.
-	 */
-	private function print_inline_style_tag( string $context ): void {
-		$css = $this->get_inline_css( $context );
-		if ( '' === trim( $css ) ) {
-			return;
-		}
-		// CSS already sanitized and validated via build_font_css().
-		echo '<style id="vazir-font-' . esc_attr( $context ) . '-inline-css">' . "\n" . $css . "\n</style>\n";
-	}
-
-	/**
-	 * Enqueue font faces for contexts that need a dedicated style handle.
-	 */
-	private function enqueue_font_files( string $context ): void {
-		$weights = $this->get_selected_weights();
-		if ( [] === $weights ) {
-			return;
-		}
-
-		// Frontend & admin use only inline CSS (no separate handle).
-		if ( in_array( $context, [ 'frontend', 'admin' ], true ) ) {
-			return;
-		}
-
-		$version = VAZIR_FONT_VERSION . '.' . implode( '', $weights );
-		$handle  = 'vazir-font-' . $context;
-
-		wp_register_style( $handle, false, [], $version );
-		wp_enqueue_style( $handle );
-		wp_add_inline_style( $handle, $this->generate_font_faces( $weights ) );
-	}
-
-	/**
-	 * Add preload links for selected font weights (frontend only).
-	 */
-	private function add_font_preload(): void {
-		$weights = $this->get_selected_weights();
-		if ( [] === $weights ) {
-			return;
-		}
-
-		$order = [ '400', '700', '500', '300', '900' ];
-		foreach ( $order as $weight ) {
-			if ( ! in_array( $weight, $weights, true ) ) {
-				continue;
-			}
-			$url = VAZIR_FONT_FONTS_URL . 'vazir-' . $weight . '.woff2';
-			echo '<link rel="preload" href="' . esc_url( $url ) . '" as="font" type="font/woff2" crossorigin="anonymous">' . "\n";
-		}
-	}
-
-	/**
-	 * Get selected and validated font weights.
+	 * Public read-only selected weight surface for compatibility adapters/tests.
 	 *
 	 * @return string[]
 	 */
-	private function get_selected_weights(): array {
+	public function get_selected_weights(): array {
 		if ( null !== $this->selected_weights ) {
 			return $this->selected_weights;
 		}
 
 		$options = VazirFontPlugin::get_options();
 		$weights = $options['font_weights'] ?? [];
-
 		if ( ! is_array( $weights ) ) {
 			$weights = [];
 		}
 
 		$weights = array_map( 'strval', $weights );
-		$weights = array_values(
-			array_intersect(
-				$weights,
-				array_keys( $this->supported_weights )
-			)
-		);
-
-		$weights = array_values( array_unique( $weights ) );
-
+		$weights = array_values( array_unique( array_intersect( $weights, array_keys( $this->supported_weights ) ) ) );
 		if ( [] === $weights ) {
 			$weights = [ '400' ];
 		}
-
-		// Ensure '400' (Regular) is always present.
 		if ( ! in_array( '400', $weights, true ) ) {
 			array_unshift( $weights, '400' );
 			$weights = array_values( array_unique( $weights ) );
@@ -276,12 +133,24 @@ final class VazirFont_Loader {
 		return $weights;
 	}
 
-	/**
-	 * Determine whether a context should load.
-	 */
+	private function enqueue_inline_style( string $handle, string $css ): void {
+		if ( '' === trim( $css ) ) {
+			return;
+		}
+
+		if ( isset( $this->inline_handles[ $handle ] ) ) {
+			return;
+		}
+
+		$version = VAZIR_FONT_VERSION . '.' . implode( '', $this->get_selected_weights() );
+		wp_register_style( $handle, false, [], $version );
+		wp_enqueue_style( $handle );
+		wp_add_inline_style( $handle, $css );
+		$this->inline_handles[ $handle ] = true;
+	}
+
 	private function should_load_context( string $context ): bool {
 		$options = VazirFontPlugin::get_options();
-
 		switch ( $context ) {
 			case 'frontend':
 				return ! empty( $options['enable_frontend'] );
@@ -292,75 +161,47 @@ final class VazirFont_Loader {
 			case 'gravityforms':
 				return ! empty( $options['enable_gravity_forms'] );
 			default:
-				return true;
+				return false;
 		}
 	}
 
-	/**
-	 * Get complete inline CSS for a context.
-	 */
 	private function get_inline_css( string $context ): string {
-		$weights = $this->get_selected_weights();
-
 		$parts = [
-			$this->generate_font_faces( $weights ),
+			$this->get_font_face_css(),
 			$this->get_context_css( $context ),
 			$this->get_base_font_css( $context ),
 		];
-
 		$parts = array_filter( array_map( 'trim', $parts ) );
-		if ( empty( $parts ) ) {
-			return '';
-		}
-
 		return implode( "\n\n", $parts );
 	}
 
 	/**
-	 * Generate @font-face declarations for selected weights.
+	 * Generate only sources that physically exist in the package.
 	 *
-	 * @param string[] $weights
+	 * @param string[] $weights Selected weights.
 	 */
 	private function generate_font_faces( array $weights ): string {
-		if ( empty( $weights ) ) {
+		if ( [] === $weights ) {
 			$weights = [ '400' ];
 		}
 
 		$css = '';
 		foreach ( $weights as $weight ) {
-			$font_name = 'vazir-' . $weight;
-			$src_parts = [];
-
-			$extensions = [
-				'woff2' => 'woff2',
-				'woff'  => 'woff',
-				'ttf'   => 'truetype',
-			];
-
-			foreach ( $extensions as $ext => $format ) {
-				$url = VAZIR_FONT_FONTS_URL . $font_name . '.' . $ext;
-				$src_parts[] = "url('" . esc_url( $url ) . "') format('{$format}')";
-			}
-
-			if ( empty( $src_parts ) ) {
+			if ( ! isset( $this->supported_weights[ $weight ] ) ) {
 				continue;
 			}
-
+			$url = VAZIR_FONT_FONTS_URL . 'vazir-' . $weight . '.woff2';
 			$css .= "@font-face {\n";
 			$css .= "\tfont-family: 'Vazir';\n";
 			$css .= "\tfont-style: normal;\n";
 			$css .= "\tfont-weight: {$weight};\n";
 			$css .= "\tfont-display: swap;\n";
-			$css .= "\tsrc: " . implode( ",\n\t\t", $src_parts ) . ";\n";
+			$css .= "\tsrc: url('" . esc_url( $url ) . "') format('woff2');\n";
 			$css .= "}\n\n";
 		}
-
 		return $css;
 	}
 
-	/**
-	 * Get context‑specific CSS (selectors for font application).
-	 */
 	private function get_context_css( string $context ): string {
 		$options = VazirFontPlugin::get_options();
 		$exclude = $options['exclude_selectors'] ?? [];
@@ -370,54 +211,18 @@ final class VazirFont_Loader {
 
 		switch ( $context ) {
 			case 'frontend':
-				$base = [
-					'body',
-					'button',
-					'input',
-					'select',
-					'textarea',
-					'.editor-styles-wrapper',
-				];
-				return $this->build_font_css( $exclude, $base );
+				return $this->build_font_css( $exclude, [ 'body', 'button', 'input', 'select', 'textarea' ], true );
 			case 'admin':
-				$base = [
-					'body.wp-admin',
-					'#wpadminbar',
-					'.wrap',
-					'.wp-core-ui .button',
-					'.wp-core-ui input',
-				];
-				return $this->build_font_css( $exclude, $base );
+				return $this->build_font_css( $exclude, [ 'body.wp-admin', '#wpadminbar', '.wrap', '.wp-core-ui .button', '.wp-core-ui input' ], true );
 			case 'login':
-				$base = [
-					'body.login',
-					'#loginform',
-					'#loginform input',
-					'.message',
-				];
-				return $this->build_font_css( $exclude, $base );
-			case 'gravityforms':
-				$base = [
-					'.gform_wrapper',
-					'.gform_wrapper .gfield_label',
-					'.gform_wrapper .ginput_container input',
-					'.gform_wrapper .ginput_container textarea',
-					'.gform_wrapper .ginput_container select',
-					'.gform_wrapper .gform_footer input[type="submit"]',
-					'.gform_wrapper .gform_button',
-					'.gform_wrapper .gform_page_footer input',
-					'.gform_wrapper.gravity-theme .gfield_label',
-					'.gform_wrapper.gravity-theme .ginput_complex input',
-				];
-				return $this->build_font_css( $exclude, $base );
+				return $this->build_font_css( $exclude, [ 'body.login', '#loginform', '#loginform input', '.message' ], true );
+			case 'editor':
+				return $this->build_font_css( $exclude, [ '.editor-styles-wrapper', '.editor-styles-wrapper button', '.editor-styles-wrapper input', '.editor-styles-wrapper select', '.editor-styles-wrapper textarea' ], false );
 			default:
 				return '';
 		}
 	}
 
-	/**
-	 * Get base font CSS that applies to generic selectors and resets icons.
-	 */
 	private function get_base_font_css( string $context ): string {
 		$family = $this->get_font_family();
 
@@ -438,6 +243,11 @@ final class VazirFont_Loader {
 				. "}\n";
 		}
 
+		if ( 'editor' === $context ) {
+			return ".editor-styles-wrapper {\n\tfont-family: {$family};\n}\n"
+				. ".editor-styles-wrapper :where(input, textarea, select, button) {\n\tfont-family: inherit;\n}\n";
+		}
+
 		return ".vazir-font-enabled,\n"
 			. ".vazir-font-enabled input,\n"
 			. ".vazir-font-enabled textarea,\n"
@@ -447,9 +257,6 @@ final class VazirFont_Loader {
 			. "}\n";
 	}
 
-	/**
-	 * Get font-family stack with filter.
-	 */
 	private function get_font_family(): string {
 		return apply_filters(
 			'vazir_font_family',
@@ -458,181 +265,96 @@ final class VazirFont_Loader {
 	}
 
 	/**
-	 * Build CSS rules for given base selectors + exclude selectors.
-	 *
-	 * @param string[] $exclude_selectors
-	 * @param string[] $base_selectors
+	 * @param string[] $exclude_selectors Exclusions from settings.
+	 * @param string[] $base_selectors Base selectors for the context.
 	 */
-	private function build_font_css( array $exclude_selectors, array $base_selectors ): string {
+	private function build_font_css( array $exclude_selectors, array $base_selectors, bool $scope ): string {
 		$family = $this->get_font_family();
 		$rules  = '';
 
 		foreach ( $base_selectors as $selector ) {
-			$scoped = $this->scope_selector( $selector );
-			$scoped = $this->sanitize_css_selector( $scoped );
-			if ( '' === $scoped || ! $this->is_valid_css_selector( $scoped ) ) {
+			$candidate = $scope ? $this->scope_selector( $selector ) : $selector;
+			$candidate = $this->sanitize_css_selector( $candidate );
+			if ( '' === $candidate || ! $this->is_valid_css_selector( $candidate ) ) {
 				continue;
 			}
-			// Selector already validated – safe to output without escaping.
-			$rules .= $scoped . " {\n\tfont-family: {$family};\n}\n";
+			$rules .= $candidate . " {\n\tfont-family: {$family};\n}\n";
 		}
 
 		foreach ( $exclude_selectors as $selector ) {
-			$sanitized = $this->sanitize_css_selector( $selector );
+			$sanitized = $this->sanitize_css_selector( (string) $selector );
 			if ( '' === $sanitized ) {
 				continue;
 			}
-			$scoped = $this->scope_selector( $sanitized );
-			$scoped = $this->sanitize_css_selector( $scoped );
-			if ( '' === $scoped || ! $this->is_valid_css_selector( $scoped ) ) {
+			$candidate = $scope ? $this->scope_selector( $sanitized ) : '.editor-styles-wrapper ' . $sanitized;
+			$candidate = $this->sanitize_css_selector( $candidate );
+			if ( '' === $candidate || ! $this->is_valid_css_selector( $candidate ) ) {
 				continue;
 			}
-			$rules .= $scoped . " {\n\tfont-family: inherit;\n}\n";
+			$rules .= $candidate . " {\n\tfont-family: inherit;\n}\n";
 		}
 
-		if ( is_rtl() ) {
-			$rules .= "[dir='rtl'] .vazir-font-enabled {\n\tletter-spacing: normal;\n}\n";
+		if ( function_exists( 'is_rtl' ) && is_rtl() ) {
+			$rules .= $scope
+				? "[dir='rtl'] .vazir-font-enabled {\n\tletter-spacing: normal;\n}\n"
+				: "[dir='rtl'] .editor-styles-wrapper {\n\tletter-spacing: normal;\n}\n";
 		}
 
 		return $rules;
 	}
 
-	/**
-	 * Scope a selector under .vazir-font-enabled.
-	 */
 	private function scope_selector( string $selector ): string {
 		$selector = trim( $selector );
 		if ( '' === $selector ) {
 			return '';
 		}
-		if ( strpos( $selector, '.vazir-font-enabled' ) === 0 ) {
+		if ( 0 === strpos( $selector, '.vazir-font-enabled' ) ) {
 			return $selector;
 		}
-		if ( strpos( $selector, 'body' ) === 0 ) {
+		if ( 0 === strpos( $selector, 'body' ) ) {
 			return '.vazir-font-enabled' . substr( $selector, 4 );
 		}
 		return '.vazir-font-enabled ' . $selector;
 	}
 
-	/**
-	 * Sanitize a CSS selector (remove dangerous patterns).
-	 */
 	private function sanitize_css_selector( string $selector ): string {
 		$selector = str_ireplace( [ '@import', 'url(' ], '', $selector );
-		$selector = preg_replace( '/\/\*.*?\*\//', '', $selector );
+		$selector = (string) preg_replace( '/\/\*.*?\*\//', '', $selector );
 		$selector = str_replace( [ '{', '}', ';' ], ' ', $selector );
-		$selector = preg_replace( '/[^a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~]/', '', $selector );
-		$selector = trim( preg_replace( '/\s+/', ' ', $selector ) );
-
-		if ( strlen( $selector ) > 200 ) {
-			$selector = substr( $selector, 0, 200 );
-		}
-		return $selector;
+		$selector = (string) preg_replace( '/[^a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~=\"\'\^$|]/', '', $selector );
+		$selector = trim( (string) preg_replace( '/\s+/', ' ', $selector ) );
+		return strlen( $selector ) > 200 ? substr( $selector, 0, 200 ) : $selector;
 	}
 
-	/**
-	 * Validate that a sanitized selector is safe to output.
-	 */
 	private function is_valid_css_selector( string $selector ): bool {
-		if ( '' === $selector ) {
+		if ( '' === $selector || false !== strpos( $selector, '{' ) || false !== strpos( $selector, '}' ) || false !== strpos( $selector, ';' ) || false !== strpos( $selector, '/*' ) ) {
 			return false;
 		}
-		if ( strpos( $selector, '{' ) !== false || strpos( $selector, '}' ) !== false || strpos( $selector, ';' ) !== false ) {
+		if ( ! preg_match( '/^[a-zA-Z.#\[]/', $selector ) ) {
 			return false;
 		}
-		if ( strpos( $selector, '/*' ) !== false ) {
-			return false;
-		}
-		if ( ! preg_match( '/^[a-zA-Z.#]/', $selector ) ) {
-			return false;
-		}
-		if ( ! preg_match( '/^[a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~]+$/', $selector ) ) {
-			return false;
-		}
-		$invalid = [ '##', '..', ',,', '>>', '++', '~~', '**' ];
-		foreach ( $invalid as $seq ) {
-			if ( strpos( $selector, $seq ) !== false ) {
-				return false;
-			}
-		}
-		return true;
+		return 1 === preg_match( '/^[a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~=\"\'\^$|]+$/', $selector );
 	}
 
-	/**
-	 * Add body class for frontend.
-	 *
-	 * @param string[] $classes
-	 * @return string[]
-	 */
 	public function filter_body_class( array $classes ): array {
-		$enable_frontend = $this->should_load_context( 'frontend' );
-		$enable_gf       = $this->gravityforms_requested && $this->should_load_context( 'gravityforms' );
-
-		if ( $enable_frontend || $enable_gf ) {
+		if ( $this->should_load_context( 'frontend' ) || ( $this->gravityforms_requested && $this->should_load_context( 'gravityforms' ) ) ) {
 			$classes[] = 'vazir-font-enabled';
 		}
 		return array_values( array_unique( $classes ) );
 	}
 
-	/**
-	 * Add body class for admin.
-	 */
 	public function filter_admin_body_class( string $classes ): string {
-		$enable_admin = $this->should_load_context( 'admin' );
-		$enable_gf    = $this->gravityforms_requested && $this->should_load_context( 'gravityforms' );
-
-		if ( $enable_admin || $enable_gf ) {
+		if ( $this->should_load_context( 'admin' ) || ( $this->gravityforms_requested && $this->should_load_context( 'gravityforms' ) ) ) {
 			$classes = trim( $classes );
-			if ( '' !== $classes ) {
-				$classes .= ' ';
-			}
-			$classes .= 'vazir-font-enabled';
+			$classes .= ( '' === $classes ? '' : ' ' ) . 'vazir-font-enabled';
 		}
 		return $classes;
 	}
 
-	/**
-	 * Add body class for login.
-	 *
-	 * @param string[] $classes
-	 * @return string[]
-	 */
 	public function filter_login_body_class( array $classes ): array {
 		if ( $this->should_load_context( 'login' ) ) {
 			$classes[] = 'vazir-font-enabled';
 		}
 		return array_values( array_unique( $classes ) );
-	}
-
-	/**
-	 * Clear cache – triggers regeneration and flushes Gravity Forms caches.
-	 */
-	public function clear_cache(): void {
-		$this->regenerate_font_files();
-	}
-
-	/**
-	 * Regenerate cached font files (especially for Gravity Forms).
-	 * Same logic as original loader.
-	 */
-	private function regenerate_font_files(): void {
-		if ( class_exists( 'GFCache' ) ) {
-			GFCache::flush();
-		}
-		if ( function_exists( 'wp_get_upload_dir' ) ) {
-			$uploads = wp_get_upload_dir();
-			if ( ! empty( $uploads['basedir'] ) ) {
-				$pattern = trailingslashit( $uploads['basedir'] ) . 'gravity_forms/*/css/*.css';
-				$files   = glob( $pattern );
-				if ( is_array( $files ) ) {
-					foreach ( $files as $file ) {
-						if ( is_string( $file ) && is_file( $file ) && is_readable( $file ) ) {
-							wp_delete_file( $file );
-						}
-					}
-				}
-			}
-		}
-		delete_transient( 'gforms_css_version' );
 	}
 }
