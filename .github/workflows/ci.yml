@@ -5,7 +5,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   php:
@@ -38,15 +38,3 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - run: composer lint
       - run: composer compat
-      - name: Commit reproducible Composer lock
-        if: github.event_name == 'push'
-        shell: bash
-        run: |
-          if git ls-files --error-unmatch composer.lock >/dev/null 2>&1; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add composer.lock
-          git commit -m "build: lock development dependencies"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
