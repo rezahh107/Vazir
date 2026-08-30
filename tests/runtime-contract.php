@@ -7,8 +7,11 @@ $GLOBALS['vf_styles']  = [];
 $GLOBALS['vf_inline']  = [];
 $GLOBALS['vf_options'] = [];
 $GLOBALS['vf_is_admin'] = false;
+$GLOBALS['vf_transients'] = [];
+$GLOBALS['vf_settings_errors'] = [];
 
 const ABSPATH = '/tmp/wp/';
+const MINUTE_IN_SECONDS = 60;
 
 function plugin_dir_url( $file ) { return 'https://example.test/wp-content/plugins/vazir/'; }
 function register_activation_hook( $file, $callback ) {}
@@ -28,6 +31,14 @@ function wp_enqueue_style( $handle ) { if ( ! isset( $GLOBALS['vf_styles'][$hand
 function wp_add_inline_style( $handle, $css ) { $GLOBALS['vf_inline'][$handle][] = $css; return true; }
 function is_rtl() { return true; }
 function get_current_screen() { return new WP_Screen( 'toplevel_page_gf_edit_forms' ); }
+function current_user_can( $capability ) { return 'manage_options' === $capability; }
+function wp_verify_nonce( $nonce, $action ) { return 'test-nonce' === $nonce && 'vazir_font_settings-options' === $action; }
+function get_current_user_id() { return 1; }
+function get_transient( $key ) { return $GLOBALS['vf_transients'][$key] ?? false; }
+function set_transient( $key, $value, $expiration ) { $GLOBALS['vf_transients'][$key] = $value; return true; }
+function sanitize_text_field( $value ) { return trim( strip_tags( (string) $value ) ); }
+function add_settings_error( $setting, $code, $message, $type = 'error' ) { $GLOBALS['vf_settings_errors'][] = [ $setting, $code, $message, $type ]; }
+function esc_html__( $text, $domain = 'default' ) { return $text; }
 
 class WP_Screen {
 	public string $id;
@@ -61,6 +72,7 @@ foreach ( $weights as $weight ) {
 
 vf_assert( isset( $GLOBALS['vf_actions']['enqueue_block_assets'] ), 'editor content uses enqueue_block_assets' );
 vf_assert( ! isset( $GLOBALS['vf_actions']['enqueue_block_editor_assets'] ), 'editor content no longer relies on enqueue_block_editor_assets' );
+vf_assert( isset( $GLOBALS['vf_actions']['init'] ), 'translation loading is registered on init' );
 vf_assert( ! isset( $GLOBALS['vf_actions']['cron_schedules'] ), 'no cron schedule action is registered' );
 vf_assert( ! isset( $GLOBALS['vf_actions']['gform_post_render'] ), 'deprecated JavaScript event is not misregistered as a PHP action' );
 
@@ -87,5 +99,22 @@ vf_assert( false === stripos( $filtered, 'font-family' ) && false !== stripos( $
 
 vf_assert( isset( $GLOBALS['vf_filters']['gform_field_content'] ), 'field-content compatibility hook is retained pending browser characterization' );
 vf_assert( isset( $GLOBALS['vf_filters']['gform_field_css_class'] ), 'field-class compatibility hook is retained pending browser characterization' );
+
+$_POST['_wpnonce'] = 'test-nonce';
+$settings = VazirFont_Admin_Settings::get_instance();
+$sanitized = $settings->sanitize_options(
+	[
+		'enable_frontend'      => '1',
+		'enable_gravity_forms' => 'true',
+		'font_weights'         => [ '700', '999', '300' ],
+		'exclude_selectors'    => ".custom-control\n.bad{color:red;}\n",
+	]
+);
+vf_assert( true === $sanitized['enable_frontend'], 'settings sanitizer accepts enabled frontend boolean' );
+vf_assert( false === $sanitized['enable_admin'], 'settings sanitizer treats an omitted checkbox as disabled' );
+vf_assert( true === $sanitized['enable_gravity_forms'], 'settings sanitizer accepts enabled Gravity Forms boolean' );
+vf_assert( [ '700', '300' ] === $sanitized['font_weights'], 'settings sanitizer rejects unsupported font weights' );
+vf_assert( in_array( '.custom-control', $sanitized['exclude_selectors'], true ), 'settings sanitizer preserves a supported safe selector' );
+vf_assert( count( $sanitized['exclude_selectors'] ) <= 50, 'settings sanitizer bounds selector count' );
 
 fwrite( STDOUT, "ALL CONTRACT CHECKS PASSED\n" );
