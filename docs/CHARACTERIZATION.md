@@ -45,6 +45,10 @@ Licensed Gravity Forms browser characterization remains separate and environment
 
 Pseudo-element exclusions are not forced into relational `:where()`/`:not()` guards. Generic Vazir enforcement does not directly target pseudo-elements, and existing dedicated icon-family protections remain responsible for Dashicons and equivalent icon contexts.
 
+The Gravity Forms adapter consumes the same `vazir_font_options['exclude_selectors']` authority. Its Theme Framework custom-property rule and legacy/current `font-family` compatibility rules use the same root/descendant negative applicability semantics, with an additional `:has(:where(...))` guard on inheritable rules so a rule on an ancestor cannot leak Vazir into an excluded descendant subtree. If an accepted exclusion itself contains `:has()`, the adapter omits the affected inheritable GF rule rather than nesting `:has()` into invalid CSS or approximating selector matching in PHP.
+
+`gform_field_content` remains registered, but inline `font-family` cleanup is now conditional. When any accepted element-level exclusion exists, the callback preserves the field markup unchanged because arbitrary CSS-selector matching cannot be truthfully reproduced against a rendering fragment with a bounded PHP regex/DOM workaround. Cleanup is retained only when no element-level exclusion boundary is active. This keeps the compatibility hook without letting it destroy an excluded component's own font declaration.
+
 ## Removed/changed mechanisms that do not depend on licensed Gravity Forms visual equivalence
 
 - nonexistent WOFF/TTF sources: correctness defect, replaced by packaged WOFF2 only;
