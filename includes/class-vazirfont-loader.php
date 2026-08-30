@@ -256,7 +256,11 @@ final class VazirFont_Loader {
 			. ".vazir-font-enabled button {\n"
 			. "\tfont-family: {$family};\n"
 			. "}\n"
-			. ".vazir-font-enabled :where({$textual_elements}) {\n\tfont-family: inherit;\n}\n";
+			// Twenty Twenty-One and similar classic themes set font-family directly
+			// on headings/text. Browser characterization proves a normal scoped
+			// inheritance rule loses that cascade; the !important is deliberately
+			// limited to textual elements and excludes icon-bearing generic nodes.
+			. ".vazir-font-enabled :where({$textual_elements}) {\n\tfont-family: inherit !important;\n}\n";
 	}
 
 	private function get_font_family(): string {
