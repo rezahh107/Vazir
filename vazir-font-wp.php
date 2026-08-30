@@ -49,6 +49,7 @@ final class VazirFontPlugin {
 		register_activation_hook( VAZIR_FONT_PLUGIN_FILE, [ self::class, 'activate' ] );
 		register_deactivation_hook( VAZIR_FONT_PLUGIN_FILE, [ self::class, 'deactivate' ] );
 		add_action( 'plugins_loaded', [ $this, 'init' ] );
+		add_action( 'init', [ $this, 'load_textdomain' ] );
 	}
 
 	private function __clone() {}
@@ -64,13 +65,18 @@ final class VazirFontPlugin {
 		return self::$instance;
 	}
 
-	public function init(): void {
+	/**
+	 * Load translations at init or later, as required by current WordPress i18n guidance.
+	 */
+	public function load_textdomain(): void {
 		load_plugin_textdomain(
 			'vazir-font-wp',
 			false,
 			dirname( plugin_basename( VAZIR_FONT_PLUGIN_FILE ) ) . '/languages/'
 		);
+	}
 
+	public function init(): void {
 		$this->maybe_migrate_options_schema();
 
 		if ( class_exists( 'VazirFont_Loader' ) ) {
