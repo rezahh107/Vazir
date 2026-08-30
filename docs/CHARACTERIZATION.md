@@ -21,21 +21,31 @@ Initial repository state:
 | GF `gform_enqueue_scripts` | ACTIVE_REQUIRED | frontend integration entrypoint |
 | GF `gform_preview_styles` | ACTIVE_BUT_REFACTORABLE | current callback returned raw CSS rather than style handles |
 | GF `gform_noconflict_styles` | ACTIVE_BUT_REFACTORABLE | current handle was not a registered stylesheet handle |
-| GF `gform_field_content` | UNKNOWN | aggressive rendering workaround; no browser proof available for removal |
-| GF `gform_field_css_class` | UNKNOWN | compatibility behavior; no browser proof available for removal |
+| GF `gform_field_content` | UNKNOWN | aggressive rendering workaround; no licensed Gravity Forms browser proof available for removal |
+| GF `gform_field_css_class` | UNKNOWN | compatibility behavior; no licensed Gravity Forms browser proof available for removal |
 | PHP `add_action( 'gform_post_render', ... )` | DEAD_CONFIRMED | official API is a JavaScript event, not a PHP action |
 | GF cache/file deletion | RISKY | unrelated cache/file ownership; no plugin-generated persistent CSS cache existed |
 | weekly cron | REDUNDANT_PROVEN | only triggered the unrelated GF cache/file cleanup path |
 | Composer `vendor/` | DEV_ONLY | plugin runtime uses its own bounded autoloader; Composer packages are development tooling |
-| Tests/CI | DEAD_CONFIRMED | `composer test` existed but repository had no `tests/` and no CI workflow |
+| Tests/CI | DEAD_CONFIRMED at initial SHA | `composer test` existed but repository had no `tests/` and no CI workflow |
 
-## Visual/browser baseline
+## Browser characterization now present on the refactor branch
 
-`NOT_PROVEN` in this execution environment. No real browser automation, WordPress 7.1 site, licensed Gravity Forms 3.1.x artifact, or network waterfall was available to execute the full requested matrix.
+The refactor branch contains Chromium/Playwright computed-style characterization against WordPress 7.1 with both Twenty Twenty-One and Twenty Twenty-Five. The fixture checks frontend text and controls, login, wp-admin, Dashicons, the Post Editor iframe, and the Site Editor canvas for the block-theme lane.
 
-Because of that evidence ceiling, the refactor must not remove `gform_field_content`, `gform_field_css_class`, or the scoped Gravity Forms `!important` compatibility rules in this pass. They require a future real-browser regression run before removal.
+The exclusion regression fixture configures `.vf-excluded-component` in the existing `exclude_selectors` option and gives the excluded text an explicit `monospace` family. The browser contract requires ordinary neighboring typography to remain Vazir while the excluded text remains non-Vazir. This is the runtime evidence required for the negative applicability repair; source inspection alone is not sufficient.
 
-## Removed/changed mechanisms that do not depend on visual equivalence
+Exact-Head success must always be observed from the CI run bound to the resulting commit before claiming this characterization passed for a change.
+
+Licensed Gravity Forms browser characterization remains separate and environment-dependent. Until that evidence exists, the refactor must not remove `gform_field_content`, `gform_field_css_class`, or the scoped Gravity Forms `!important` compatibility rules merely for architectural simplification.
+
+## Exclusion semantics
+
+`exclude_selectors` is a negative applicability boundary for Vazir `font-family` enforcement. Element-level exclusions are incorporated into generated enforcement selectors so those rules do not match the excluded root or elements below it. The Loader does not implement generic exclusions by emitting competing `font-family: inherit`, `initial`, `revert`, or `revert-layer` reset declarations.
+
+Pseudo-element exclusions are not forced into relational `:where()`/`:not()` guards. Generic Vazir enforcement does not directly target pseudo-elements, and existing dedicated icon-family protections remain responsible for Dashicons and equivalent icon contexts.
+
+## Removed/changed mechanisms that do not depend on licensed Gravity Forms visual equivalence
 
 - nonexistent WOFF/TTF sources: correctness defect, replaced by packaged WOFF2 only;
 - private Loader method access from GF adapter: PHP correctness defect, replaced by explicit public read-only Loader surfaces;
