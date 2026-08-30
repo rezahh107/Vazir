@@ -90,7 +90,7 @@ $frontend_css = implode( "\n", $GLOBALS['vf_inline']['vazir-font-frontend'] ?? [
 $negative_guard = ':not(:where(.vf-excluded-component, .vf-excluded-component *, .dashicons, .dashicons *))';
 vf_assert( false !== strpos( $frontend_css, $negative_guard ), 'frontend Vazir rules preserve element selectors from mixed lists and exclude roots plus descendants by predicate' );
 vf_assert( false === strpos( $frontend_css, ".vazir-font-enabled .vf-excluded-component {\n\tfont-family: inherit;" ), 'frontend exclusions do not emit competing font-family reset rules' );
-vf_assert( false !== strpos( $frontend_css, 'font-family: inherit !important;' ), 'narrow frontend theme override remains present for non-excluded text' );
+vf_assert( 1 === preg_match( "/font-family:\\s*'Vazir'[^;]*!important;/", $frontend_css ), 'narrow frontend theme override directly enforces Vazir for non-excluded text' );
 vf_assert( false === strpos( $frontend_css, '[data-icon]:before' . $negative_guard ), 'pseudo-element exclusions are not forced into relational negative guards' );
 
 $GLOBALS['vf_is_admin'] = true;
