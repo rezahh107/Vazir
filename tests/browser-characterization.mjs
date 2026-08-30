@@ -31,7 +31,7 @@ const expectVazir = async (locator, label) => {
 await page.goto(`${baseUrl}/?p=${postId}`, { waitUntil: 'networkidle' });
 await expectVazir(page.locator('body'), 'frontend body');
 await expectVazir(page.getByRole('heading', { name: 'عنوان فارسی Mixed Heading' }), 'frontend heading');
-await expectVazir(page.locator('article p').first(), 'frontend paragraph');
+await expectVazir(page.getByText('متن فارسی Mixed Latin 123', { exact: true }), 'frontend paragraph');
 await expectVazir(page.locator('#vf-input'), 'frontend input');
 await expectVazir(page.locator('#vf-textarea'), 'frontend textarea');
 await expectVazir(page.locator('#vf-select'), 'frontend select');
@@ -70,7 +70,7 @@ const editorFrameElement = page.locator('iframe[name="editor-canvas"]');
 await editorFrameElement.waitFor({ state: 'attached', timeout: 30000 });
 const editor = page.frameLocator('iframe[name="editor-canvas"]');
 await expectVazir(editor.locator('.editor-styles-wrapper'), 'Post Editor canvas root');
-await expectVazir(editor.getByRole('paragraph').first(), 'Post Editor paragraph');
+await expectVazir(editor.getByText('متن فارسی Mixed Latin 123', { exact: true }), 'Post Editor paragraph');
 await expectVazir(editor.getByRole('heading', { name: 'عنوان فارسی Mixed Heading' }), 'Post Editor heading');
 
 if (blockTheme) {
