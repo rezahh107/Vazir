@@ -9,25 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Manages the Vazir font admin settings page.
  */
 final class VazirFont_Admin_Settings {
-
-	/**
-	 * Singleton instance.
-	 */
-	private static ?self $instance = null;
-
-	/**
-	 * Settings page slug.
-	 */
 	private const PAGE_SLUG = 'vazir-font-settings';
-
-	/**
-	 * Allowed font weights.
-	 */
 	private const ALLOWED_WEIGHTS = [ '300', '400', '500', '700', '900' ];
-
-	/**
-	 * Default exclude selectors (fallback).
-	 */
 	private const DEFAULT_EXCLUDE_SELECTORS = [
 		'.dashicons',
 		'.menu-icon',
@@ -40,38 +23,26 @@ final class VazirFont_Admin_Settings {
 		'[data-icon]:before',
 	];
 
-	/**
-	 * Private constructor.
-	 */
+	private static ?self $instance = null;
+
 	private function __construct() {
 		$this->init_hooks();
 	}
 
-	/**
-	 * Prevent cloning.
-	 */
 	private function __clone() {}
 
-	/**
-	 * Prevent unserialization.
-	 */
 	public function __wakeup(): void {
 		throw new RuntimeException( 'Cannot unserialize VazirFont_Admin_Settings singleton.' );
 	}
 
-	/**
-	 * Get singleton instance.
-	 */
 	public static function get_instance(): self {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
+
 		return self::$instance;
 	}
 
-	/**
-	 * Register WordPress hooks.
-	 */
 	private function init_hooks(): void {
 		add_action( 'admin_menu', [ $this, 'add_admin_menu' ] );
 		add_action( 'admin_init', [ $this, 'init_settings' ] );
@@ -80,7 +51,7 @@ final class VazirFont_Admin_Settings {
 	}
 
 	/**
-	 * Enqueue admin assets only on our settings page.
+	 * Enqueue admin assets only on the plugin settings page.
 	 *
 	 * @param string $hook Current admin page hook.
 	 */
@@ -100,9 +71,6 @@ final class VazirFont_Admin_Settings {
 		);
 	}
 
-	/**
-	 * Add settings page under Settings menu.
-	 */
 	public function add_admin_menu(): void {
 		add_options_page(
 			__( 'تنظیمات فونت وزیر', 'vazir-font-wp' ),
@@ -113,9 +81,6 @@ final class VazirFont_Admin_Settings {
 		);
 	}
 
-	/**
-	 * Register settings, sections, and fields.
-	 */
 	public function init_settings(): void {
 		register_setting(
 			'vazir_font_settings',
@@ -123,7 +88,6 @@ final class VazirFont_Admin_Settings {
 			[ $this, 'sanitize_options' ]
 		);
 
-		// General section.
 		add_settings_section(
 			'vazir_font_general',
 			__( 'تنظیمات عمومی', 'vazir-font-wp' ),
@@ -167,7 +131,6 @@ final class VazirFont_Admin_Settings {
 			]
 		);
 
-		// Font weights section.
 		add_settings_section(
 			'vazir_font_weights',
 			__( 'وزن‌های فونت', 'vazir-font-wp' ),
@@ -183,7 +146,6 @@ final class VazirFont_Admin_Settings {
 			'vazir_font_weights'
 		);
 
-		// Advanced section.
 		add_settings_section(
 			'vazir_font_advanced',
 			__( 'تنظیمات پیشرفته', 'vazir-font-wp' ),
@@ -204,54 +166,51 @@ final class VazirFont_Admin_Settings {
 		);
 	}
 
-	/**
-	 * Render the settings page markup.
-	 */
 	public function render_settings_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'شما دسترسی لازم برای مشاهده این صفحه را ندارید.', 'vazir-font-wp' ) );
 		}
 		?>
-<div class="wrap">
-	<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+		<div class="wrap">
+			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 
-	<div class="vazir-font-admin-header">
-		<p><?php esc_html_e( 'این افزونه فونت وزیر را به تمام بخش‌های وردپرس شما اضافه می‌کند.', 'vazir-font-wp' ); ?></p>
-	</div>
+			<div class="vazir-font-admin-header">
+				<p><?php esc_html_e( 'این افزونه فونت وزیر را به تمام بخش‌های وردپرس شما اضافه می‌کند.', 'vazir-font-wp' ); ?></p>
+			</div>
 
-	<?php settings_errors(); ?>
+			<?php settings_errors(); ?>
 
-	<form method="post" action="options.php">
-		<?php
-		settings_fields( 'vazir_font_settings' );
-		do_settings_sections( self::PAGE_SLUG );
-		submit_button( __( 'ذخیره تنظیمات', 'vazir-font-wp' ) );
-		?>
-	</form>
+			<form method="post" action="options.php">
+				<?php
+				settings_fields( 'vazir_font_settings' );
+				do_settings_sections( self::PAGE_SLUG );
+				submit_button( __( 'ذخیره تنظیمات', 'vazir-font-wp' ) );
+				?>
+			</form>
 
-	<div class="vazir-font-preview">
-		<h3><?php esc_html_e( 'پیش‌نمایش فونت', 'vazir-font-wp' ); ?></h3>
-		<div class="vazir-font-preview__text">
-			<?php
-			$weights = [
-				'300' => __( '300 (Light)', 'vazir-font-wp' ),
-				'400' => __( '400 (Regular)', 'vazir-font-wp' ),
-				'500' => __( '500 (Medium)', 'vazir-font-wp' ),
-				'700' => __( '700 (Bold)', 'vazir-font-wp' ),
-				'900' => __( '900 (Black)', 'vazir-font-wp' ),
-			];
+			<div class="vazir-font-preview">
+				<h3><?php esc_html_e( 'پیش‌نمایش فونت', 'vazir-font-wp' ); ?></h3>
+				<div class="vazir-font-preview__text">
+					<?php
+					$weights = [
+						'300' => __( '300 (Light)', 'vazir-font-wp' ),
+						'400' => __( '400 (Regular)', 'vazir-font-wp' ),
+						'500' => __( '500 (Medium)', 'vazir-font-wp' ),
+						'700' => __( '700 (Bold)', 'vazir-font-wp' ),
+						'900' => __( '900 (Black)', 'vazir-font-wp' ),
+					];
 
-			foreach ( $weights as $weight => $label ) {
-				printf(
-					'<p style="font-family: \'Vazir\', sans-serif; font-size: 16px; font-weight: %1$s;">%2$s</p>',
-					esc_attr( $weight ),
-					esc_html( $label )
-				);
-			}
-			?>
+					foreach ( $weights as $weight => $label ) {
+						printf(
+							'<p style="font-family: \'Vazir\', sans-serif; font-size: 16px; font-weight: %1$s;">%2$s</p>',
+							esc_attr( $weight ),
+							esc_html( $label )
+						);
+					}
+					?>
+				</div>
+			</div>
 		</div>
-	</div>
-</div>
 		<?php
 	}
 
@@ -279,7 +238,7 @@ final class VazirFont_Admin_Settings {
 		}
 
 		$current_user_id = get_current_user_id();
-		$transient_key   = 'vazir_font_save_count_' . ( $current_user_id ?: 'guest' );
+		$transient_key   = 'vazir_font_save_count_' . ( $current_user_id ? $current_user_id : 'guest' );
 		$save_count      = (int) get_transient( $transient_key );
 
 		if ( $save_count > 10 ) {
@@ -297,7 +256,6 @@ final class VazirFont_Admin_Settings {
 		$current_options = VazirFontPlugin::get_options();
 		$sanitized       = [];
 
-		// Checkbox fields.
 		$checkboxes = [ 'enable_frontend', 'enable_admin', 'enable_gravity_forms' ];
 		foreach ( $checkboxes as $checkbox ) {
 			$value = false;
@@ -308,7 +266,6 @@ final class VazirFont_Admin_Settings {
 			$sanitized[ $checkbox ] = $value;
 		}
 
-		// Font weights.
 		if ( isset( $input['font_weights'] ) && is_array( $input['font_weights'] ) ) {
 			$selected = array_map( 'sanitize_text_field', $input['font_weights'] );
 			$valid    = array_values( array_intersect( $selected, self::ALLOWED_WEIGHTS ) );
@@ -327,7 +284,6 @@ final class VazirFont_Admin_Settings {
 			$sanitized['font_weights'] = $current_options['font_weights'] ?? [ '400' ];
 		}
 
-		// Exclude selectors.
 		$sanitized['exclude_selectors'] = $current_options['exclude_selectors'] ?? self::DEFAULT_EXCLUDE_SELECTORS;
 		if ( isset( $input['exclude_selectors'] ) && is_string( $input['exclude_selectors'] ) ) {
 			$raw_lines = explode( "\n", $input['exclude_selectors'] );
@@ -341,6 +297,7 @@ final class VazirFont_Admin_Settings {
 					$this->log_security_event( sprintf( 'CSS selector rejected during sanitization: %s', $selector ), 'critical' );
 					continue;
 				}
+
 				$validated = $this->validate_css_selector( $sanitized_selector );
 				if ( '' === $validated ) {
 					$this->log_security_event( sprintf( 'CSS selector failed validation: %s', $selector ), 'critical' );
@@ -348,7 +305,8 @@ final class VazirFont_Admin_Settings {
 				}
 				$clean[] = $validated;
 			}
-			$clean = array_values( array_unique( $clean ) );
+
+			$clean                           = array_values( array_unique( $clean ) );
 			$sanitized['exclude_selectors'] = array_slice( $clean, 0, 50 );
 		}
 
@@ -359,32 +317,28 @@ final class VazirFont_Admin_Settings {
 		return $sanitized;
 	}
 
-	/**
-	 * Sanitize a CSS selector.
-	 */
 	private function sanitize_css_selector( string $selector ): string {
 		$selector = str_ireplace( [ '@import', 'url(' ], '', $selector );
-		$selector = preg_replace( '/\/\*.*?\*\//', '', $selector );
+		$selector = (string) preg_replace( '/\/\*.*?\*\//', '', $selector );
 		$selector = str_replace( [ '{', '}', ';' ], ' ', $selector );
-		$selector = preg_replace( '/[^a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~]/', '', $selector );
-		$selector = trim( preg_replace( '/\s+/', ' ', $selector ) );
+		$selector = (string) preg_replace( '/[^a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~]/', '', $selector );
+		$selector = trim( (string) preg_replace( '/\s+/', ' ', $selector ) );
+
 		if ( strlen( $selector ) > 200 ) {
 			$selector = substr( $selector, 0, 200 );
 		}
+
 		return $selector;
 	}
 
-	/**
-	 * Validate a sanitized CSS selector.
-	 */
 	private function validate_css_selector( string $selector ): string {
 		if ( '' === $selector ) {
 			return '';
 		}
-		if ( strpos( $selector, '{' ) !== false || strpos( $selector, '}' ) !== false || strpos( $selector, ';' ) !== false ) {
+		if ( false !== strpos( $selector, '{' ) || false !== strpos( $selector, '}' ) || false !== strpos( $selector, ';' ) ) {
 			return '';
 		}
-		if ( strpos( $selector, '/*' ) !== false ) {
+		if ( false !== strpos( $selector, '/*' ) ) {
 			return '';
 		}
 		if ( ! preg_match( '/^[a-zA-Z.#]/', $selector ) ) {
@@ -393,53 +347,43 @@ final class VazirFont_Admin_Settings {
 		if ( ! preg_match( '/^[a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~]+$/', $selector ) ) {
 			return '';
 		}
+
 		$invalid = [ '##', '..', ',,', '>>', '++', '~~', '**' ];
-		foreach ( $invalid as $seq ) {
-			if ( strpos( $selector, $seq ) !== false ) {
+		foreach ( $invalid as $sequence ) {
+			if ( false !== strpos( $selector, $sequence ) ) {
 				return '';
 			}
 		}
+
 		return $selector;
 	}
 
-	/**
-	 * Log security events when debugging is enabled.
-	 */
 	private function log_security_event( string $event, string $severity = 'warning' ): void {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( sprintf(
-				'[Vazir Font Security] [%s] User %d: %s',
-				$severity,
-				get_current_user_id(),
-				$event
-			) );
+			error_log(
+				sprintf(
+					'[Vazir Font Security] [%s] User %d: %s',
+					$severity,
+					get_current_user_id(),
+					$event
+				)
+			);
 		}
 	}
 
-	/**
-	 * Render general section description.
-	 */
 	public function render_general_section_desc(): void {
 		echo '<p>' . esc_html__( 'انتخاب کنید فونت در کدام بخش‌ها فعال باشد.', 'vazir-font-wp' ) . '</p>';
 	}
 
-	/**
-	 * Render weights section description.
-	 */
 	public function render_weights_section_desc(): void {
 		echo '<p>' . esc_html__( 'وزن‌های مورد نیاز را انتخاب کنید تا فقط فونت‌های ضروری بارگذاری شوند.', 'vazir-font-wp' ) . '</p>';
 	}
 
-	/**
-	 * Render advanced section description.
-	 */
 	public function render_advanced_section_desc(): void {
 		echo '<p>' . esc_html__( 'انتخابگرهایی که باید از اعمال فونت مستثنی شوند را تعیین کنید.', 'vazir-font-wp' ) . '</p>';
 	}
 
 	/**
-	 * Render a checkbox field.
-	 *
 	 * @param array<string, string> $args Field arguments.
 	 */
 	public function render_checkbox_field( array $args ): void {
@@ -457,15 +401,13 @@ final class VazirFont_Admin_Settings {
 		echo '</fieldset>';
 	}
 
-	/**
-	 * Render font weights checkboxes.
-	 */
 	public function render_weights_field(): void {
 		$options  = VazirFontPlugin::get_options();
 		$selected = $options['font_weights'] ?? [ '400' ];
 		if ( ! is_array( $selected ) ) {
 			$selected = [ '400' ];
 		}
+
 		$weights = [
 			'300' => __( '300 (Light)', 'vazir-font-wp' ),
 			'400' => __( '400 (Regular)', 'vazir-font-wp' ),
@@ -487,8 +429,6 @@ final class VazirFont_Admin_Settings {
 	}
 
 	/**
-	 * Render a textarea field.
-	 *
 	 * @param array<string, string> $args Field arguments.
 	 */
 	public function render_textarea_field( array $args ): void {
@@ -506,14 +446,13 @@ final class VazirFont_Admin_Settings {
 	}
 
 	/**
-	 * Add a settings link on the plugins screen.
-	 *
 	 * @param array<string> $links Existing links.
 	 * @return array<string>
 	 */
 	public function add_settings_link( array $links ): array {
 		$settings_link = '<a href="' . esc_url( admin_url( 'options-general.php?page=' . self::PAGE_SLUG ) ) . '">' . esc_html__( 'تنظیمات', 'vazir-font-wp' ) . '</a>';
 		$links[]       = $settings_link;
+
 		return $links;
 	}
 }
