@@ -1,6 +1,6 @@
 /*!
  * Vazir Font Plugin - Admin JavaScript
- * Version: 1.2.0
+ * Version: 1.3.0
  * Refactored for modern standards and compatibility with refactored PHP code.
  */
 
@@ -39,7 +39,7 @@
 
     /**
      * Reset form fields to default values.
-     * Uses hardcoded defaults as fallback, but can be extended to fetch via AJAX.
+     * Uses the same defaults as the PHP option schema.
      */
     const resetToDefaults = ( event ) => {
         if ( event ) {
@@ -55,14 +55,15 @@
             // Font weights: select all (default behavior)
             $( 'input[name="vazir_font_options[font_weights][]"]' ).prop( 'checked', true );
 
-            // Exclude selectors textarea
+            // Exclude selectors textarea: keep in sync with VazirFontPlugin defaults.
             const defaultSelectors = [
                 '.dashicons',
-                '.dashicons-before:before',
-                '[class*="dashicons"]:before',
-                '.wp-menu-image',
-                'i.fa',
-                '[class*="icon-"]:before',
+                '.menu-icon',
+                '.menu-image',
+                '[class^="dashicons-"]',
+                '[class*=" dashicons-"]',
+                '[class^="fa-"]',
+                '[class*=" fa-"]',
                 '.material-icons',
                 '[data-icon]:before'
             ].join( '\n' );
