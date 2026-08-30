@@ -76,9 +76,29 @@ vf_assert( isset( $GLOBALS['vf_actions']['init'] ), 'translation loading is regi
 vf_assert( ! isset( $GLOBALS['vf_actions']['cron_schedules'] ), 'no cron schedule action is registered' );
 vf_assert( ! isset( $GLOBALS['vf_actions']['gform_post_render'] ), 'deprecated JavaScript event is not misregistered as a PHP action' );
 
+VazirFontPlugin::update_options(
+	[
+		'exclude_selectors' => [ '.vf-excluded-component', '.dashicons', '[data-icon]:before' ],
+	]
+);
+
 $loader->enqueue_frontend_fonts();
 vf_assert( isset( $GLOBALS['vf_styles']['vazir-font-frontend'] ) && $GLOBALS['vf_styles']['vazir-font-frontend']['enqueued'], 'frontend uses a registered/enqueued style handle' );
 vf_assert( ! isset( $GLOBALS['vf_preloads'] ), 'no default preload path is emitted' );
+
+$frontend_css = implode( "\n", $GLOBALS['vf_inline']['vazir-font-frontend'] ?? [] );
+vf_assert( false !== strpos( $frontend_css, ':not(:where(.vf-excluded-component, .dashicons))' ), 'frontend Vazir rules exclude configured element roots by predicate' );
+vf_assert( false !== strpos( $frontend_css, ':not(:where(.vf-excluded-component, .dashicons) *)' ), 'frontend Vazir rules exclude descendants below configured roots' );
+vf_assert( false === strpos( $frontend_css, ".vazir-font-enabled .vf-excluded-component {\n\tfont-family: inherit;" ), 'frontend exclusions do not emit competing font-family reset rules' );
+vf_assert( false !== strpos( $frontend_css, 'font-family: inherit !important;' ), 'narrow frontend theme override remains present for non-excluded text' );
+vf_assert( false === strpos( $frontend_css, '[data-icon]:before):not(' ), 'pseudo-element exclusions are not forced into relational negative guards' );
+
+$GLOBALS['vf_is_admin'] = true;
+$loader->enqueue_editor_content_fonts();
+$editor_css = implode( "\n", $GLOBALS['vf_inline']['vazir-font-editor-content'] ?? [] );
+vf_assert( false !== strpos( $editor_css, ':not(:where(.vf-excluded-component, .dashicons))' ), 'editor Vazir rules use the same negative exclusion boundary' );
+vf_assert( false === strpos( $editor_css, ".editor-styles-wrapper .vf-excluded-component {\n\tfont-family: inherit;" ), 'editor exclusions do not emit a second competing reset mechanism' );
+$GLOBALS['vf_is_admin'] = false;
 
 $gf = VazirFont_GravityForms_Integration::get_instance();
 $styles = $gf->filter_preview_styles( [ 'gravity-forms-orbital-theme' ], [] );
