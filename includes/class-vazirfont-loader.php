@@ -166,10 +166,11 @@ final class VazirFont_Loader {
 	}
 
 	private function get_inline_css( string $context ): string {
-		$parts = [
+		$exclude_selectors = $this->get_exclude_selectors();
+		$parts             = [
 			$this->get_font_face_css(),
-			$this->get_context_css( $context ),
-			$this->get_base_font_css( $context ),
+			$this->get_context_css( $context, $exclude_selectors ),
+			$this->get_base_font_css( $context, $exclude_selectors ),
 		];
 		$parts = array_filter( array_map( 'trim', $parts ) );
 		return implode( "\n\n", $parts );
@@ -202,39 +203,56 @@ final class VazirFont_Loader {
 		return $css;
 	}
 
-	private function get_context_css( string $context ): string {
+	/**
+	 * @return string[]
+	 */
+	private function get_exclude_selectors(): array {
 		$options = VazirFontPlugin::get_options();
 		$exclude = $options['exclude_selectors'] ?? [];
-		if ( ! is_array( $exclude ) ) {
-			$exclude = [];
-		}
+		return is_array( $exclude ) ? $exclude : [];
+	}
 
+	/**
+	 * @param string[] $exclude_selectors Exclusions from settings.
+	 */
+	private function get_context_css( string $context, array $exclude_selectors ): string {
 		switch ( $context ) {
 			case 'frontend':
-				return $this->build_font_css( $exclude, [ 'body', 'button', 'input', 'select', 'textarea' ], true );
+				return $this->build_font_css( $exclude_selectors, [ 'body', 'button', 'input', 'select', 'textarea' ], true );
 			case 'admin':
-				return $this->build_font_css( $exclude, [ 'body.wp-admin', '#wpadminbar', '.wrap', '.wp-core-ui .button', '.wp-core-ui input' ], true );
+				return $this->build_font_css( $exclude_selectors, [ 'body.wp-admin', '#wpadminbar', '.wrap', '.wp-core-ui .button', '.wp-core-ui input' ], true );
 			case 'login':
-				return $this->build_font_css( $exclude, [ 'body.login', '#loginform', '#loginform input', '.message' ], true );
+				return $this->build_font_css( $exclude_selectors, [ 'body.login', '#loginform', '#loginform input', '.message' ], true );
 			case 'editor':
-				return $this->build_font_css( $exclude, [ '.editor-styles-wrapper', '.editor-styles-wrapper button', '.editor-styles-wrapper input', '.editor-styles-wrapper select', '.editor-styles-wrapper textarea' ], false );
+				return $this->build_font_css( $exclude_selectors, [ '.editor-styles-wrapper', '.editor-styles-wrapper button', '.editor-styles-wrapper input', '.editor-styles-wrapper select', '.editor-styles-wrapper textarea' ], false );
 			default:
 				return '';
 		}
 	}
 
-	private function get_base_font_css( string $context ): string {
-		$family = $this->get_font_family();
-		$textual_elements = 'h1, h2, h3, h4, h5, h6, p, li, dt, dd, blockquote, figcaption, table, th, td, label, legend';
+	/**
+	 * @param string[] $exclude_selectors Exclusions from settings.
+	 */
+	private function get_base_font_css( string $context, array $exclude_selectors ): string {
+		$family              = $this->get_font_family();
+		$textual_elements    = 'h1, h2, h3, h4, h5, h6, p, li, dt, dd, blockquote, figcaption, table, th, td, label, legend';
+		$negative_exclusions = $this->get_negative_scope_selectors( $exclude_selectors );
 
 		if ( 'admin' === $context ) {
-			return ".vazir-font-enabled,\n"
-				. ".vazir-font-enabled #wpwrap,\n"
-				. ".vazir-font-enabled .wrap,\n"
-				. ".vazir-font-enabled input,\n"
-				. ".vazir-font-enabled textarea,\n"
-				. ".vazir-font-enabled select,\n"
-				. ".vazir-font-enabled button {\n"
+			$selectors = $this->build_enforcement_selector_list(
+				[
+					'.vazir-font-enabled',
+					'.vazir-font-enabled #wpwrap',
+					'.vazir-font-enabled .wrap',
+					'.vazir-font-enabled input',
+					'.vazir-font-enabled textarea',
+					'.vazir-font-enabled select',
+					'.vazir-font-enabled button',
+				],
+				$negative_exclusions
+			);
+
+			return $selectors . " {\n"
 				. "\tfont-family: {$family} !important;\n"
 				. "}\n\n"
 				. ".vazir-font-enabled .dashicons,\n"
@@ -245,22 +263,39 @@ final class VazirFont_Loader {
 		}
 
 		if ( 'editor' === $context ) {
-			return ".editor-styles-wrapper {\n\tfont-family: {$family};\n}\n"
-				. ".editor-styles-wrapper :where({$textual_elements}, input, textarea, select, button) {\n\tfont-family: inherit;\n}\n";
+			$root_selector = $this->apply_exclusion_boundary( '.editor-styles-wrapper', $negative_exclusions );
+			$text_selector = $this->apply_exclusion_boundary(
+				".editor-styles-wrapper :where({$textual_elements}, input, textarea, select, button)",
+				$negative_exclusions
+			);
+
+			return $root_selector . " {\n\tfont-family: {$family};\n}\n"
+				. $text_selector . " {\n\tfont-family: inherit;\n}\n";
 		}
 
-		return ".vazir-font-enabled,\n"
-			. ".vazir-font-enabled input,\n"
-			. ".vazir-font-enabled textarea,\n"
-			. ".vazir-font-enabled select,\n"
-			. ".vazir-font-enabled button {\n"
+		$selectors = $this->build_enforcement_selector_list(
+			[
+				'.vazir-font-enabled',
+				'.vazir-font-enabled input',
+				'.vazir-font-enabled textarea',
+				'.vazir-font-enabled select',
+				'.vazir-font-enabled button',
+			],
+			$negative_exclusions
+		);
+		$text_selector = $this->apply_exclusion_boundary(
+			".vazir-font-enabled :where({$textual_elements})",
+			$negative_exclusions
+		);
+
+		return $selectors . " {\n"
 			. "\tfont-family: {$family};\n"
 			. "}\n"
 			// Twenty Twenty-One and similar classic themes set font-family directly
 			// on headings/text. Browser characterization proves a normal scoped
 			// inheritance rule loses that cascade; the !important is deliberately
 			// limited to textual elements and excludes icon-bearing generic nodes.
-			. ".vazir-font-enabled :where({$textual_elements}) {\n\tfont-family: inherit !important;\n}\n";
+			. $text_selector . " {\n\tfont-family: inherit !important;\n}\n";
 	}
 
 	private function get_font_family(): string {
@@ -275,8 +310,9 @@ final class VazirFont_Loader {
 	 * @param string[] $base_selectors Base selectors for the context.
 	 */
 	private function build_font_css( array $exclude_selectors, array $base_selectors, bool $scope ): string {
-		$family = $this->get_font_family();
-		$rules  = '';
+		$family              = $this->get_font_family();
+		$rules               = '';
+		$negative_exclusions = $this->get_negative_scope_selectors( $exclude_selectors );
 
 		foreach ( $base_selectors as $selector ) {
 			$candidate = $scope ? $this->scope_selector( $selector ) : $selector;
@@ -284,20 +320,9 @@ final class VazirFont_Loader {
 			if ( '' === $candidate || ! $this->is_valid_css_selector( $candidate ) ) {
 				continue;
 			}
-			$rules .= $candidate . " {\n\tfont-family: {$family};\n}\n";
-		}
 
-		foreach ( $exclude_selectors as $selector ) {
-			$sanitized = $this->sanitize_css_selector( (string) $selector );
-			if ( '' === $sanitized ) {
-				continue;
-			}
-			$candidate = $scope ? $this->scope_selector( $sanitized ) : '.editor-styles-wrapper ' . $sanitized;
-			$candidate = $this->sanitize_css_selector( $candidate );
-			if ( '' === $candidate || ! $this->is_valid_css_selector( $candidate ) ) {
-				continue;
-			}
-			$rules .= $candidate . " {\n\tfont-family: inherit;\n}\n";
+			$candidate = $this->apply_exclusion_boundary( $candidate, $negative_exclusions );
+			$rules    .= $candidate . " {\n\tfont-family: {$family};\n}\n";
 		}
 
 		if ( function_exists( 'is_rtl' ) && is_rtl() ) {
@@ -307,6 +332,67 @@ final class VazirFont_Loader {
 		}
 
 		return $rules;
+	}
+
+	/**
+	 * Turn user exclusions into safe element-level predicates for Vazir rules.
+	 *
+	 * Pseudo-element selectors are deliberately not inserted into :where()/:not()
+	 * relational guards. Generic Vazir rules do not directly target pseudo-elements,
+	 * and icon pseudo-elements retain their dedicated font-family protections.
+	 *
+	 * @param string[] $exclude_selectors Exclusions from settings.
+	 * @return string[]
+	 */
+	private function get_negative_scope_selectors( array $exclude_selectors ): array {
+		$valid = [];
+
+		foreach ( $exclude_selectors as $selector ) {
+			$sanitized = $this->sanitize_css_selector( (string) $selector );
+			if ( '' === $sanitized || ! $this->is_valid_css_selector( $sanitized ) ) {
+				continue;
+			}
+			if ( $this->selector_targets_pseudo_element( $sanitized ) ) {
+				continue;
+			}
+			$valid[] = $sanitized;
+		}
+
+		return array_values( array_unique( $valid ) );
+	}
+
+	/**
+	 * Prevent a Vazir enforcement selector from matching an excluded root or any
+	 * element below an excluded root. :where() keeps the exclusion list at zero
+	 * specificity so settings do not accidentally strengthen plugin selectors.
+	 *
+	 * @param string[] $exclude_selectors Valid element-level exclusions.
+	 */
+	private function apply_exclusion_boundary( string $selector, array $exclude_selectors ): string {
+		if ( [] === $exclude_selectors ) {
+			return $selector;
+		}
+
+		$exclusion_list = implode( ', ', $exclude_selectors );
+		return $selector
+			. ':not(:where(' . $exclusion_list . '))'
+			. ':not(:where(' . $exclusion_list . ') *)';
+	}
+
+	/**
+	 * @param string[] $selectors Valid internal enforcement selectors.
+	 * @param string[] $exclude_selectors Valid element-level exclusions.
+	 */
+	private function build_enforcement_selector_list( array $selectors, array $exclude_selectors ): string {
+		$guarded = [];
+		foreach ( $selectors as $selector ) {
+			$guarded[] = $this->apply_exclusion_boundary( $selector, $exclude_selectors );
+		}
+		return implode( ",\n", $guarded );
+	}
+
+	private function selector_targets_pseudo_element( string $selector ): bool {
+		return 1 === preg_match( '/::[a-zA-Z0-9_-]+|:(?:before|after|first-letter|first-line)\b/i', $selector );
 	}
 
 	private function scope_selector( string $selector ): string {
