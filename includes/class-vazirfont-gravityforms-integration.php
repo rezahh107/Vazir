@@ -144,12 +144,17 @@ final class VazirFont_GravityForms_Integration {
 	}
 
 	/**
-	 * Compatibility workaround retained pending a reproducible regression test.
-	 * It removes only inline font-family declarations and leaves other styles.
+	 * Compatibility workaround retained pending licensed visual proof.
+	 *
+	 * Arbitrary configured CSS selectors cannot be truthfully matched against a
+	 * field-content fragment here without implementing a second, incomplete DOM/
+	 * selector engine. When any accepted element-level exclusion exists, fail
+	 * closed and preserve inline font-family declarations. Cleanup remains active
+	 * only when no element-level exclusion boundary needs to be honored.
 	 */
 	public function remove_inline_font_styles( string $content, $field, $value, $entry_id, $form_id ): string {
 		unset( $field, $value, $entry_id, $form_id );
-		if ( ! $this->is_enabled() ) {
+		if ( ! $this->is_enabled() || [] !== $this->get_negative_scope_selectors() ) {
 			return $content;
 		}
 
@@ -194,26 +199,217 @@ final class VazirFont_GravityForms_Integration {
 			'vazir_font_family',
 			"'Vazir', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif"
 		);
+		$negative_exclusions = $this->get_negative_scope_selectors();
 
-		$css  = VazirFont_Loader::get_instance()->get_font_face_css();
-		$css .= "\n.gform-theme--framework {\n\t--gf-font-family-base: {$family};\n}\n";
+		$css = VazirFont_Loader::get_instance()->get_font_face_css();
 
-		// Current/legacy compatibility layer retained until browser proof permits
-		// narrower selectors or removal of !important.
-		$css .= ".gform_wrapper,\n";
-		$css .= ".gform_wrapper .gfield_label,\n";
-		$css .= ".gform_wrapper .gfield_description,\n";
-		$css .= ".gform_wrapper .ginput_container input,\n";
-		$css .= ".gform_wrapper .ginput_container textarea,\n";
-		$css .= ".gform_wrapper .ginput_container select,\n";
-		$css .= ".gform_wrapper .gform_footer input[type=\"submit\"],\n";
-		$css .= ".gform_wrapper .gform_button,\n";
-		$css .= ".gform_wrapper .gform_page_footer input {\n";
-		$css .= "\tfont-family: {$family} !important;\n";
-		$css .= "}\n";
+		// Theme Framework CSS API remains the preferred current path. Because the
+		// custom property is inherited, suppress this ancestor rule when it is an
+		// excluded root/descendant or contains an excluded subtree.
+		$framework_selector = $this->apply_exclusion_boundary(
+			'.gform-theme--framework',
+			$negative_exclusions,
+			true
+		);
+		if ( '' !== $framework_selector ) {
+			$css .= "\n{$framework_selector} {\n\t--gf-font-family-base: {$family};\n}\n";
+		}
+
+		// Current/legacy compatibility layer retained until licensed browser proof
+		// permits narrower selectors or removal of !important. Every inheritable
+		// font-family rule is guarded against excluded roots, descendants, and
+		// containing an excluded subtree so it cannot leak Vazir into exclusions.
+		$selectors = $this->build_enforcement_selector_list(
+			[
+				'.gform_wrapper',
+				'.gform_wrapper .gfield_label',
+				'.gform_wrapper .gfield_description',
+				'.gform_wrapper .ginput_container input',
+				'.gform_wrapper .ginput_container textarea',
+				'.gform_wrapper .ginput_container select',
+				'.gform_wrapper .gform_footer input[type="submit"]',
+				'.gform_wrapper .gform_button',
+				'.gform_wrapper .gform_page_footer input',
+			],
+			$negative_exclusions,
+			true
+		);
+		if ( '' !== $selectors ) {
+			$css .= $selectors . " {\n\tfont-family: {$family} !important;\n}\n";
+		}
 
 		$this->cached_css = $css;
 		return $css;
+	}
+
+	/**
+	 * Consume the existing vazir_font_options['exclude_selectors'] authority and
+	 * apply the same bounded element-level selector semantics as the Loader.
+	 * Pseudo-elements are intentionally not inserted into relational guards.
+	 *
+	 * @return string[]
+	 */
+	private function get_negative_scope_selectors(): array {
+		$options = VazirFontPlugin::get_options();
+		$exclude = $options['exclude_selectors'] ?? [];
+		if ( ! is_array( $exclude ) ) {
+			return [];
+		}
+
+		$valid = [];
+		foreach ( $exclude as $selector ) {
+			$sanitized = $this->sanitize_css_selector( (string) $selector );
+			if ( '' === $sanitized || ! $this->is_valid_css_selector( $sanitized ) ) {
+				continue;
+			}
+
+			foreach ( $this->split_top_level_selector_list( $sanitized ) as $component ) {
+				if ( '' === $component || ! $this->is_valid_css_selector( $component ) ) {
+					continue;
+				}
+				if ( $this->selector_targets_pseudo_element( $component ) ) {
+					continue;
+				}
+				$valid[] = $component;
+			}
+		}
+
+		return array_values( array_unique( $valid ) );
+	}
+
+	/**
+	 * Apply root/descendant negative scope. For inheritable declarations, also
+	 * reject targets containing an excluded subtree so font inheritance cannot
+	 * bypass the exclusion boundary.
+	 *
+	 * A configured selector containing :has() cannot safely be nested inside the
+	 * required descendant-protection :has(). In that case fail closed by omitting
+	 * the inheritable GF rule rather than emitting invalid CSS or approximating the
+	 * selector with a PHP/DOM matcher.
+	 *
+	 * @param string[] $exclude_selectors Valid element-level exclusions.
+	 */
+	private function apply_exclusion_boundary( string $selector, array $exclude_selectors, bool $protect_descendants = false ): string {
+		if ( [] === $exclude_selectors ) {
+			return $selector;
+		}
+
+		$blocked_selectors = [];
+		foreach ( $exclude_selectors as $exclude_selector ) {
+			$blocked_selectors[] = $exclude_selector;
+			$blocked_selectors[] = $exclude_selector . ' *';
+		}
+
+		$guarded = $selector . ':not(:where(' . implode( ', ', $blocked_selectors ) . '))';
+		if ( ! $protect_descendants ) {
+			return $guarded;
+		}
+
+		foreach ( $exclude_selectors as $exclude_selector ) {
+			if ( false !== stripos( $exclude_selector, ':has(' ) ) {
+				return '';
+			}
+		}
+
+		return $guarded . ':not(:has(:where(' . implode( ', ', $exclude_selectors ) . ')))';
+	}
+
+	/**
+	 * @param string[] $selectors Internal GF enforcement selectors.
+	 * @param string[] $exclude_selectors Valid element-level exclusions.
+	 */
+	private function build_enforcement_selector_list( array $selectors, array $exclude_selectors, bool $protect_descendants = false ): string {
+		$guarded = [];
+		foreach ( $selectors as $selector ) {
+			$candidate = $this->apply_exclusion_boundary( $selector, $exclude_selectors, $protect_descendants );
+			if ( '' !== $candidate ) {
+				$guarded[] = $candidate;
+			}
+		}
+		return implode( ",\n", $guarded );
+	}
+
+	/**
+	 * Split only commas at selector-list top level, matching Loader behavior.
+	 *
+	 * @return string[]
+	 */
+	private function split_top_level_selector_list( string $selector ): array {
+		$parts         = [];
+		$buffer        = '';
+		$paren_depth   = 0;
+		$bracket_depth = 0;
+		$quote         = '';
+		$length        = strlen( $selector );
+
+		for ( $index = 0; $index < $length; $index++ ) {
+			$char = $selector[ $index ];
+
+			if ( '' !== $quote ) {
+				$buffer .= $char;
+				if ( $char === $quote ) {
+					$quote = '';
+				}
+				continue;
+			}
+
+			if ( '"' === $char || "'" === $char ) {
+				$quote   = $char;
+				$buffer .= $char;
+				continue;
+			}
+
+			if ( '(' === $char ) {
+				$paren_depth++;
+			} elseif ( ')' === $char && $paren_depth > 0 ) {
+				$paren_depth--;
+			} elseif ( '[' === $char ) {
+				$bracket_depth++;
+			} elseif ( ']' === $char && $bracket_depth > 0 ) {
+				$bracket_depth--;
+			}
+
+			if ( ',' === $char && 0 === $paren_depth && 0 === $bracket_depth ) {
+				$part = trim( $buffer );
+				if ( '' !== $part ) {
+					$parts[] = $part;
+				}
+				$buffer = '';
+				continue;
+			}
+
+			$buffer .= $char;
+		}
+
+		$part = trim( $buffer );
+		if ( '' !== $part ) {
+			$parts[] = $part;
+		}
+
+		return $parts;
+	}
+
+	private function selector_targets_pseudo_element( string $selector ): bool {
+		return 1 === preg_match( '/::[a-zA-Z0-9_-]+|:(?:before|after|first-letter|first-line)\b/i', $selector );
+	}
+
+	private function sanitize_css_selector( string $selector ): string {
+		$selector = str_ireplace( [ '@import', 'url(' ], '', $selector );
+		$selector = (string) preg_replace( '/\/\*.*?\*\//', '', $selector );
+		$selector = str_replace( [ '{', '}', ';' ], ' ', $selector );
+		$selector = (string) preg_replace( '/[^a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~=\"\'\^$|]/', '', $selector );
+		$selector = trim( (string) preg_replace( '/\s+/', ' ', $selector ) );
+		return strlen( $selector ) > 200 ? substr( $selector, 0, 200 ) : $selector;
+	}
+
+	private function is_valid_css_selector( string $selector ): bool {
+		if ( '' === $selector || false !== strpos( $selector, '{' ) || false !== strpos( $selector, '}' ) || false !== strpos( $selector, ';' ) || false !== strpos( $selector, '/*' ) ) {
+			return false;
+		}
+		if ( ! preg_match( '/^[a-zA-Z.#\[]/', $selector ) ) {
+			return false;
+		}
+		return 1 === preg_match( '/^[a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~=\"\'\^$|]+$/', $selector );
 	}
 
 	private function is_enabled(): bool {
