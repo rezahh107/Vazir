@@ -337,9 +337,10 @@ final class VazirFont_Loader {
 	/**
 	 * Turn user exclusions into safe element-level predicates for Vazir rules.
 	 *
-	 * Pseudo-element selectors are deliberately not inserted into :where()/:not()
-	 * relational guards. Generic Vazir rules do not directly target pseudo-elements,
-	 * and icon pseudo-elements retain their dedicated font-family protections.
+	 * Each top-level selector-list member is evaluated independently so a safe
+	 * element selector remains effective when the same setting line also contains
+	 * a pseudo-element selector. Pseudo-elements are not inserted into relational
+	 * guards because generic Vazir rules do not directly target pseudo-elements.
 	 *
 	 * @param string[] $exclude_selectors Exclusions from settings.
 	 * @return string[]
@@ -352,13 +353,80 @@ final class VazirFont_Loader {
 			if ( '' === $sanitized || ! $this->is_valid_css_selector( $sanitized ) ) {
 				continue;
 			}
-			if ( $this->selector_targets_pseudo_element( $sanitized ) ) {
-				continue;
+
+			foreach ( $this->split_top_level_selector_list( $sanitized ) as $component ) {
+				if ( '' === $component || ! $this->is_valid_css_selector( $component ) ) {
+					continue;
+				}
+				if ( $this->selector_targets_pseudo_element( $component ) ) {
+					continue;
+				}
+				$valid[] = $component;
 			}
-			$valid[] = $sanitized;
 		}
 
 		return array_values( array_unique( $valid ) );
+	}
+
+	/**
+	 * Split only commas at selector-list top level. Commas inside functional
+	 * pseudo-classes or attribute values remain part of their original selector.
+	 *
+	 * @return string[]
+	 */
+	private function split_top_level_selector_list( string $selector ): array {
+		$parts         = [];
+		$buffer        = '';
+		$paren_depth   = 0;
+		$bracket_depth = 0;
+		$quote         = '';
+		$length        = strlen( $selector );
+
+		for ( $index = 0; $index < $length; $index++ ) {
+			$char = $selector[ $index ];
+
+			if ( '' !== $quote ) {
+				$buffer .= $char;
+				if ( $char === $quote ) {
+					$quote = '';
+				}
+				continue;
+			}
+
+			if ( '"' === $char || "'" === $char ) {
+				$quote   = $char;
+				$buffer .= $char;
+				continue;
+			}
+
+			if ( '(' === $char ) {
+				$paren_depth++;
+			} elseif ( ')' === $char && $paren_depth > 0 ) {
+				$paren_depth--;
+			} elseif ( '[' === $char ) {
+				$bracket_depth++;
+			} elseif ( ']' === $char && $bracket_depth > 0 ) {
+				$bracket_depth--;
+			}
+
+			if ( ',' === $char && 0 === $paren_depth && 0 === $bracket_depth ) {
+				$part = trim( $buffer );
+				if ( '' !== $part ) {
+					$parts[] = $part;
+				}
+				$buffer = '';
+				continue;
+			}
+
+			$buffer .= $char;
+		}
+
+		$part = trim( $buffer );
+		if ( '' !== $part ) {
+			$parts[] = $part;
+		}
+
+		return $parts;
 	}
 
 	/**
