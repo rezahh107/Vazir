@@ -1,15 +1,20 @@
 # Release Checklist
 
-1. Update the plugin version in `vazir-font-wp.php` and the `VAZIR_FONT_VERSION` constant.
-2. Review `README.md` for changelog notes and licensing accuracy.
-3. Regenerate the translation template:
+1. Confirm the release branch is based on the intended `main` SHA.
+2. Update plugin/version metadata consistently.
+3. Run:
    ```bash
-   wp i18n make-pot . languages/vazir-font-wp.pot
+   composer install
+   composer test
+   composer lint
+   composer compat
    ```
-4. Verify that all bundled font files and `assets/fonts/OFL.txt` are present.
-5. Run coding standards before tagging:
-   ```bash
-   vendor/bin/phpcs --standard=WordPress --extensions=php,inc .
-   ```
-6. Test toggling frontend, admin, login, and Gravity Forms options on a WordPress site (WP 5.8+, PHP 7.4+).
-7. Commit, tag (e.g. `git tag v1.1.0`), and push the release.
+4. Verify every generated `@font-face` URL resolves to a packaged WOFF2 asset.
+5. Verify default output contains no font preload unless a measured release requirement explicitly adds one.
+6. Test WordPress frontend, wp-admin, login, Block Editor iframe, and Site Editor canvas.
+7. With a licensed current Gravity Forms build, test Orbital/Theme Framework, supported Legacy Markup, Preview, Form Editor, No Conflict Mode, AJAX, multi-page navigation, validation rerenders, and conditional logic.
+8. Inspect computed `font-family` on representative text/form controls and verify Dashicons/Gravity Forms icons remain intact.
+9. Compare font request count/bytes and ensure no duplicate downloads.
+10. Verify no Gravity Forms cache/file deletion and no periodic font cleanup cron are present.
+11. Build the production artifact without `vendor/`, tests, CI files, or development tooling unless explicitly required by the release process.
+12. Do not publish or merge without Owner authorization.
