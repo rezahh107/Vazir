@@ -55,6 +55,20 @@ final class RepositoryContractTest extends TestCase {
 		$this->assertStringNotContainsString( "add_action( 'gform_post_render'", $source );
 	}
 
+	public function test_gravity_forms_font_enforcement_consumes_exclusion_authority(): void {
+		$source = file_get_contents( VAZIR_TEST_ROOT . '/includes/class-vazirfont-gravityforms-integration.php' );
+		$this->assertIsString( $source );
+		$this->assertStringContainsString( "\$options['exclude_selectors'] ?? []", $source );
+		$this->assertStringContainsString( 'get_negative_scope_selectors', $source );
+		$this->assertStringContainsString( 'apply_exclusion_boundary', $source );
+		$this->assertStringContainsString( ':not(:where(', $source );
+		$this->assertStringContainsString( ':not(:has(:where(', $source );
+		$this->assertStringContainsString( '--gf-font-family-base', $source );
+		$this->assertStringContainsString( "[] !== \$this->get_negative_scope_selectors()", $source );
+		$this->assertStringNotContainsString( 'querySelector', $source );
+		$this->assertStringNotContainsString( 'DOMDocument', $source );
+	}
+
 	public function test_compatibility_hooks_are_still_present_pending_visual_characterization(): void {
 		$source = file_get_contents( VAZIR_TEST_ROOT . '/includes/class-vazirfont-gravityforms-integration.php' );
 		$this->assertIsString( $source );
