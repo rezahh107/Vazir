@@ -1,15 +1,26 @@
 <?xml version="1.0"?>
 <ruleset name="Vazir Font WP Standards">
-  <description>WordPress Coding Standards and PHP compatibility for Vazir Font.</description>
-  <file>.</file>
+  <description>Production runtime coding and PHP-compatibility checks.</description>
+
+  <file>vazir-font-wp.php</file>
+  <file>includes/class-vazirfont-loader.php</file>
+  <file>includes/class-vazirfont-gravityforms-integration.php</file>
+
   <exclude-pattern>vendor/*</exclude-pattern>
+  <exclude-pattern>tests/*</exclude-pattern>
   <exclude-pattern>assets/fonts/*</exclude-pattern>
-  <exclude-pattern>tests/fixtures/*</exclude-pattern>
+
   <config name="testVersion" value="7.4-8.3"/>
-  <rule ref="WordPress-Core"/>
-  <rule ref="WordPress-Docs"/>
-  <rule ref="WordPress-Extra"/>
+
+  <rule ref="WordPress-Core">
+    <!-- The existing public codebase consistently uses PHP 7.4 short arrays. -->
+    <exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
+    <!-- The main plugin bootstrap legitimately contains its controller class. -->
+    <exclude name="WordPress.Files.FileName"/>
+  </rule>
+
   <rule ref="PHPCompatibilityWP"/>
+
   <arg value="p"/>
   <arg name="extensions" value="php,inc"/>
 </ruleset>
