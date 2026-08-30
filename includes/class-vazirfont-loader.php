@@ -225,6 +225,7 @@ final class VazirFont_Loader {
 
 	private function get_base_font_css( string $context ): string {
 		$family = $this->get_font_family();
+		$textual_elements = 'h1, h2, h3, h4, h5, h6, p, li, dt, dd, blockquote, figcaption, table, th, td, label, legend';
 
 		if ( 'admin' === $context ) {
 			return ".vazir-font-enabled,\n"
@@ -245,7 +246,7 @@ final class VazirFont_Loader {
 
 		if ( 'editor' === $context ) {
 			return ".editor-styles-wrapper {\n\tfont-family: {$family};\n}\n"
-				. ".editor-styles-wrapper :where(input, textarea, select, button) {\n\tfont-family: inherit;\n}\n";
+				. ".editor-styles-wrapper :where({$textual_elements}, input, textarea, select, button) {\n\tfont-family: inherit;\n}\n";
 		}
 
 		return ".vazir-font-enabled,\n"
@@ -254,7 +255,8 @@ final class VazirFont_Loader {
 			. ".vazir-font-enabled select,\n"
 			. ".vazir-font-enabled button {\n"
 			. "\tfont-family: {$family};\n"
-			. "}\n";
+			. "}\n"
+			. ".vazir-font-enabled :where({$textual_elements}) {\n\tfont-family: inherit;\n}\n";
 	}
 
 	private function get_font_family(): string {
