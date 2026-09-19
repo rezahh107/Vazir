@@ -47,7 +47,7 @@ final class VazirFont_GravityForms_Integration {
 	}
 
 	private function init_hooks(): void {
-		add_action( 'gform_enqueue_scripts', [ $this, 'enqueue_gravityforms_assets' ], 999, 2 );
+		add_action( 'gform_enqueue_scripts', [ $this, 'enqueue_gravityforms_assets' ], 1001, 2 );
 		add_action( 'gform_preview_init', [ $this, 'mark_preview_request' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_gravityforms_admin_assets' ], 20 );
 
