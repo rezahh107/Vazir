@@ -5,8 +5,8 @@ if ( ! defined( 'ABSPATH' ) ) { exit( 1 ); }
 $artifact_dir = getenv( 'VAZIR_LAB_ARTIFACT_DIR' );
 if ( ! is_string( $artifact_dir ) || '' === $artifact_dir ) { throw new RuntimeException( 'VAZIR_LAB_ARTIFACT_DIR is required.' ); }
 wp_mkdir_p( $artifact_dir );
-if ( ! class_exists( 'GFAPI' ) || ! class_exists( 'GFCommon' ) || ! class_exists( 'Gravity_Flow_API' ) ) { throw new RuntimeException( 'Gravity Forms / Gravity Flow runtime APIs are unavailable.' ); }
-if ( '3.1.1.1' !== (string) GFCommon::get_version() || ! defined( 'GRAVITY_FLOW_VERSION' ) || '3.1.0' !== GRAVITY_FLOW_VERSION ) { throw new RuntimeException( 'Gravity Flow profile requires Gravity Forms 3.1.1.1 and Gravity Flow 3.1.0.' ); }
+if ( ! class_exists( 'GFAPI' ) || ! class_exists( 'GFCommon' ) || ! class_exists( 'GFForms' ) || ! class_exists( 'Gravity_Flow_API' ) ) { throw new RuntimeException( 'Gravity Forms / Gravity Flow runtime APIs are unavailable.' ); }
+if ( '3.1.1.1' !== (string) GFForms::$version || ! defined( 'GRAVITY_FLOW_VERSION' ) || '3.1.0' !== GRAVITY_FLOW_VERSION ) { throw new RuntimeException( 'Gravity Flow profile requires Gravity Forms 3.1.1.1 and Gravity Flow 3.1.0.' ); }
 $existing = get_option( 'vazir_flow_evidence_fixture_manifest' );
 if ( is_array( $existing ) && ! empty( $existing['form_id'] ) && ! empty( $existing['entry_id'] ) ) { file_put_contents( $artifact_dir . '/gravityflow-fixture.json', wp_json_encode( $existing, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n" ); return; }
 $operator = get_user_by( 'login', getenv( 'VAZIR_LAB_ADMIN_USER' ) ?: 'vazir_lab_admin' );
