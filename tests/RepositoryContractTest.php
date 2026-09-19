@@ -64,7 +64,7 @@ final class RepositoryContractTest extends TestCase {
 		$this->assertStringNotContainsString( "method_exists( 'GFCommon', 'get_version' )", $source );
 		$this->assertStringContainsString( 'class GFCommon {}', $fixture );
 		$this->assertStringContainsString( "public static string \$version = '3.1.1.1'", $fixture );
-		$this->assertStringNotContainsString( 'GFCommon::get_version', $fixture );
+		$this->assertStringNotContainsString( 'public static function get_version', $fixture );
 	}
 
 	public function test_gravity_forms_integration_stays_inactive_without_required_runtime_classes(): void {
