@@ -16,8 +16,9 @@ await recorder.record('frontend_view_table_search_pagination', async () => {
   await page.goto(manifest.frontend_url, { waitUntil: 'networkidle' });
   const container = page.locator('.gv-container').first(); await container.waitFor({ state: 'visible', timeout: 30000 });
   await expectVazir(container, 'GravityView frontend container'); await expectNotVazir(page.locator('#vf-view-excluded'), 'GravityView profile exclusion fixture', /monospace/i);
-  const search = page.locator('.gv-widget-search input[type="search"][name="gv_search"]').first(); await expectVazir(search, 'GravityView search input');
-  const submit = page.locator('.gv-widget-search .gv-search-button').first(); await expectVazir(submit, 'GravityView search button');
+  const searchForm = page.locator('form.gv-widget-search').first(); await searchForm.waitFor({ state: 'visible', timeout: 30000 });
+  const search = searchForm.locator('input[type="search"], input[type="text"]').first(); await expectVazir(search, 'GravityView search input');
+  const submit = searchForm.locator('.gv-search-button').first(); await expectVazir(submit, 'GravityView search button');
   await search.fill('آلفا'); await Promise.all([page.waitForLoadState('domcontentloaded'), submit.click()]);
   await page.locator('.gv-container').first().waitFor({ state: 'visible' }); await expectVazir(page.locator('.gv-container').first(), 'GravityView filtered result state');
   assert.match(await page.locator('.gv-container').first().innerText(), /آلفا/, 'Filtered View should contain the matching synthetic entry');
