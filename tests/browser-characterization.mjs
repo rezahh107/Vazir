@@ -59,7 +59,10 @@ const assertSingleLineControlLayout = async (locator, label) => {
   if (Number.isFinite(metrics.lineHeight)) {
     assert.ok(metrics.height + 0.5 >= metrics.lineHeight, `${label} height must accommodate line-height: ${JSON.stringify(metrics)}`);
   }
-  assert.ok(metrics.scrollHeight <= metrics.clientHeight + 2, `${label} must not vertically clip after font migration: ${JSON.stringify(metrics)}`);
+  // Form controls can report scrollHeight against their rendered border box while
+  // clientHeight excludes borders. Compare to the actual rendered height so a
+  // healthy bordered input is not misclassified as vertical clipping.
+  assert.ok(metrics.scrollHeight <= metrics.height + 2, `${label} must not vertically clip after font migration: ${JSON.stringify(metrics)}`);
   return metrics;
 };
 
