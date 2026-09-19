@@ -29,10 +29,6 @@ const browser = await chromium.launch();
 results.browser.version = browser.version();
 const context = await browser.newContext();
 const page = await context.newPage();
-const dynamicRequests = [];
-page.on('request', request => {
-  if (['xhr', 'fetch'].includes(request.resourceType())) dynamicRequests.push(request.url());
-});
 
 const familyOf = locator => locator.evaluate(el => getComputedStyle(el).fontFamily);
 const expectVazir = async (locator, label) => {
@@ -76,8 +72,63 @@ await record('frontend_orbital_theme_framework', async () => {
   assert.match(className || '', /gform-theme--framework/, 'Orbital wrapper must use Theme Framework');
   assert.match(className || '', /gform-theme--orbital/, 'Orbital wrapper must use Orbital theme');
   const frameworkFamily = await wrapper.evaluate(el => getComputedStyle(el).getPropertyValue('--gf-font-family-base'));
-  assert.match(frameworkFamily, /Vazir/i, `--gf-font-family-base should contain Vazir; got ${frameworkFamily}`);
-  return { theme_framework_custom_property: frameworkFamily };
+  const frameworkDiagnostics = await wrapper.evaluate(el => {
+    const matchedRules = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+      let rules;
+      try {
+        rules = Array.from(sheet.cssRules || []);
+      } catch {
+        continue;
+      }
+      for (const rule of rules) {
+        if (!(rule instanceof CSSStyleRule)) continue;
+        const value = rule.style.getPropertyValue('--gf-font-family-base');
+        if (!value) continue;
+        let matches = false;
+        try {
+          matches = el.matches(rule.selectorText);
+        } catch {}
+        matchedRules.push({
+          selector: rule.selectorText,
+          value: value.trim(),
+          matches,
+          stylesheet: sheet.href || (sheet.ownerNode && sheet.ownerNode.id) || 'inline',
+        });
+      }
+    }
+    const exclusionSelectors = [
+      '.dashicons',
+      '.menu-icon',
+      '.menu-image',
+      '[class^="dashicons-"]',
+      '[class*=" dashicons-"]',
+      '[class^="fa-"]',
+      '[class*=" fa-"]',
+      '.material-icons',
+      '.vf-gf-excluded',
+    ];
+    const matchingExcludedDescendants = exclusionSelectors.filter(selector => {
+      try {
+        return el.querySelector(selector) !== null;
+      } catch {
+        return false;
+      }
+    });
+    const vazirStyle = document.getElementById('vazir-font-gravity-forms-inline-css');
+    return {
+      matchedRules,
+      matchingExcludedDescendants,
+      vazirStylePresent: Boolean(vazirStyle),
+      vazirStyleHasFrameworkProperty: Boolean(vazirStyle && vazirStyle.textContent && vazirStyle.textContent.includes('--gf-font-family-base')),
+    };
+  });
+  assert.match(
+    frameworkFamily,
+    /Vazir/i,
+    `--gf-font-family-base should contain Vazir; got ${frameworkFamily}; diagnostics=${JSON.stringify(frameworkDiagnostics)}`,
+  );
+  return { theme_framework_custom_property: frameworkFamily, framework_diagnostics: frameworkDiagnostics };
 });
 
 await record('frontend_exclusions_and_icons', async () => {
@@ -108,7 +159,12 @@ await record('conditional_logic_transition', async () => {
 
 await record('ajax_validation_and_multipage_rerenders', async () => {
   await page.goto(manifest.dynamic_url, { waitUntil: 'networkidle' });
-  const requestBaseline = dynamicRequests.length;
+  const submissionMethod = page.locator(`[data-js="gform_submission_method_${manifest.dynamic_form_id}"]`);
+  await submissionMethod.waitFor({ state: 'attached', timeout: 30000 });
+  assert.equal(await submissionMethod.inputValue(), 'iframe', 'Gravity Forms 3.1.1.1 ajax="true" should use the real iframe submission method');
+  const ajaxFrame = page.locator(`#gform_ajax_frame_${manifest.dynamic_form_id}`);
+  await ajaxFrame.waitFor({ state: 'attached', timeout: 30000 });
+
   await page.getByRole('button', { name: 'بعدی' }).click();
   await page.locator('.gform_validation_errors').waitFor({ state: 'visible', timeout: 30000 });
   await expectVazir(page.locator(`#input_${manifest.dynamic_form_id}_1`), 'required field after validation rerender');
@@ -126,9 +182,7 @@ await record('ajax_validation_and_multipage_rerenders', async () => {
   await page.locator(`#input_${manifest.dynamic_form_id}_1`).waitFor({ state: 'visible', timeout: 30000 });
   await expectVazir(page.locator(`#input_${manifest.dynamic_form_id}_1`), 'page-one input after previous transition');
 
-  const observed = dynamicRequests.slice(requestBaseline);
-  assert.ok(observed.length > 0, 'AJAX form transitions should produce at least one fetch/XHR request');
-  return { dynamic_request_count: observed.length };
+  return { submission_method: 'iframe', ajax_frame_present: true };
 });
 
 await record('legacy_markup_frontend', async () => {
