@@ -77,7 +77,7 @@ Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms ru
 | `assets/css/` | Shared/static CSS assets |
 | `assets/js/` | Admin-side JavaScript |
 | `languages/` | Translation template/resources |
-| `tests/` | Runtime, repository, WordPress smoke, and browser characterization tests |
+| `tests/` | Runtime, repository, WordPress smoke, browser, and licensed Gravity Forms evidence tests |
 | `docs/CHARACTERIZATION.md` | Evidence boundaries and characterization status |
 | `RELEASE.md` | Release verification checklist |
 
@@ -119,9 +119,12 @@ Current CI coverage includes:
 - PHP `7.4`, `8.3`, `8.4`, and `8.5`: syntax checks, `tests/runtime-contract.php`, PHPUnit;
 - standards: `composer lint` and `composer compat`;
 - WordPress smoke: `6.7/PHP 7.4`, `7.1/PHP 8.3`, `7.1/PHP 8.5`;
-- Chromium computed-style characterization on WordPress `7.1` with Twenty Twenty-One and Twenty Twenty-Five.
+- Chromium computed-style characterization on WordPress `7.1` with Twenty Twenty-One and Twenty Twenty-Five;
+- a separately diagnosable licensed Gravity Forms evidence lab targeting WordPress `7.1`, PHP `8.3`, Gravity Forms `3.1.1.1`, and Chromium.
 
-The browser fixture covers WordPress typography/exclusion behavior and Dashicons. It does not install licensed Gravity Forms and must not be described as licensed Gravity Forms characterization.
+The generic browser fixture covers WordPress typography/exclusion behavior and Dashicons. It does not install licensed Gravity Forms and must not be described as licensed Gravity Forms characterization.
+
+The dedicated Gravity Forms lab must fail closed unless the approved package matches its exact expected byte size, SHA-256, entrypoint, and version. It must never commit or publish the licensed Gravity Forms ZIP as a CI artifact. A configured lab is not evidence by itself: licensed-runtime claims require an actually executed exact-Head run, and unavailable runner/package conditions remain `ENVIRONMENT_UNAVAILABLE`/`NOT_PROVEN`, not PASS.
 
 ## 10. Testing Rules for Changes
 
