@@ -22,7 +22,17 @@ jobs:
           coverage: none
           tools: composer:v2
       - name: Construct bounded migration tree
-        run: python3 .github/scripts/build-vazirmatn-migration.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('.github/scripts/build-vazirmatn-migration.py')
+          lines = path.read_text(encoding='utf-8').splitlines()
+          lines[69] = "replace_exact('tests/runtime-contract.php', \"Vazir'[^;]*!important\", \"Vazirmatn'[^;]*!important\")"
+          path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          PY
+          python3 .github/scripts/build-vazirmatn-migration.py
       - name: Run deterministic repository checks
         shell: bash
         run: |
