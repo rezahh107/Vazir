@@ -28,8 +28,8 @@ $assert = static function ( bool $condition, string $message ): void {
 	}
 };
 
-$assert( class_exists( 'GFAPI' ) && class_exists( 'GFCommon' ), 'Gravity Forms runtime classes are unavailable.' );
-$assert( '3.1.1.1' === (string) GFCommon::get_version(), 'Gravity Forms runtime version is not 3.1.1.1.' );
+$assert( class_exists( 'GFAPI' ) && class_exists( 'GFCommon' ) && class_exists( 'GFForms' ), 'Gravity Forms runtime classes are unavailable.' );
+$assert( '3.1.1.1' === (string) GFForms::$version, 'Gravity Forms runtime version is not 3.1.1.1.' );
 $assert( defined( 'VAZIR_FONT_VERSION' ), 'Vazir runtime version constant is unavailable.' );
 $assert( is_plugin_active( 'gravityforms/gravityforms.php' ), 'Gravity Forms is not active.' );
 $assert( is_plugin_active( 'vazir-font-wp/vazir-font-wp.php' ), 'Vazir plugin under test is not active.' );
@@ -61,7 +61,7 @@ $identity = array(
 	'repository_sha'        => $repo_sha,
 	'wordpress_version'     => get_bloginfo( 'version' ),
 	'php_version'           => PHP_VERSION,
-	'gravity_forms_version' => (string) GFCommon::get_version(),
+	'gravity_forms_version' => (string) GFForms::$version,
 	'vazir_version'         => (string) VAZIR_FONT_VERSION,
 	'theme'                 => wp_get_theme()->get_stylesheet(),
 	'no_conflict_mode'      => (bool) get_option( 'gform_enable_noconflict' ),
