@@ -47,7 +47,7 @@ final class VazirFont_GravityForms_Integration {
 	}
 
 	private function init_hooks(): void {
-		add_action( 'gform_enqueue_scripts', [ $this, 'enqueue_gravityforms_assets' ], 1001, 2 );
+		add_action( 'gform_enqueue_scripts', [ $this, 'enqueue_gravityforms_assets' ], 999, 2 );
 		add_action( 'gform_preview_init', [ $this, 'mark_preview_request' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_gravityforms_admin_assets' ], 20 );
 
@@ -205,9 +205,11 @@ final class VazirFont_GravityForms_Integration {
 
 		// Theme Framework CSS API remains the preferred current path. Because the
 		// custom property is inherited, suppress this ancestor rule when it is an
-		// excluded root/descendant or contains an excluded subtree.
+		// excluded root/descendant or contains an excluded subtree. Include the
+		// canonical wrapper class so the intended font override remains more
+		// specific than Gravity Forms' framework default regardless of asset order.
 		$framework_selector = $this->apply_exclusion_boundary(
-			'.gform-theme--framework',
+			'.gform_wrapper.gform-theme--framework',
 			$negative_exclusions,
 			true
 		);
