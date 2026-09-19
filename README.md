@@ -13,7 +13,7 @@ The plugin is designed to cover:
 - Gravity Forms frontend, Preview, Form Editor, and No Conflict Mode through registered WordPress style handles;
 - currently supported Gravity Forms legacy/current wrapper markup.
 
-Automated PHP and repository contracts verify the loading/API paths. Real-WordPress smoke lanes verify bootstrap and enqueue behavior, and Chromium computed-style lanes exercise WordPress frontend/login/admin/editor coverage on classic and block themes. Licensed Gravity Forms visual coverage remains a separate characterization requirement; see `docs/CHARACTERIZATION.md`.
+Automated PHP and repository contracts verify the loading/API paths. Real-WordPress smoke lanes verify bootstrap and enqueue behavior, and Chromium computed-style lanes exercise WordPress frontend/login/admin/editor coverage on classic and block themes. Licensed Gravity product coverage is handled separately by the Product-Wide Reproducible Evidence Lab; see `docs/CHARACTERIZATION.md`.
 
 ## Font delivery
 
@@ -40,6 +40,8 @@ The adapter uses current Gravity Forms APIs for stylesheet delivery:
 `gform_field_content`, `gform_field_css_class`, and narrowly scoped Gravity Forms `!important` rules remain compatibility mechanisms until licensed browser characterization proves equivalent rendering without them. They are not treated as permanently required.
 
 The plugin does not flush `GFCache`, delete Gravity Forms-generated CSS, delete Gravity Forms transients, or schedule periodic Gravity Forms/font cleanup.
+
+Gravity Flow and GravityView are currently evidence profiles, not dedicated production integration layers. Their licensed profiles characterize how Vazir coexists with the exact Owner-supplied products without inventing Flow/View-specific CSS or runtime ownership.
 
 ## Requirements and PHP policy
 
@@ -73,7 +75,9 @@ composer lint
 composer compat
 ```
 
-`tests/runtime-contract.php` is a standalone contract harness that runs without a WordPress database. `tests/wordpress-smoke.php` is executed by CI against real WordPress installations. `tests/browser-characterization.mjs` verifies computed typography and icon behavior for current WordPress fixtures. Licensed Gravity Forms characterization is intentionally not represented by the unlicensed smoke/browser lanes.
+`tests/runtime-contract.php` is a standalone contract harness that runs without a WordPress database. `tests/wordpress-smoke.php` is executed by CI against real WordPress installations. `tests/browser-characterization.mjs` verifies computed typography and icon behavior for current WordPress fixtures.
+
+The Product-Wide Reproducible Evidence Lab adds separately diagnosable licensed profiles for Gravity Forms, Gravity Flow, GravityView, and the combined Gravity stack. The existing WordPress lanes remain the `wordpress` profile authority. A PASS is scoped to the exact profile/scenarios that ran; package verification or another profile is not a substitute for licensed runtime evidence.
 
 ## Licensing
 
