@@ -46,11 +46,43 @@ The exclusion regression fixture configures `.vf-excluded-component` in the exis
 
 Exact-Head success must always be observed from CI bound to the commit being evaluated before claiming characterization passed for a later change.
 
+## PR #12 evidence-lab evolution
+
+PR #12 began as a dedicated licensed Gravity Forms evidence lab without changing production PHP or CSS behavior. That first batch established exact-Head checkout, ephemeral WordPress/database provisioning, fail-closed package verification, deterministic real-Gravity-Forms fixtures, runtime identity capture, Playwright/Chromium characterization, bounded diagnostics, and a future production-ZIP substitution seam.
+
+The Gravity Forms profile remains deep and unchanged in intended coverage: Orbital / Theme Framework, supported Legacy Markup, text/control typography, exclusions, representative icon families, conditional logic, AJAX validation rerender, multi-page navigation, Preview, Form Editor, No Conflict Mode, and duplicate-font-request characterization.
+
+The Owner-approved scope amendment generalizes only the reusable infrastructure into a **Vazir Product-Wide Reproducible Evidence Lab**. The existing WordPress smoke/browser lanes remain authoritative for the `wordpress` profile and are not duplicated. Licensed matrix profiles are `gravityforms`, `gravityflow`, `gravityview`, and `gravity-stack`.
+
+### Pinned Owner-supplied package identities
+
+The generic verifier was executed directly against the actual Owner-supplied ZIP bytes and accepted all three exact identities. Deterministic wrong-size, wrong-SHA, and missing-entrypoint checks were also executed and rejected as required.
+
+| Package | Drive ID | Size | SHA-256 | Entrypoint | Header version |
+| --- | --- | ---: | --- | --- | --- |
+| Gravity Forms | `10pDROZVyqELKzSzIiJrOyEWKjxS8r22Q` | `5300290` | `542f56ae0747f3661d1474996527298027db3fb8ed3e6469a6391aaabf61069b` | `gravityforms/gravityforms.php` | `3.1.1.1` |
+| Gravity Flow | `1F5p8XvXdfrKSpm-_cozxIAX_eJLZRuOV` | `2603034` | `ac0573b75831380417a21a455176e25eb746d718bbbd0bb70d6da6f48cba5404` | `gravityflow/gravityflow.php` | `3.1.0` |
+| GravityView | `1sFuTdH7E0SVqAMPT0V7wOBoaYPfqgoKj` | `7569755` | `af5959fb6bf0cfcb4d07d14b1933cf9ea0a9d0f994b9991f27aed47edbcb9829` | `gravityview/gravityview.php` | `3.3.4` |
+
+The approved GravityView bytes are not described as a vanilla upstream archive. The exact `gravityview/gravityview.php` in the Owner-supplied package contains a custom `pre_http_request` filter that redirects POST requests for `store.gravitykit.com` to `gravitykit.gpltimes.com`. Evidence is therefore bound to the exact SHA-256 above; the lab does not substitute another package and does not require a licensing request to create its synthetic View fixture.
+
+### Profile claim ceilings
+
+- `wordpress`: existing WordPress smoke/browser characterization only.
+- `gravityforms`: deep real Gravity Forms typography/dynamic/admin characterization; it proves only the scenarios that execute in that profile.
+- `gravityflow`: exact GF + Flow + Vazir activation, a real `Gravity_Flow_API` approval step/entry, current inbox surfaces, prerequisite GF rendering, exclusions, and rendered icon-family checks when the real node exists. Fixture-created workflow state does not prove every production setup path.
+- `gravityview`: exact GF + GravityView + Vazir activation, a real `gravityview` post bound to a synthetic GF form using inspected 3.3.4 View metadata, front-end View/search/result state, admin editor, exclusions, pagination/icon checks when rendered. AJAX remains `NOT_PROVEN` unless an observable runtime path is actually exercised.
+- `gravity-stack`: representative coexistence/regression checks with all three Gravity products and Vazir active. It is not exhaustive compatibility evidence for any individual product.
+
+A PASS in one profile must not be promoted into another profile or an unexecuted surface.
+
 ## Current verification boundary
 
-Licensed Gravity Forms browser characterization has **not** been executed in the available verification environment.
+The first PR #12 GitHub Actions attempts on 2026-09-19 were `ENVIRONMENT_UNAVAILABLE`: GitHub completed both the licensed lab and every job in the pre-existing CI workflow without allocating a runner (`runner_id=0`, no executed steps). This is an execution-environment failure, not a Vazir or Gravity-product runtime result.
 
-Repository/runtime contract tests exercise the Gravity Forms integration code with stubs, but those stubs are not a substitute for a licensed real-Gravity-Forms installation. Therefore the repository must not claim runtime PASS for real Gravity Forms Orbital/Theme Framework, supported Legacy Markup, Preview, Form Editor, No Conflict Mode, AJAX, multi-page navigation, validation rerenders, conditional logic, or representative Gravity Forms icons without separate licensed characterization.
+Until a later exact-Head run actually receives a runner, licensed browser/runtime scenarios remain `NOT_EXECUTED / ENVIRONMENT_UNAVAILABLE` and therefore `NOT_PROVEN`. The existence of the workflow, successful local package-identity verification, source inspection, or fixture code is not a runtime PASS.
+
+Repository/runtime contract tests with stubs are not a substitute for licensed product runtime evidence. In particular, Gravity Forms Orbital/Theme Framework, Legacy Markup, Preview, Form Editor, No Conflict Mode, AJAX, multi-page navigation, validation rerenders, conditional logic, and representative icons remain `NOT_PROVEN` until their profile actually executes.
 
 Until that evidence exists, `gform_field_content`, `gform_field_css_class`, and the scoped Gravity Forms `!important` compatibility rules must not be removed merely for architectural simplification.
 
@@ -78,11 +110,4 @@ If an accepted exclusion itself contains `:has()`, the adapter omits the affecte
 
 ## Evidence discipline for future changes
 
-For later changes, distinguish these evidence classes:
-
-- source/repository contract evidence;
-- real WordPress smoke evidence;
-- computed-style browser evidence;
-- licensed Gravity Forms runtime evidence.
-
-Do not promote one class into another. In particular, `NOT_EXECUTED_ENVIRONMENT_UNAVAILABLE` for licensed Gravity Forms remains an evidence gap, not PASS and not a reproduced defect.
+Distinguish source/repository contracts, real WordPress smoke, computed-style browser evidence, package identity, and each licensed product profile. Package identity PASS proves only exact package identity/archive safety. `ENVIRONMENT_UNAVAILABLE`, `NOT_EXECUTED`, and `NOT_PROVEN` remain evidence gaps, not PASS and not reproduced product defects.

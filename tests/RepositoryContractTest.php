@@ -55,6 +55,35 @@ final class RepositoryContractTest extends TestCase {
 		$this->assertStringNotContainsString( "add_action( 'gform_post_render'", $source );
 	}
 
+	public function test_gravity_forms_availability_uses_loaded_required_classes(): void {
+		$source = file_get_contents( VAZIR_TEST_ROOT . '/includes/class-vazirfont-gravityforms-integration.php' );
+		$fixture = file_get_contents( VAZIR_TEST_ROOT . '/tests/runtime-contract.php' );
+		$this->assertIsString( $source );
+		$this->assertIsString( $fixture );
+		$this->assertStringContainsString( "class_exists( 'GFForms' ) && class_exists( 'GFCommon' )", $source );
+		$this->assertStringNotContainsString( "method_exists( 'GFCommon', 'get_version' )", $source );
+		$this->assertStringContainsString( 'class GFCommon {}', $fixture );
+		$this->assertStringContainsString( "public static string \$version = '3.1.1.1'", $fixture );
+		$this->assertStringNotContainsString( 'public static function get_version', $fixture );
+	}
+
+	public function test_gravity_forms_integration_stays_inactive_without_required_runtime_classes(): void {
+		$this->assertFalse( class_exists( 'GFForms', false ) );
+		$this->assertFalse( class_exists( 'GFCommon', false ) );
+
+		if ( ! defined( 'ABSPATH' ) ) {
+			define( 'ABSPATH', '/tmp/wp/' );
+		}
+		require_once VAZIR_TEST_ROOT . '/includes/class-vazirfont-gravityforms-integration.php';
+
+		$integration = VazirFont_GravityForms_Integration::get_instance();
+		$reflection = new ReflectionClass( $integration );
+		$available = $reflection->getProperty( 'gf_available' );
+		$available->setAccessible( true );
+
+		$this->assertFalse( $available->getValue( $integration ) );
+	}
+
 	public function test_gravity_forms_font_enforcement_consumes_exclusion_authority(): void {
 		$source = file_get_contents( VAZIR_TEST_ROOT . '/includes/class-vazirfont-gravityforms-integration.php' );
 		$this->assertIsString( $source );

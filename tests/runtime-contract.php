@@ -44,8 +44,8 @@ class WP_Screen {
 	public string $id;
 	public function __construct( string $id ) { $this->id = $id; }
 }
-class GFCommon { public static function get_version() { return '3.1.0.3'; } }
-class GFForms { public static string $version = '3.1.0.3'; public static function is_gravity_page() { return true; } }
+class GFCommon {}
+class GFForms { public static string $version = '3.1.1.1'; public static function is_gravity_page() { return true; } }
 
 function vf_assert( bool $condition, string $message ): void {
 	if ( ! $condition ) {
@@ -67,6 +67,21 @@ function vf_reset_gf_css_state( VazirFont_GravityForms_Integration $gf ): void {
 
 require dirname( __DIR__ ) . '/vazir-font-wp.php';
 VazirFontPlugin::get_instance()->init();
+
+vf_assert( class_exists( 'GFForms' ) && class_exists( 'GFCommon' ), 'synthetic Gravity Forms model exposes the required loaded runtime classes' );
+vf_assert( '3.1.1.1' === GFForms::$version, 'synthetic Gravity Forms model exposes the real runtime version surface' );
+vf_assert( ! method_exists( 'GFCommon', 'get_version' ), 'synthetic Gravity Forms model does not invent GFCommon::get_version()' );
+
+$gf = VazirFont_GravityForms_Integration::get_instance();
+$gf_reflection = new ReflectionClass( $gf );
+$gf_available_property = $gf_reflection->getProperty( 'gf_available' );
+$gf_available_property->setAccessible( true );
+vf_assert( true === $gf_available_property->getValue( $gf ), 'Gravity Forms integration becomes available from the loaded real-shape classes' );
+vf_assert( isset( $GLOBALS['vf_actions']['gform_enqueue_scripts'] ), 'Gravity Forms enqueue hook registers for the real-shape runtime' );
+vf_assert( isset( $GLOBALS['vf_filters']['gform_preview_styles'] ), 'gform_preview_styles hook registers for the real-shape runtime' );
+vf_assert( isset( $GLOBALS['vf_filters']['gform_noconflict_styles'] ), 'gform_noconflict_styles hook registers for the real-shape runtime' );
+vf_assert( isset( $GLOBALS['vf_filters']['gform_field_content'] ), 'field-content compatibility hook registers for the real-shape runtime' );
+vf_assert( isset( $GLOBALS['vf_filters']['gform_field_css_class'] ), 'field-class compatibility hook registers for the real-shape runtime' );
 
 $loader = VazirFont_Loader::get_instance();
 $weights = $loader->get_selected_weights();
@@ -110,12 +125,12 @@ vf_assert( false !== strpos( $editor_css, $negative_guard ), 'editor Vazir rules
 vf_assert( false === strpos( $editor_css, ".editor-styles-wrapper .vf-excluded-component {\n\tfont-family: inherit;" ), 'editor exclusions do not emit a second competing reset mechanism' );
 $GLOBALS['vf_is_admin'] = false;
 
-$gf = VazirFont_GravityForms_Integration::get_instance();
 $styles = $gf->filter_preview_styles( [ 'gravity-forms-orbital-theme' ], [] );
 vf_assert( in_array( 'vazir-font-gravity-forms', $styles, true ), 'gform_preview_styles returns a WordPress style handle' );
 
 $noconflict = $gf->add_noconflict_styles( [] );
 vf_assert( in_array( 'vazir-font-gravity-forms', $noconflict, true ), 'gform_noconflict_styles allowlists the same style handle' );
+vf_assert( in_array( 'vazir-font-admin-runtime', $noconflict, true ), 'gform_noconflict_styles retains the admin runtime handle when admin typography is enabled' );
 
 VazirFontPlugin::update_options( [ 'exclude_selectors' => [ '.gform_wrapper', '[data-icon]:before' ] ] );
 vf_reset_gf_css_state( $gf );
