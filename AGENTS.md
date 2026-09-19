@@ -25,8 +25,9 @@ The plugin owns typography only. Preserve these boundaries:
 - WordPress frontend, wp-admin, login, Block Editor, and Site Editor typography is handled by `VazirFont_Loader`.
 - Editor content uses the current `enqueue_block_assets` path.
 - Gravity Forms compatibility is handled by `VazirFont_GravityForms_Integration` through WordPress/Gravity Forms style hooks and registered handles.
-- Do not introduce a second settings authority, JavaScript DOM typography engine, or Gravity Forms cache/file ownership.
-- Do not flush `GFCache`, delete Gravity Forms-generated CSS/transients, or add periodic Gravity Forms/font cleanup jobs.
+- Gravity Flow and GravityView evidence profiles characterize coexistence only; they do not create dedicated production integration layers.
+- Do not introduce a second settings authority, JavaScript DOM typography engine, or Gravity Forms/Flow/View cache/file ownership.
+- Do not flush third-party caches, delete generated files/transients, or add periodic third-party cleanup jobs.
 
 ## 3. Font Delivery Invariants
 
@@ -77,7 +78,8 @@ Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms ru
 | `assets/css/` | Shared/static CSS assets |
 | `assets/js/` | Admin-side JavaScript |
 | `languages/` | Translation template/resources |
-| `tests/` | Runtime, repository, WordPress smoke, browser, and licensed Gravity Forms evidence tests |
+| `tests/gravityforms-evidence-lab/` | Deep Gravity Forms profile retained from the first PR #12 batch |
+| `tests/product-evidence-lab/` | Shared licensed package/runtime core plus Gravity Flow, GravityView, and combined-stack profiles |
 | `docs/CHARACTERIZATION.md` | Evidence boundaries and characterization status |
 | `RELEASE.md` | Release verification checklist |
 
@@ -120,19 +122,22 @@ Current CI coverage includes:
 - standards: `composer lint` and `composer compat`;
 - WordPress smoke: `6.7/PHP 7.4`, `7.1/PHP 8.3`, `7.1/PHP 8.5`;
 - Chromium computed-style characterization on WordPress `7.1` with Twenty Twenty-One and Twenty Twenty-Five;
-- a separately diagnosable licensed Gravity Forms evidence lab targeting WordPress `7.1`, PHP `8.3`, Gravity Forms `3.1.1.1`, and Chromium.
+- a separately diagnosable Product-Wide Reproducible Evidence Lab targeting WordPress `7.1`, PHP `8.3`, Chromium, and licensed profiles `gravityforms`, `gravityflow`, `gravityview`, and `gravity-stack`.
 
-The generic browser fixture covers WordPress typography/exclusion behavior and Dashicons. It does not install licensed Gravity Forms and must not be described as licensed Gravity Forms characterization.
+The existing generic WordPress browser fixture remains the `wordpress` profile authority and is not duplicated inside the licensed matrix.
 
-The dedicated Gravity Forms lab must fail closed unless the approved package matches its exact expected byte size, SHA-256, entrypoint, and version. It must never commit or publish the licensed Gravity Forms ZIP as a CI artifact. A configured lab is not evidence by itself: licensed-runtime claims require an actually executed exact-Head run, and unavailable runner/package conditions remain `ENVIRONMENT_UNAVAILABLE`/`NOT_PROVEN`, not PASS.
+The product evidence lab must fail closed unless every required Owner-supplied package matches its exact expected byte size, SHA-256, archive safety rules, entrypoint, plugin identity, and version. Licensed ZIPs must never be committed or uploaded as CI artifacts. A configured profile is not evidence by itself: claims require an actually executed exact-Head run, and unavailable runner/package conditions remain `ENVIRONMENT_UNAVAILABLE`/`NOT_PROVEN`, not PASS.
+
+A PASS belongs only to the profile and scenarios that executed. Gravity Forms PASS does not prove Gravity Flow or GravityView, and combined-stack PASS is representative coexistence evidence rather than exhaustive compatibility.
 
 ## 10. Testing Rules for Changes
 
 - Production behavior changes require a deterministic contract test where feasible.
 - CSS/typography changes that depend on cascade or computed style require browser characterization, not source inspection alone.
 - Changes to Gravity Forms compatibility should preserve Preview/No Conflict registered handles and include deterministic repository/runtime contracts.
-- Any claim about real Orbital/Theme Framework, Legacy Markup, Preview, Form Editor, AJAX, multi-page, validation rerender, conditional logic, or Gravity Forms icons requires a licensed Gravity Forms environment.
-- Keep exact-Head CI evidence bound to the commit being evaluated.
+- Any claim about real Orbital/Theme Framework, Legacy Markup, Preview, Form Editor, AJAX, multi-page, validation rerender, conditional logic, or Gravity Forms icons requires the licensed `gravityforms` profile.
+- Claims about Gravity Flow or GravityView surfaces require their respective licensed profile; fixture-created state proves behavior after that state exists, not production reachability of every setup path.
+- Keep exact-Head CI evidence bound to the commit and profile being evaluated.
 
 ## 11. Internationalization, Security, and Accessibility
 
@@ -152,8 +157,8 @@ At minimum:
 - run all repository checks;
 - verify packaged font URLs/assets;
 - run WordPress computed-style characterization;
-- run licensed current Gravity Forms characterization when making Gravity Forms release claims;
-- do not promote unavailable or stub-only Gravity Forms evidence to PASS;
+- run the relevant licensed product profile for any Gravity Forms/Flow/View compatibility claim made by the release;
+- do not promote unavailable, stub-only, or different-profile evidence to PASS;
 - build the production artifact without development-only tooling unless explicitly required;
 - publish only with Owner authorization.
 
