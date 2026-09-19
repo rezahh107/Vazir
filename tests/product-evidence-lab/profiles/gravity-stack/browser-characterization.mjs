@@ -14,12 +14,18 @@ const view = JSON.parse(fs.readFileSync(path.join(artifactDir, 'gravityview-fixt
 const results = { status: 'PASS', profile: 'gravity-stack', scenarios: {}, claim_ceiling: 'Representative coexistence only; not exhaustive product compatibility.' };
 const recorder = makeRecorder(results);
 const browser = await chromium.launch(); const context = await browser.newContext(); const page = await context.newPage();
-const fontRequests = []; page.on('request', req => { if (/\/assets\/fonts\/vazir-\d+\.woff2(?:\?|$)/.test(req.url())) fontRequests.push(req.url()); });
 await recorder.record('representative_gravityforms_surface', async () => { await page.goto(gf.orbital_url, { waitUntil: 'networkidle' }); await expectVazir(page.locator(`#gform_wrapper_${gf.orbital_form_id}`), 'combined-stack Gravity Forms wrapper'); });
 await recorder.record('representative_gravityview_surface', async () => { await page.goto(view.frontend_url, { waitUntil: 'networkidle' }); await expectVazir(page.locator('.gv-container').first(), 'combined-stack GravityView container'); await expectNotVazir(page.locator('#vf-view-excluded'), 'combined-stack GravityView exclusion', /monospace/i); });
 await login(page, baseUrl, user, password);
 await recorder.record('representative_gravityflow_surface', async () => { await page.goto(flow.admin_inbox_url, { waitUntil: 'domcontentloaded' }); await page.locator('.gflow-inbox').first().waitFor({ state: 'visible', timeout: 30000 }); await expectVazir(page.locator('.gflow-inbox').first(), 'combined-stack Gravity Flow inbox'); });
-await recorder.record('font_delivery_has_no_duplicate_url_requests', async () => { const counts = new Map(); for (const url of fontRequests) counts.set(url, (counts.get(url) || 0) + 1); const duplicates = [...counts.entries()].filter(([, count]) => count > 1); assert.deepEqual(duplicates, [], `Combined stack requested a Vazir font URL more than once in observed representative navigations: ${JSON.stringify(duplicates)}`); return { observed_font_urls: [...counts.keys()] }; });
+await recorder.record('font_delivery_has_no_duplicate_url_requests', async () => {
+  const requestPage = await context.newPage(); const requests = [];
+  requestPage.on('request', req => { if (/\/assets\/fonts\/vazir-\d+\.woff2(?:\?|$)/.test(req.url())) requests.push(req.url()); });
+  await requestPage.goto(gf.orbital_url, { waitUntil: 'networkidle' }); await requestPage.locator(`#gform_wrapper_${gf.orbital_form_id}`).waitFor({ state: 'visible' });
+  const counts = new Map(); for (const url of requests) counts.set(url, (counts.get(url) || 0) + 1); const duplicates = [...counts.entries()].filter(([, count]) => count > 1);
+  assert.deepEqual(duplicates, [], `Combined stack requested a Vazir font URL more than once in one representative render: ${JSON.stringify(duplicates)}`);
+  await requestPage.close(); return { observed_font_urls: [...counts.keys()], request_count: requests.length };
+});
 fs.writeFileSync(path.join(artifactDir, 'gravity-stack-browser-results.json'), `${JSON.stringify(results, null, 2)}\n`);
 if (recorder.failed()) { try { await page.screenshot({ path: path.join(artifactDir, 'gravity-stack-browser-failure.png'), fullPage: true }); } catch {} }
 await browser.close(); if (recorder.failed()) process.exit(1); console.log(JSON.stringify(results, null, 2));
