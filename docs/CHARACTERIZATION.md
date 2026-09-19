@@ -46,11 +46,21 @@ The exclusion regression fixture configures `.vf-excluded-component` in the exis
 
 Exact-Head success must always be observed from CI bound to the commit being evaluated before claiming characterization passed for a later change.
 
+## Licensed Gravity Forms evidence lab
+
+PR #12 introduces a dedicated, isolated licensed Gravity Forms evidence lab without changing production PHP or CSS behavior. The lab is designed around the Owner-supplied Gravity Forms `3.1.1.1` package and fails closed on package size, SHA-256, entrypoint, or version mismatch before extraction or activation.
+
+The intended primary runtime is WordPress `7.1`, PHP `8.3`, Twenty Twenty-Five, Playwright `1.55.0`, and Chromium. Synthetic fixtures use real Gravity Forms APIs and separate the plain Orbital / Theme Framework custom-property case from the dynamic exclusion/icon case so negative-applicability guards do not invalidate the framework-root observation. The browser contract covers current Orbital markup, supported Legacy Markup, text/control typography, exclusions, representative icon families, conditional logic, AJAX validation rerender, multi-page next/previous transitions, Preview, Form Editor, No Conflict Mode, and a single-render duplicate-font-request check.
+
+The package verifier was executed directly against the Owner-supplied archive during implementation. It accepted the exact package at `5300290` bytes with SHA-256 `542f56ae0747f3661d1474996527298027db3fb8ed3e6469a6391aaabf61069b` and version `3.1.1.1`, and deterministic wrong-size and wrong-hash checks were rejected as required.
+
+The first PR #12 GitHub Actions attempts on 2026-09-19 are classified `ENVIRONMENT_UNAVAILABLE`: GitHub completed both the new licensed lab and every job in the pre-existing CI workflow without allocating a runner (`runner_id=0`, no executed steps). This is an execution-environment failure, not a Gravity Forms or Vazir runtime result. Consequently no licensed browser scenario is recorded as PASS or FAIL from those attempts, and the licensed runtime claims below remain `NOT_PROVEN` until an exact-Head run actually executes.
+
 ## Current verification boundary
 
-Licensed Gravity Forms browser characterization has **not** been executed in the available verification environment.
+Licensed Gravity Forms browser characterization remains **NOT_PROVEN** because the new exact-Head CI lab has not yet been allocated a GitHub Actions runner.
 
-Repository/runtime contract tests exercise the Gravity Forms integration code with stubs, but those stubs are not a substitute for a licensed real-Gravity-Forms installation. Therefore the repository must not claim runtime PASS for real Gravity Forms Orbital/Theme Framework, supported Legacy Markup, Preview, Form Editor, No Conflict Mode, AJAX, multi-page navigation, validation rerenders, conditional logic, or representative Gravity Forms icons without separate licensed characterization.
+Repository/runtime contract tests exercise the Gravity Forms integration code with stubs, but those stubs are not a substitute for a licensed real-Gravity-Forms installation. The dedicated lab now provides the reproducible path for this evidence, but the repository still must not claim runtime PASS for real Gravity Forms Orbital/Theme Framework, supported Legacy Markup, Preview, Form Editor, No Conflict Mode, AJAX, multi-page navigation, validation rerenders, conditional logic, or representative Gravity Forms icons until that workflow actually executes successfully on the evaluated Head.
 
 Until that evidence exists, `gform_field_content`, `gform_field_css_class`, and the scoped Gravity Forms `!important` compatibility rules must not be removed merely for architectural simplification.
 
@@ -85,4 +95,4 @@ For later changes, distinguish these evidence classes:
 - computed-style browser evidence;
 - licensed Gravity Forms runtime evidence.
 
-Do not promote one class into another. In particular, `NOT_EXECUTED_ENVIRONMENT_UNAVAILABLE` for licensed Gravity Forms remains an evidence gap, not PASS and not a reproduced defect.
+Do not promote one class into another. In particular, `ENVIRONMENT_UNAVAILABLE` or `NOT_PROVEN` for licensed Gravity Forms remains an evidence gap, not PASS and not a reproduced product defect.
