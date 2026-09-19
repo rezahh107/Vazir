@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { observeVazirFontRequests } from '../product-evidence-lab/core/browser-helpers.mjs';
 
 const baseUrl = process.env.VAZIR_GF_BASE_URL || 'http://127.0.0.1:8080';
 const artifactDir = process.env.VAZIR_GF_ARTIFACT_DIR;
@@ -141,20 +142,13 @@ await record('legacy_markup_frontend', async () => {
 });
 
 await record('font_request_deduplication_single_render', async () => {
-  const requestPage = await context.newPage();
-  const requests = [];
-  requestPage.on('request', request => {
-    const url = request.url();
-    if (/\/assets\/fonts\/vazir-\d+\.woff2(?:\?|$)/.test(url)) requests.push(url);
+  return observeVazirFontRequests(browser, {
+    url: manifest.orbital_url,
+    label: 'Gravity Forms single render',
+    waitForSurface: async requestPage => {
+      await requestPage.locator(`#gform_wrapper_${manifest.orbital_form_id}`).waitFor({ state: 'visible', timeout: 30000 });
+    },
   });
-  await requestPage.goto(manifest.orbital_url, { waitUntil: 'networkidle' });
-  await requestPage.locator(`#gform_wrapper_${manifest.orbital_form_id}`).waitFor({ state: 'visible' });
-  const counts = new Map();
-  for (const url of requests) counts.set(url, (counts.get(url) || 0) + 1);
-  const duplicates = [...counts.entries()].filter(([, count]) => count > 1);
-  assert.deepEqual(duplicates, [], `Vazir font URLs were requested more than once in one GF render: ${JSON.stringify(duplicates)}`);
-  await requestPage.close();
-  return { unique_font_urls: [...counts.keys()], request_count: requests.length };
 });
 
 await login();
@@ -200,6 +194,7 @@ fs.writeFileSync(path.join(artifactDir, 'browser-results.json'), `${JSON.stringi
 if (failed) {
   try { await page.screenshot({ path: path.join(artifactDir, 'browser-failure.png'), fullPage: true }); } catch {}
 }
+await context.close();
 await browser.close();
 
 if (failed) {
