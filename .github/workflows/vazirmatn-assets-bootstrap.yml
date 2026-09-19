@@ -1,4 +1,4 @@
-name: Temporary Vazirmatn Asset Bootstrap
+name: Temporary Vazirmatn Migration Builder
 
 on:
   push:
@@ -9,85 +9,36 @@ permissions:
   contents: write
 
 jobs:
-  import-upstream-assets:
+  construct-migration:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 1
-      - name: Import exact official Vazirmatn release assets
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+      - name: Construct bounded migration tree
+        run: python3 .github/scripts/build-vazirmatn-migration.py
+      - name: Run deterministic repository checks
         shell: bash
         run: |
           set -euo pipefail
-          archive=/tmp/vazirmatn-v33.003.zip
-          extract=/tmp/vazirmatn-v33.003
-          release_url='https://github.com/rastikerdar/vazirmatn/releases/download/v33.003/vazirmatn-v33.003.zip'
-          rm -rf "$extract"
-          mkdir -p "$extract" assets/fonts
-          curl --fail --location --retry 3 --retry-delay 2 "$release_url" -o "$archive"
-          archive_sha256="$(sha256sum "$archive" | awk '{print $1}')"
-          archive_bytes="$(stat -c '%s' "$archive")"
-          unzip -q "$archive" -d "$extract"
-
-          copy_upstream() {
-            local source_suffix="$1"
-            local destination="$2"
-            local source
-            source="$(find "$extract" -type f -path "*/${source_suffix}" -print -quit)"
-            test -n "$source"
-            cp "$source" "$destination"
-          }
-
-          copy_upstream 'fonts/webfonts/Vazirmatn-Light.woff2'   'assets/fonts/vazirmatn-300.woff2'
-          copy_upstream 'fonts/webfonts/Vazirmatn-Regular.woff2' 'assets/fonts/vazirmatn-400.woff2'
-          copy_upstream 'fonts/webfonts/Vazirmatn-Medium.woff2'  'assets/fonts/vazirmatn-500.woff2'
-          copy_upstream 'fonts/webfonts/Vazirmatn-Bold.woff2'    'assets/fonts/vazirmatn-700.woff2'
-          copy_upstream 'fonts/webfonts/Vazirmatn-Black.woff2'   'assets/fonts/vazirmatn-900.woff2'
-          copy_upstream 'OFL.txt'                                'assets/fonts/OFL.txt'
-          copy_upstream 'AUTHORS.txt'                            'assets/fonts/AUTHORS.txt'
-
-          for file in assets/fonts/vazirmatn-*.woff2; do
-            test "$(xxd -p -l 4 "$file")" = '774f4632'
-          done
-
-          {
-            echo '# Vazirmatn bundled-font provenance'
-            echo
-            echo '- Upstream project: `rastikerdar/vazirmatn`'
-            echo '- Upstream release/tag: `v33.003`'
-            echo '- Upstream release commit: `83629f877e8f084cc07b47030b5d3a0ff06c76ec`'
-            echo '- Upstream release tree: `a7eef4f5ed0e5e339c873fcb28a9cd00e2864964`'
-            echo '- Source archive: `vazirmatn-v33.003.zip`'
-            echo "- Source archive bytes: \`${archive_bytes}\`"
-            echo "- Source archive SHA-256: \`${archive_sha256}\`"
-            echo '- Source archive URL: `https://github.com/rastikerdar/vazirmatn/releases/download/v33.003/vazirmatn-v33.003.zip`'
-            echo
-            echo '## Bundled files'
-            echo
-            echo '| Bundled path | Upstream path | Bytes | SHA-256 |'
-            echo '| --- | --- | ---: | --- |'
-            for row in \
-              'assets/fonts/vazirmatn-300.woff2|fonts/webfonts/Vazirmatn-Light.woff2' \
-              'assets/fonts/vazirmatn-400.woff2|fonts/webfonts/Vazirmatn-Regular.woff2' \
-              'assets/fonts/vazirmatn-500.woff2|fonts/webfonts/Vazirmatn-Medium.woff2' \
-              'assets/fonts/vazirmatn-700.woff2|fonts/webfonts/Vazirmatn-Bold.woff2' \
-              'assets/fonts/vazirmatn-900.woff2|fonts/webfonts/Vazirmatn-Black.woff2' \
-              'assets/fonts/OFL.txt|OFL.txt' \
-              'assets/fonts/AUTHORS.txt|AUTHORS.txt'; do
-              bundled="${row%%|*}"
-              upstream="${row#*|}"
-              bytes="$(stat -c '%s' "$bundled")"
-              sha256="$(sha256sum "$bundled" | awk '{print $1}')"
-              printf '| `%s` | `%s` | %s | `%s` |\n' "$bundled" "$upstream" "$bytes" "$sha256"
-            done
-            echo
-            echo 'These bytes were extracted from the pinned official release archive above; they are not fetched at plugin runtime.'
-          } > assets/fonts/Vazirmatn-PROVENANCE.md
-
+          composer install --no-interaction --prefer-dist
+          find . -path ./vendor -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
+          php tests/runtime-contract.php
+          vendor/bin/phpunit
+          node tests/product-evidence-lab/core/browser-helpers.test.mjs
+          git diff --check -- . ':!assets/fonts/OFL.txt' ':!assets/fonts/AUTHORS.txt'
+      - name: Commit constructed migration
+        shell: bash
+        run: |
+          set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add assets/fonts
-          git diff --cached --check -- assets/fonts/Vazirmatn-PROVENANCE.md
-          git commit -m 'chore: import pinned Vazirmatn v33.003 assets'
+          git add -A
+          git commit -m 'feat: migrate bundled typography to Vazirmatn'
           git push origin "HEAD:${GITHUB_REF_NAME}"
