@@ -43,7 +43,7 @@ final class VazirFont_GravityForms_Integration {
 	}
 
 	private function is_gravity_forms_active(): bool {
-		return class_exists( 'GFCommon' ) && method_exists( 'GFCommon', 'get_version' );
+		return class_exists( 'GFForms' ) && class_exists( 'GFCommon' );
 	}
 
 	private function init_hooks(): void {
