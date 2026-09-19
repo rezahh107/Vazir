@@ -76,6 +76,12 @@ jobs:
           printf '{"repository":"%s","sha":"%s","profile":"%s"}\n' "$GITHUB_REPOSITORY" "$actual" "$VAZIR_LAB_PROFILE" > "$VAZIR_LAB_ARTIFACT_DIR/repository-identity.json"
           if git ls-files '*.zip' | grep -q .; then echo "Committed ZIP archives are forbidden in the Product Evidence Lab." >&2; exit 1; fi
 
+      - name: Falsify artifact upload safety guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tests/product-evidence-lab/core/falsify-artifact-safety.sh "$GITHUB_WORKSPACE"
+
       - name: Set up PHP 8.3 and WP-CLI
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
         with:
@@ -163,6 +169,12 @@ jobs:
           npx playwright install --with-deps chromium
           node -e "const p=require('playwright/package.json'); if(p.version!=='1.55.0') process.exit(1)"
 
+      - name: Falsify browser font-request analysis
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/product-evidence-lab/core/browser-helpers.test.mjs
+
       - name: Start ephemeral WordPress server
         shell: bash
         run: |
@@ -184,28 +196,41 @@ jobs:
           esac
 
       - name: Assert licensed package bytes are outside evidence
+        id: artifact_safety
         if: always()
         shell: bash
         run: |
           set -euo pipefail
-          if find "$VAZIR_LAB_ARTIFACT_DIR" -type f -name '*.zip' -print -quit | grep -q .; then echo "Licensed ZIP bytes must never enter the evidence artifact directory." >&2; exit 1; fi
+          bash tests/product-evidence-lab/core/artifact-safety.sh "$VAZIR_LAB_ARTIFACT_DIR"
 
       - name: Upload bounded profile evidence
-        if: success()
+        if: ${{ success() && steps.artifact_safety.outputs.safe == 'true' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: vazir-${{ matrix.profile }}-evidence-${{ env.VAZIR_LAB_REPOSITORY_SHA }}
-          path: /tmp/vazir-lab-artifacts
+          path: |
+            /tmp/vazir-lab-artifacts/**
+            !/tmp/vazir-lab-artifacts/**/*.zip
           if-no-files-found: error
           retention-days: 30
 
       - name: Upload bounded profile failure diagnostics
-        if: failure()
+        if: ${{ failure() && steps.artifact_safety.outputs.safe == 'true' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: vazir-${{ matrix.profile }}-failure-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            /tmp/vazir-lab-artifacts
+            /tmp/vazir-lab-artifacts/**
+            !/tmp/vazir-lab-artifacts/**/*.zip
             /tmp/vazir-lab-wp-server.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload unsafe-directory log-only diagnostics
+        if: ${{ failure() && steps.artifact_safety.outputs.safe != 'true' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vazir-${{ matrix.profile }}-unsafe-directory-log-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/vazir-lab-wp-server.log
           if-no-files-found: ignore
           retention-days: 7
