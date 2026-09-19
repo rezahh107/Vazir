@@ -89,7 +89,8 @@ await record('frontend_exclusions_and_icons', async () => {
   const icon = page.locator(`#field_${manifest.dynamic_form_id}_5 .dashicons`).first();
   await icon.waitFor({ state: 'attached', timeout: 30000 });
   const iconFamily = await pseudoFamily(icon);
-  assert.match(iconFamily, /dashicons/i, `Gravity Forms password icon must remain Dashicons; got ${iconFamily}`);
+  assert.doesNotMatch(iconFamily, /Vazir/i, `Gravity Forms password icon must not inherit Vazir; got ${iconFamily}`);
+  assert.match(iconFamily, /gform-icons-orbital/i, `Gravity Forms password icon must retain the Orbital icon family; got ${iconFamily}`);
   return { password_icon_family: iconFamily };
 });
 
@@ -118,9 +119,10 @@ await record('ajax_validation_and_multipage_rerenders', async () => {
   const pageTwo = page.locator(`#input_${manifest.dynamic_form_id}_7`);
   await pageTwo.waitFor({ state: 'visible', timeout: 30000 });
   await expectVazir(pageTwo, 'page-two input after AJAX transition');
-  await expectVazir(page.getByRole('button', { name: 'قبلی' }), 'previous button after AJAX transition');
+  const previousButton = page.locator(`#gform_wrapper_${manifest.dynamic_form_id} .gform_previous_button`).first();
+  await expectVazir(previousButton, 'previous button after AJAX transition');
 
-  await page.getByRole('button', { name: 'قبلی' }).click();
+  await previousButton.click();
   await page.locator(`#input_${manifest.dynamic_form_id}_1`).waitFor({ state: 'visible', timeout: 30000 });
   await expectVazir(page.locator(`#input_${manifest.dynamic_form_id}_1`), 'page-one input after previous transition');
 
@@ -163,7 +165,8 @@ await record('gravity_forms_preview', async () => {
   const icon = page.locator(`#field_${manifest.dynamic_form_id}_5 .dashicons`).first();
   await icon.waitFor({ state: 'attached', timeout: 30000 });
   const iconFamily = await pseudoFamily(icon);
-  assert.match(iconFamily, /dashicons/i, `Preview password icon must remain Dashicons; got ${iconFamily}`);
+  assert.doesNotMatch(iconFamily, /Vazir/i, `Preview password icon must not inherit Vazir; got ${iconFamily}`);
+  assert.match(iconFamily, /gform-icons-orbital/i, `Preview password icon must retain the Orbital icon family; got ${iconFamily}`);
 });
 
 await record('form_editor_and_no_conflict_mode', async () => {
