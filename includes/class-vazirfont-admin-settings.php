@@ -202,7 +202,7 @@ final class VazirFont_Admin_Settings {
 
 					foreach ( $weights as $weight => $label ) {
 						printf(
-							'<p style="font-family: \'Vazirmatn\', sans-serif; font-size: 16px; font-weight: %1$s;">%2$s</p>',
+							'<p style="font-family: \'Vazir\', sans-serif; font-size: 16px; font-weight: %1$s;">%2$s</p>',
 							esc_attr( $weight ),
 							esc_html( $label )
 						);

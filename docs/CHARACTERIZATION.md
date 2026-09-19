@@ -76,17 +76,19 @@ The approved GravityView bytes are not described as a vanilla upstream archive. 
 
 A PASS in one profile must not be promoted into another profile or an unexecuted surface.
 
-## PR #12 exact-Head verification boundary
+## Current verification boundary
 
-The initial PR #12 attempts that failed to receive runners were later superseded by executed exact-Head evidence. PR #12's final Head was `8042526d6d8130497b318b915aeb84f9c5a94fe0`.
+The first PR #12 GitHub Actions attempts on 2026-09-19 were `ENVIRONMENT_UNAVAILABLE`: GitHub completed both the licensed lab and every job in the pre-existing CI workflow without allocating a runner (`runner_id=0`, no executed steps). This is an execution-environment failure, not a Vazir or Gravity-product runtime result.
 
-On that exact Head, normal CI run #160 passed all 10 jobs, and Product-Wide Reproducible Evidence Lab run #30 passed all four licensed profiles: `gravityforms`, `gravityflow`, `gravityview`, and `gravity-stack`. The Gravity Forms profile included the Theme Framework/Orbital, supported Legacy Markup, Preview, Form Editor, No Conflict, iframe AJAX validation/rerender, multipage forward/back behavior, protected icon families, exclusions, and duplicate-free bundled font request characterization described in PR #12.
+Until a later exact-Head run actually receives a runner, licensed browser/runtime scenarios remain `NOT_EXECUTED / ENVIRONMENT_UNAVAILABLE` and therefore `NOT_PROVEN`. The existence of the workflow, successful local package-identity verification, source inspection, or fixture code is not a runtime PASS.
 
-The merge commit `cb35e57f7ad62824e642e14576e1df9f8fb8e0f9` contains the same file tree as that successfully characterized PR Head, but the PR-head run must not be represented as an exact-SHA run of the later merge commit. These results are the legacy-Vazir baseline; they do not by themselves prove a later Vazirmatn candidate.
+Repository/runtime contract tests with stubs are not a substitute for licensed product runtime evidence. In particular, Gravity Forms Orbital/Theme Framework, Legacy Markup, Preview, Form Editor, No Conflict Mode, AJAX, multi-page navigation, validation rerenders, conditional logic, and representative icons remain `NOT_PROVEN` until their profile actually executes.
+
+Until that evidence exists, `gform_field_content`, `gform_field_css_class`, and the scoped Gravity Forms `!important` compatibility rules must not be removed merely for architectural simplification.
 
 ## Exclusion semantics
 
-`exclude_selectors` is a negative applicability boundary for bundled `font-family` enforcement. Element-level exclusions are incorporated into generated enforcement selectors so those rules do not match the excluded root or elements below it. The Loader does not implement generic exclusions by emitting competing `font-family: inherit`, `initial`, `revert`, or `revert-layer` reset declarations.
+`exclude_selectors` is a negative applicability boundary for Vazir `font-family` enforcement. Element-level exclusions are incorporated into generated enforcement selectors so those rules do not match the excluded root or elements below it. The Loader does not implement generic exclusions by emitting competing `font-family: inherit`, `initial`, `revert`, or `revert-layer` reset declarations.
 
 Pseudo-element exclusions are not forced into relational `:where()`/`:not()` guards. Generic Vazir enforcement does not directly target pseudo-elements, and existing dedicated icon-family protections remain responsible for Dashicons and equivalent icon contexts.
 
@@ -109,14 +111,3 @@ If an accepted exclusion itself contains `:has()`, the adapter omits the affecte
 ## Evidence discipline for future changes
 
 Distinguish source/repository contracts, real WordPress smoke, computed-style browser evidence, package identity, and each licensed product profile. Package identity PASS proves only exact package identity/archive safety. `ENVIRONMENT_UNAVAILABLE`, `NOT_EXECUTED`, and `NOT_PROVEN` remain evidence gaps, not PASS and not reproduced product defects.
-
-
-## Vazirmatn migration contract
-
-The typography migration pins official upstream `rastikerdar/vazirmatn` release `v33.003` at commit `83629f877e8f084cc07b47030b5d3a0ff06c76ec`. Exact release-archive identity plus per-file SHA-256 digests are recorded in `assets/fonts/Vazirmatn-PROVENANCE.md`; the packaged `OFL.txt` and `AUTHORS.txt` are preserved byte-for-byte from that release.
-
-The product continues to use static WOFF2 delivery because the existing settings/API expose discrete weights `300/400/500/700/900`. The upstream variable webfont is 111,152 bytes; the five static files are each approximately 50–51 KiB and are fetched only when a selected face is actually used. This keeps per-weight selection, request accounting, provenance, and rollback deterministic. Variable delivery remains reversible later if measured product surfaces consistently use enough simultaneous weights to justify the extra behavior.
-
-The bundled canonical family is now `Vazirmatn`. The existing `vazir_font_family` filter remains the public compatibility seam and still overrides the complete family stack. No legacy `Vazir` alias is emitted for the new bytes. Existing persisted options retain their previous schema and meaning; rollback is restoring the pre-migration plugin version/package, not shipping both font families indefinitely.
-
-Migration verification must run on the exact candidate Head. Generic WordPress browser characterization now measures requested Vazirmatn URLs, selected-weight behavior, response bytes, duplicate requests, preload absence, protected Dashicons, mixed Persian/Latin/numerals, inputs/buttons/selects, and bounded card/table dimensions. Licensed product profiles remain the authority for real Gravity Forms/Flow/View behavior and protected families.

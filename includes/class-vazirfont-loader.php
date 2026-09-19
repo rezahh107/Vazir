@@ -191,9 +191,9 @@ final class VazirFont_Loader {
 			if ( ! isset( $this->supported_weights[ $weight ] ) ) {
 				continue;
 			}
-			$url = VAZIR_FONT_FONTS_URL . 'vazirmatn-' . $weight . '.woff2';
+			$url = VAZIR_FONT_FONTS_URL . 'vazir-' . $weight . '.woff2';
 			$css .= "@font-face {\n";
-			$css .= "\tfont-family: 'Vazirmatn';\n";
+			$css .= "\tfont-family: 'Vazir';\n";
 			$css .= "\tfont-style: normal;\n";
 			$css .= "\tfont-weight: {$weight};\n";
 			$css .= "\tfont-display: swap;\n";
@@ -301,7 +301,7 @@ final class VazirFont_Loader {
 	private function get_font_family(): string {
 		return apply_filters(
 			'vazir_font_family',
-			"'Vazirmatn', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif"
+			"'Vazir', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif"
 		);
 	}
 

@@ -92,7 +92,7 @@ vf_assert( 5 === substr_count( $font_css, '@font-face' ), 'one @font-face is gen
 vf_assert( false === strpos( $font_css, "format('woff')" ), 'no WOFF fallback is advertised' );
 vf_assert( false === strpos( $font_css, "format('truetype')" ), 'no TTF fallback is advertised' );
 foreach ( $weights as $weight ) {
-	vf_assert( false !== strpos( $font_css, "vazirmatn-{$weight}.woff2" ), "WOFF2 URL exists in CSS for weight {$weight}" );
+	vf_assert( false !== strpos( $font_css, "vazir-{$weight}.woff2" ), "WOFF2 URL exists in CSS for weight {$weight}" );
 }
 
 vf_assert( isset( $GLOBALS['vf_actions']['enqueue_block_assets'] ), 'editor content uses enqueue_block_assets' );
@@ -115,7 +115,7 @@ $frontend_css = implode( "\n", $GLOBALS['vf_inline']['vazir-font-frontend'] ?? [
 $negative_guard = ':not(:where(.vf-excluded-component, .vf-excluded-component *, .dashicons, .dashicons *))';
 vf_assert( false !== strpos( $frontend_css, $negative_guard ), 'frontend Vazir rules preserve element selectors from mixed lists and exclude roots plus descendants by predicate' );
 vf_assert( false === strpos( $frontend_css, ".vazir-font-enabled .vf-excluded-component {\n\tfont-family: inherit;" ), 'frontend exclusions do not emit competing font-family reset rules' );
-vf_assert( 1 === preg_match( "/font-family:\\s*'Vazirmatn'[^;]*!important;/", $frontend_css ), 'narrow frontend theme override directly enforces Vazir for non-excluded text' );
+vf_assert( 1 === preg_match( "/font-family:\\s*'Vazir'[^;]*!important;/", $frontend_css ), 'narrow frontend theme override directly enforces Vazir for non-excluded text' );
 vf_assert( false === strpos( $frontend_css, '[data-icon]:before' . $negative_guard ), 'pseudo-element exclusions are not forced into relational negative guards' );
 
 $GLOBALS['vf_is_admin'] = true;
@@ -149,7 +149,7 @@ $gf_descendant_css = implode( "\n", $GLOBALS['vf_inline']['vazir-font-gravity-fo
 $gf_descendant_guard = ':not(:where(.gfield_label, .gfield_label *, .dashicons, .dashicons *)):not(:has(:where(.gfield_label, .dashicons)))';
 vf_assert( false !== strpos( $gf_descendant_css, '.gform_wrapper .gfield_label' . $gf_descendant_guard ), 'excluded .gfield_label is removed from Gravity Forms font-family applicability' );
 vf_assert( false !== strpos( $gf_descendant_css, '.gform_wrapper .ginput_container input' . $gf_descendant_guard ), 'non-excluded Gravity Forms controls retain Vazir enforcement' );
-vf_assert( false !== strpos( $gf_descendant_css, "font-family: 'Vazirmatn'" ), 'non-excluded Gravity Forms typography still receives Vazir' );
+vf_assert( false !== strpos( $gf_descendant_css, "font-family: 'Vazir'" ), 'non-excluded Gravity Forms typography still receives Vazir' );
 vf_assert( false !== strpos( $gf_descendant_css, '--gf-font-family-base' ), 'Theme Framework CSS variable remains present for safe scopes' );
 vf_assert( false === strpos( $gf_descendant_css, '[data-icon]:before' . $gf_descendant_guard ), 'Gravity Forms negative guards do not force pseudo-elements into relational selectors' );
 

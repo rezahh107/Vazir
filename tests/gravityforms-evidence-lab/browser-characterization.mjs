@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { observeVazirmatnFontRequests } from '../product-evidence-lab/core/browser-helpers.mjs';
+import { observeVazirFontRequests } from '../product-evidence-lab/core/browser-helpers.mjs';
 
 const baseUrl = process.env.VAZIR_GF_BASE_URL || 'http://127.0.0.1:8080';
 const artifactDir = process.env.VAZIR_GF_ARTIFACT_DIR;
@@ -31,16 +31,16 @@ const context = await browser.newContext();
 const page = await context.newPage();
 
 const familyOf = locator => locator.evaluate(el => getComputedStyle(el).fontFamily);
-const expectVazirmatn = async (locator, label) => {
+const expectVazir = async (locator, label) => {
   await locator.waitFor({ state: 'visible', timeout: 30000 });
   const family = await familyOf(locator);
-  assert.match(family, /Vazirmatn/i, `${label} should resolve to Vazirmatn; got ${family}`);
+  assert.match(family, /Vazir/i, `${label} should resolve to Vazir; got ${family}`);
   return family;
 };
-const expectNotVazirmatn = async (locator, label, expected) => {
+const expectNotVazir = async (locator, label, expected) => {
   await locator.waitFor({ state: 'visible', timeout: 30000 });
   const family = await familyOf(locator);
-  assert.doesNotMatch(family, /Vazirmatn/i, `${label} must not resolve to Vazirmatn; got ${family}`);
+  assert.doesNotMatch(family, /Vazir/i, `${label} must not resolve to Vazir; got ${family}`);
   if (expected) assert.match(family, expected, `${label} should retain ${expected}; got ${family}`);
   return family;
 };
@@ -60,13 +60,13 @@ await record('frontend_orbital_theme_framework', async () => {
   await page.goto(manifest.orbital_url, { waitUntil: 'networkidle' });
   const wrapper = page.locator(`#gform_wrapper_${manifest.orbital_form_id}`);
   await wrapper.waitFor({ state: 'visible' });
-  await expectVazirmatn(wrapper, 'Orbital wrapper');
-  await expectVazirmatn(page.locator(`#field_${manifest.orbital_form_id}_1 .gfield_label`), 'Orbital label');
-  await expectVazirmatn(page.locator(`#field_${manifest.orbital_form_id}_1 .gfield_description`), 'Orbital description');
-  await expectVazirmatn(page.locator(`#input_${manifest.orbital_form_id}_1`), 'Orbital text input');
-  await expectVazirmatn(page.locator(`#input_${manifest.orbital_form_id}_2`), 'Orbital textarea');
-  await expectVazirmatn(page.locator(`#input_${manifest.orbital_form_id}_3`), 'Orbital select');
-  await expectVazirmatn(page.locator(`#gform_submit_button_${manifest.orbital_form_id}`), 'Orbital submit button');
+  await expectVazir(wrapper, 'Orbital wrapper');
+  await expectVazir(page.locator(`#field_${manifest.orbital_form_id}_1 .gfield_label`), 'Orbital label');
+  await expectVazir(page.locator(`#field_${manifest.orbital_form_id}_1 .gfield_description`), 'Orbital description');
+  await expectVazir(page.locator(`#input_${manifest.orbital_form_id}_1`), 'Orbital text input');
+  await expectVazir(page.locator(`#input_${manifest.orbital_form_id}_2`), 'Orbital textarea');
+  await expectVazir(page.locator(`#input_${manifest.orbital_form_id}_3`), 'Orbital select');
+  await expectVazir(page.locator(`#gform_submit_button_${manifest.orbital_form_id}`), 'Orbital submit button');
 
   const className = await wrapper.getAttribute('class');
   assert.match(className || '', /gform-theme--framework/, 'Orbital wrapper must use Theme Framework');
@@ -125,22 +125,22 @@ await record('frontend_orbital_theme_framework', async () => {
   });
   assert.match(
     frameworkFamily,
-    /Vazirmatn/i,
-    `--gf-font-family-base should contain Vazirmatn; got ${frameworkFamily}; diagnostics=${JSON.stringify(frameworkDiagnostics)}`,
+    /Vazir/i,
+    `--gf-font-family-base should contain Vazir; got ${frameworkFamily}; diagnostics=${JSON.stringify(frameworkDiagnostics)}`,
   );
   return { theme_framework_custom_property: frameworkFamily, framework_diagnostics: frameworkDiagnostics };
 });
 
 await record('frontend_exclusions_and_icons', async () => {
   await page.goto(manifest.dynamic_url, { waitUntil: 'networkidle' });
-  await expectVazirmatn(page.locator(`#input_${manifest.dynamic_form_id}_1`), 'dynamic text input');
-  await expectVazirmatn(page.getByRole('button', { name: 'بعدی' }), 'dynamic next button');
-  await expectNotVazirmatn(page.locator('#vf-gf-excluded-text'), 'excluded Gravity Forms descendant', /monospace/i);
+  await expectVazir(page.locator(`#input_${manifest.dynamic_form_id}_1`), 'dynamic text input');
+  await expectVazir(page.getByRole('button', { name: 'بعدی' }), 'dynamic next button');
+  await expectNotVazir(page.locator('#vf-gf-excluded-text'), 'excluded Gravity Forms descendant', /monospace/i);
 
   const icon = page.locator(`#field_${manifest.dynamic_form_id}_5 .dashicons`).first();
   await icon.waitFor({ state: 'attached', timeout: 30000 });
   const iconFamily = await pseudoFamily(icon);
-  assert.doesNotMatch(iconFamily, /Vazirmatn/i, `Gravity Forms password icon must not inherit Vazirmatn; got ${iconFamily}`);
+  assert.doesNotMatch(iconFamily, /Vazir/i, `Gravity Forms password icon must not inherit Vazir; got ${iconFamily}`);
   assert.match(iconFamily, /gform-icons-orbital/i, `Gravity Forms password icon must retain the Orbital icon family; got ${iconFamily}`);
   return { password_icon_family: iconFamily };
 });
@@ -152,7 +152,7 @@ await record('conditional_logic_transition', async () => {
   assert.equal(await conditional.isVisible(), false, 'conditional field should start hidden');
   await page.getByLabel('نمایش بده').check();
   await conditional.waitFor({ state: 'visible', timeout: 10000 });
-  await expectVazirmatn(page.locator(`#input_${manifest.dynamic_form_id}_3`), 'conditional field after show transition');
+  await expectVazir(page.locator(`#input_${manifest.dynamic_form_id}_3`), 'conditional field after show transition');
   await page.getByLabel('پنهان بمان').check();
   await conditional.waitFor({ state: 'hidden', timeout: 10000 });
 });
@@ -167,20 +167,20 @@ await record('ajax_validation_and_multipage_rerenders', async () => {
 
   await page.getByRole('button', { name: 'بعدی' }).click();
   await page.locator('.gform_validation_errors').waitFor({ state: 'visible', timeout: 30000 });
-  await expectVazirmatn(page.locator(`#input_${manifest.dynamic_form_id}_1`), 'required field after validation rerender');
-  await expectNotVazirmatn(page.locator('#vf-gf-excluded-text'), 'excluded descendant after validation rerender', /monospace/i);
+  await expectVazir(page.locator(`#input_${manifest.dynamic_form_id}_1`), 'required field after validation rerender');
+  await expectNotVazir(page.locator('#vf-gf-excluded-text'), 'excluded descendant after validation rerender', /monospace/i);
 
   await page.locator(`#input_${manifest.dynamic_form_id}_1`).fill('رضا Runtime');
   await page.getByRole('button', { name: 'بعدی' }).click();
   const pageTwo = page.locator(`#input_${manifest.dynamic_form_id}_7`);
   await pageTwo.waitFor({ state: 'visible', timeout: 30000 });
-  await expectVazirmatn(pageTwo, 'page-two input after AJAX transition');
+  await expectVazir(pageTwo, 'page-two input after AJAX transition');
   const previousButton = page.locator(`#gform_wrapper_${manifest.dynamic_form_id} .gform_previous_button`).first();
-  await expectVazirmatn(previousButton, 'previous button after AJAX transition');
+  await expectVazir(previousButton, 'previous button after AJAX transition');
 
   await previousButton.click();
   await page.locator(`#input_${manifest.dynamic_form_id}_1`).waitFor({ state: 'visible', timeout: 30000 });
-  await expectVazirmatn(page.locator(`#input_${manifest.dynamic_form_id}_1`), 'page-one input after previous transition');
+  await expectVazir(page.locator(`#input_${manifest.dynamic_form_id}_1`), 'page-one input after previous transition');
 
   return { submission_method: 'iframe', ajax_frame_present: true };
 });
@@ -192,13 +192,13 @@ await record('legacy_markup_frontend', async () => {
   const className = await wrapper.getAttribute('class');
   assert.match(className || '', /gform_legacy_markup_wrapper/, 'legacy fixture must use supported Legacy Markup wrapper');
   assert.doesNotMatch(className || '', /gform-theme--framework/, 'legacy fixture must not masquerade as Theme Framework markup');
-  await expectVazirmatn(wrapper, 'Legacy wrapper');
-  await expectVazirmatn(page.locator(`#input_${manifest.legacy_form_id}_1`), 'Legacy text input');
-  await expectVazirmatn(page.locator(`#input_${manifest.legacy_form_id}_2`), 'Legacy select');
+  await expectVazir(wrapper, 'Legacy wrapper');
+  await expectVazir(page.locator(`#input_${manifest.legacy_form_id}_1`), 'Legacy text input');
+  await expectVazir(page.locator(`#input_${manifest.legacy_form_id}_2`), 'Legacy select');
 });
 
 await record('font_request_deduplication_single_render', async () => {
-  return observeVazirmatnFontRequests(browser, {
+  return observeVazirFontRequests(browser, {
     url: manifest.orbital_url,
     label: 'Gravity Forms single render',
     waitForSurface: async requestPage => {
@@ -213,20 +213,20 @@ await record('gravity_forms_preview', async () => {
   await page.goto(manifest.preview_url, { waitUntil: 'networkidle' });
   const wrapper = page.locator(`#gform_wrapper_${manifest.dynamic_form_id}`);
   await wrapper.waitFor({ state: 'visible', timeout: 30000 });
-  await expectVazirmatn(page.locator(`#input_${manifest.dynamic_form_id}_1`), 'Preview input');
+  await expectVazir(page.locator(`#input_${manifest.dynamic_form_id}_1`), 'Preview input');
   assert.equal(await page.locator('#vazir-font-gravity-forms-inline-css').count(), 1, 'Preview must print the registered Vazir Gravity Forms style handle');
-  await expectNotVazirmatn(page.locator('#vf-gf-excluded-text'), 'Preview excluded descendant', /monospace/i);
+  await expectNotVazir(page.locator('#vf-gf-excluded-text'), 'Preview excluded descendant', /monospace/i);
   const icon = page.locator(`#field_${manifest.dynamic_form_id}_5 .dashicons`).first();
   await icon.waitFor({ state: 'attached', timeout: 30000 });
   const iconFamily = await pseudoFamily(icon);
-  assert.doesNotMatch(iconFamily, /Vazirmatn/i, `Preview password icon must not inherit Vazirmatn; got ${iconFamily}`);
+  assert.doesNotMatch(iconFamily, /Vazir/i, `Preview password icon must not inherit Vazir; got ${iconFamily}`);
   assert.match(iconFamily, /gform-icons-orbital/i, `Preview password icon must retain the Orbital icon family; got ${iconFamily}`);
 });
 
 await record('form_editor_and_no_conflict_mode', async () => {
   await page.goto(manifest.form_editor_url, { waitUntil: 'domcontentloaded' });
   await page.locator('.gform_editor').waitFor({ state: 'visible', timeout: 30000 });
-  await expectVazirmatn(page.locator('.gform_editor .gfield_label').first(), 'Form Editor field label');
+  await expectVazir(page.locator('.gform_editor .gfield_label').first(), 'Form Editor field label');
   assert.equal(await page.locator('#vazir-font-gravity-forms-inline-css').count(), 1, 'GF style handle must survive No Conflict Mode');
   assert.equal(await page.locator('#vazir-font-admin-runtime-inline-css').count(), 1, 'Vazir admin handle must survive No Conflict Mode');
 
@@ -239,7 +239,7 @@ await record('form_editor_and_no_conflict_mode', async () => {
 
 await record('normal_wp_admin_under_gf_noconflict_setting', async () => {
   await page.goto(`${baseUrl}/wp-admin/`, { waitUntil: 'networkidle' });
-  await expectVazirmatn(page.locator('body.wp-admin'), 'normal wp-admin body');
+  await expectVazir(page.locator('body.wp-admin'), 'normal wp-admin body');
   const dashicon = page.locator('#adminmenu .wp-menu-image.dashicons-before').first();
   await dashicon.waitFor({ state: 'attached', timeout: 30000 });
   const family = await pseudoFamily(dashicon);

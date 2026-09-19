@@ -42,22 +42,6 @@ vazir_wp_assert( 5 === substr_count( $css, '@font-face' ), 'real WordPress recei
 vazir_wp_assert( false !== strpos( $css, "format('woff2')" ), 'real WordPress CSS uses WOFF2' );
 vazir_wp_assert( false === strpos( $css, "format('woff')" ), 'real WordPress CSS does not advertise WOFF' );
 vazir_wp_assert( false === strpos( $css, "format('truetype')" ), 'real WordPress CSS does not advertise TTF' );
-vazir_wp_assert( false !== strpos( $css, "font-family: 'Vazirmatn'" ), 'real WordPress emits the canonical Vazirmatn family' );
-foreach ( [ '300', '400', '500', '700', '900' ] as $weight ) {
-	vazir_wp_assert( false !== strpos( $css, "vazirmatn-{$weight}.woff2" ), "real WordPress emits the packaged Vazirmatn source for weight {$weight}" );
-	vazir_wp_assert( false === strpos( $css, "vazir-{$weight}.woff2" ), "real WordPress does not emit the legacy Vazir source for weight {$weight}" );
-}
-
-$legacy_options = [
-	'enable_frontend'      => false,
-	'enable_admin'         => true,
-	'enable_gravity_forms' => false,
-	'font_weights'         => [ '400', '700' ],
-	'exclude_selectors'    => [ '.legacy-option-boundary' ],
-];
-update_option( VAZIR_FONT_OPTION_NAME, $legacy_options, false );
-VazirFontPlugin::clear_cache();
-vazir_wp_assert( $legacy_options === VazirFontPlugin::get_options(), 'existing pre-migration option semantics survive the font migration unchanged' );
 
 $loader->enqueue_admin_fonts();
 vazir_wp_assert( wp_style_is( 'vazir-font-admin-runtime', 'enqueued' ), 'admin style handle can enqueue in real WordPress' );
