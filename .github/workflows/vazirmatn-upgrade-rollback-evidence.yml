@@ -1,0 +1,72 @@
+name: Temporary Vazirmatn Upgrade Rollback Evidence
+
+on:
+  push:
+    branches:
+      - automation/vazirmatn-assets-bootstrap-20260920
+
+permissions:
+  contents: read
+
+jobs:
+  upgrade-rollback:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - name: Checkout legacy baseline
+        uses: actions/checkout@v6
+        with:
+          ref: cb35e57f7ad62824e642e14576e1df9f8fb8e0f9
+          path: legacy
+      - name: Checkout exact migration candidate
+        uses: actions/checkout@v6
+        with:
+          ref: 47911845e4acb929cd641e0bc1ce8a8f840063b9
+          path: candidate
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: wp-cli
+      - name: Install WordPress with legacy plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=/tmp/vazirmatn-upgrade-wordpress
+          mkdir -p "$root/wp-content/plugins"
+          wp core download --version=7.1 --path="$root" --force
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --path="$root"
+          wp core install --url=http://127.0.0.1:8080 --title='Vazirmatn Upgrade Evidence' --admin_user=admin --admin_password=test-password --admin_email=admin@example.test --skip-email --path="$root"
+          ln -s "$GITHUB_WORKSPACE/legacy" "$root/wp-content/plugins/vazir-font-wp"
+          wp plugin activate vazir-font-wp --path="$root"
+          wp eval '$expected=["enable_frontend"=>false,"enable_admin"=>true,"enable_gravity_forms"=>false,"font_weights"=>["400","700"],"exclude_selectors"=>[".legacy-option-boundary"]]; update_option(VAZIR_FONT_OPTION_NAME,$expected,false); VazirFontPlugin::clear_cache(); if(VazirFontPlugin::get_options()!==$expected){exit(1);} $css=VazirFont_Loader::get_instance()->get_font_face_css(); if(strpos($css,"font-family: '\''Vazir'\''")===false||strpos($css,"vazir-400.woff2")===false){exit(2);} echo "LEGACY_BASELINE_OK\n";' --path="$root"
+      - name: Switch to exact candidate and verify upgrade
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=/tmp/vazirmatn-upgrade-wordpress
+          unlink "$root/wp-content/plugins/vazir-font-wp"
+          ln -s "$GITHUB_WORKSPACE/candidate" "$root/wp-content/plugins/vazir-font-wp"
+          wp plugin is-active vazir-font-wp --path="$root"
+          wp eval '$expected=["enable_frontend"=>false,"enable_admin"=>true,"enable_gravity_forms"=>false,"font_weights"=>["400","700"],"exclude_selectors"=>[".legacy-option-boundary"]]; VazirFontPlugin::clear_cache(); if(VazirFontPlugin::get_options()!==$expected){exit(1);} $css=VazirFont_Loader::get_instance()->get_font_face_css(); if(strpos($css,"font-family: '\''Vazirmatn'\''")===false||strpos($css,"vazirmatn-400.woff2")===false||strpos($css,"vazir-400.woff2")!==false){exit(2);} if(!file_exists(VAZIR_FONT_FONTS_DIR."vazirmatn-400.woff2")||file_exists(VAZIR_FONT_FONTS_DIR."vazir-400.woff2")){exit(3);} echo "UPGRADE_TO_EXACT_CANDIDATE_OK\n";' --path="$root"
+      - name: Switch back to legacy and verify rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=/tmp/vazirmatn-upgrade-wordpress
+          unlink "$root/wp-content/plugins/vazir-font-wp"
+          ln -s "$GITHUB_WORKSPACE/legacy" "$root/wp-content/plugins/vazir-font-wp"
+          wp plugin is-active vazir-font-wp --path="$root"
+          wp eval '$expected=["enable_frontend"=>false,"enable_admin"=>true,"enable_gravity_forms"=>false,"font_weights"=>["400","700"],"exclude_selectors"=>[".legacy-option-boundary"]]; VazirFontPlugin::clear_cache(); if(VazirFontPlugin::get_options()!==$expected){exit(1);} $css=VazirFont_Loader::get_instance()->get_font_face_css(); if(strpos($css,"font-family: '\''Vazir'\''")===false||strpos($css,"vazir-400.woff2")===false){exit(2);} echo "ROLLBACK_TO_LEGACY_OK\n";' --path="$root"
