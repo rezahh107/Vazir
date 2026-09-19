@@ -82,6 +82,12 @@ jobs:
           set -euo pipefail
           bash tests/product-evidence-lab/core/falsify-artifact-safety.sh "$GITHUB_WORKSPACE"
 
+      - name: Verify strict-types eval-file invocation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tests/product-evidence-lab/core/verify-eval-file-invocations.sh "$GITHUB_WORKSPACE"
+
       - name: Set up PHP 8.3 and WP-CLI
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
         with:
@@ -99,6 +105,12 @@ jobs:
           wp core install --url="$VAZIR_LAB_BASE_URL" --title="Vazir ${VAZIR_LAB_PROFILE} Lab" --admin_user="$VAZIR_LAB_ADMIN_USER" --admin_password="$VAZIR_LAB_ADMIN_PASSWORD" --admin_email='vazir-lab@example.invalid' --skip-email --path="$VAZIR_LAB_WP_PATH"
           test "$(wp core version --path="$VAZIR_LAB_WP_PATH")" = "7.1"
           wp theme install twentytwentyfive --activate --path="$VAZIR_LAB_WP_PATH"
+
+      - name: Falsify strict-types eval-file execution mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tests/product-evidence-lab/core/falsify-strict-types-eval-file.sh "$GITHUB_WORKSPACE" "$VAZIR_LAB_WP_PATH"
 
       - name: Acquire and fail-closed verify approved licensed packages
         shell: bash
@@ -127,20 +139,20 @@ jobs:
           esac
           wp plugin activate "${plugins[@]}" --path="$VAZIR_LAB_WP_PATH"
           for plugin in "${plugins[@]}"; do wp plugin status "$plugin" --path="$VAZIR_LAB_WP_PATH"; done
-          wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/core/capture-runtime.php" --path="$VAZIR_LAB_WP_PATH"
+          wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/core/capture-runtime.php" --use-include --path="$VAZIR_LAB_WP_PATH"
 
       - name: Create deterministic profile fixtures
         shell: bash
         run: |
           set -euo pipefail
           case "$VAZIR_LAB_PROFILE" in
-            gravityforms) wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/setup-fixtures.php" --path="$VAZIR_LAB_WP_PATH" ;;
-            gravityflow) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityflow/setup-fixtures.php" --path="$VAZIR_LAB_WP_PATH" ;;
-            gravityview) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityview/setup-fixtures.php" --path="$VAZIR_LAB_WP_PATH" ;;
+            gravityforms) wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/setup-fixtures.php" --use-include --path="$VAZIR_LAB_WP_PATH" ;;
+            gravityflow) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityflow/setup-fixtures.php" --use-include --path="$VAZIR_LAB_WP_PATH" ;;
+            gravityview) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityview/setup-fixtures.php" --use-include --path="$VAZIR_LAB_WP_PATH" ;;
             gravity-stack)
-              wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/setup-fixtures.php" --path="$VAZIR_LAB_WP_PATH"
-              wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityflow/setup-fixtures.php" --path="$VAZIR_LAB_WP_PATH"
-              wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityview/setup-fixtures.php" --path="$VAZIR_LAB_WP_PATH"
+              wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/setup-fixtures.php" --use-include --path="$VAZIR_LAB_WP_PATH"
+              wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityflow/setup-fixtures.php" --use-include --path="$VAZIR_LAB_WP_PATH"
+              wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityview/setup-fixtures.php" --use-include --path="$VAZIR_LAB_WP_PATH"
               ;;
           esac
 
@@ -149,10 +161,10 @@ jobs:
         run: |
           set -euo pipefail
           case "$VAZIR_LAB_PROFILE" in
-            gravityforms) wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/runtime-contract.php" --path="$VAZIR_LAB_WP_PATH" ;;
-            gravityflow) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityflow/runtime-contract.php" --path="$VAZIR_LAB_WP_PATH" ;;
-            gravityview) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityview/runtime-contract.php" --path="$VAZIR_LAB_WP_PATH" ;;
-            gravity-stack) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravity-stack/runtime-contract.php" --path="$VAZIR_LAB_WP_PATH" ;;
+            gravityforms) wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/runtime-contract.php" --use-include --path="$VAZIR_LAB_WP_PATH" ;;
+            gravityflow) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityflow/runtime-contract.php" --use-include --path="$VAZIR_LAB_WP_PATH" ;;
+            gravityview) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityview/runtime-contract.php" --use-include --path="$VAZIR_LAB_WP_PATH" ;;
+            gravity-stack) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravity-stack/runtime-contract.php" --use-include --path="$VAZIR_LAB_WP_PATH" ;;
           esac
 
       - name: Set up exact Node runtime
