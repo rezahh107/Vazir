@@ -16,11 +16,11 @@ if ( ! is_string( $artifact_dir ) || '' === $artifact_dir ) {
 }
 wp_mkdir_p( $artifact_dir );
 
-if ( ! class_exists( 'GFAPI' ) || ! class_exists( 'GFCommon' ) ) {
+if ( ! class_exists( 'GFAPI' ) || ! class_exists( 'GFCommon' ) || ! class_exists( 'GFForms' ) ) {
 	throw new RuntimeException( 'Licensed Gravity Forms runtime API is unavailable.' );
 }
 
-if ( '3.1.1.1' !== (string) GFCommon::get_version() ) {
+if ( '3.1.1.1' !== (string) GFForms::$version ) {
 	throw new RuntimeException( 'Fixture setup requires Gravity Forms 3.1.1.1.' );
 }
 
@@ -237,7 +237,7 @@ $legacy_post_id = vazir_gf_lab_add_page(
 );
 
 $manifest = array(
-	'gravity_forms_version'  => (string) GFCommon::get_version(),
+	'gravity_forms_version'  => (string) GFForms::$version,
 	'orbital_form_id'        => $orbital_form_id,
 	'dynamic_form_id'        => $dynamic_form_id,
 	'legacy_form_id'         => $legacy_form_id,
