@@ -1,0 +1,25 @@
+import { chromium } from 'playwright';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { expectVazir, expectNotVazir, login, makeRecorder } from '../../core/browser-helpers.mjs';
+const baseUrl = process.env.VAZIR_LAB_BASE_URL || 'http://127.0.0.1:8080';
+const artifactDir = process.env.VAZIR_LAB_ARTIFACT_DIR;
+const user = process.env.VAZIR_LAB_ADMIN_USER || 'vazir_lab_admin';
+const password = process.env.VAZIR_LAB_ADMIN_PASSWORD || 'vazir-lab-admin-password';
+if (!artifactDir) throw new Error('VAZIR_LAB_ARTIFACT_DIR is required');
+const gf = JSON.parse(fs.readFileSync(path.join(artifactDir, 'fixture-manifest.json'), 'utf8'));
+const flow = JSON.parse(fs.readFileSync(path.join(artifactDir, 'gravityflow-fixture.json'), 'utf8'));
+const view = JSON.parse(fs.readFileSync(path.join(artifactDir, 'gravityview-fixture.json'), 'utf8'));
+const results = { status: 'PASS', profile: 'gravity-stack', scenarios: {}, claim_ceiling: 'Representative coexistence only; not exhaustive product compatibility.' };
+const recorder = makeRecorder(results);
+const browser = await chromium.launch(); const context = await browser.newContext(); const page = await context.newPage();
+const fontRequests = []; page.on('request', req => { if (/\/assets\/fonts\/vazir-\d+\.woff2(?:\?|$)/.test(req.url())) fontRequests.push(req.url()); });
+await recorder.record('representative_gravityforms_surface', async () => { await page.goto(gf.orbital_url, { waitUntil: 'networkidle' }); await expectVazir(page.locator(`#gform_wrapper_${gf.orbital_form_id}`), 'combined-stack Gravity Forms wrapper'); });
+await recorder.record('representative_gravityview_surface', async () => { await page.goto(view.frontend_url, { waitUntil: 'networkidle' }); await expectVazir(page.locator('.gv-container').first(), 'combined-stack GravityView container'); await expectNotVazir(page.locator('#vf-view-excluded'), 'combined-stack GravityView exclusion', /monospace/i); });
+await login(page, baseUrl, user, password);
+await recorder.record('representative_gravityflow_surface', async () => { await page.goto(flow.admin_inbox_url, { waitUntil: 'domcontentloaded' }); await page.locator('.gflow-inbox').first().waitFor({ state: 'visible', timeout: 30000 }); await expectVazir(page.locator('.gflow-inbox').first(), 'combined-stack Gravity Flow inbox'); });
+await recorder.record('font_delivery_has_no_duplicate_url_requests', async () => { const counts = new Map(); for (const url of fontRequests) counts.set(url, (counts.get(url) || 0) + 1); const duplicates = [...counts.entries()].filter(([, count]) => count > 1); assert.deepEqual(duplicates, [], `Combined stack requested a Vazir font URL more than once in observed representative navigations: ${JSON.stringify(duplicates)}`); return { observed_font_urls: [...counts.keys()] }; });
+fs.writeFileSync(path.join(artifactDir, 'gravity-stack-browser-results.json'), `${JSON.stringify(results, null, 2)}\n`);
+if (recorder.failed()) { try { await page.screenshot({ path: path.join(artifactDir, 'gravity-stack-browser-failure.png'), fullPage: true }); } catch {} }
+await browser.close(); if (recorder.failed()) process.exit(1); console.log(JSON.stringify(results, null, 2));
