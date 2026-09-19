@@ -1,0 +1,211 @@
+name: Licensed Gravity Forms Evidence Lab
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/gravityforms-evidence-lab.yml'
+      - 'tests/gravityforms-evidence-lab/**'
+      - 'includes/class-vazirfont-gravityforms-integration.php'
+      - 'includes/class-vazirfont-loader.php'
+      - 'vazir-font-wp.php'
+      - 'assets/fonts/**'
+      - 'docs/CHARACTERIZATION.md'
+      - 'README.md'
+      - 'AGENTS.md'
+      - 'RELEASE.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  licensed-gravity-forms:
+    name: GF 3.1.1.1 / WP 7.1 / PHP 8.3 / Chromium
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress
+          MYSQL_ROOT_PASSWORD: vazir-lab-root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pvazir-lab-root"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      VAZIR_GF_WP_PATH: /tmp/vazir-gf-wordpress
+      VAZIR_GF_PACKAGE_DIR: /tmp/vazir-gf-packages
+      VAZIR_GF_ARTIFACT_DIR: /tmp/vazir-gf-artifacts
+      VAZIR_GF_ZIP: /tmp/vazir-gf-packages/gravityforms-3.1.1.1-owner-supplied-source-package.zip
+      VAZIR_GF_SIZE: '5300290'
+      VAZIR_GF_SHA256: 542f56ae0747f3661d1474996527298027db3fb8ed3e6469a6391aaabf61069b
+      VAZIR_GF_VERSION: 3.1.1.1
+      VAZIR_GF_BASE_URL: http://127.0.0.1:8080
+      VAZIR_GF_ADMIN_USER: vazir_lab_admin
+      VAZIR_GF_ADMIN_PASSWORD: vazir-lab-admin-password
+
+    steps:
+      - name: Checkout exact evaluated Head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+
+      - name: Assert repository and exact Head identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "rezahh107/Vazir"
+          actual="$(git rev-parse HEAD)"
+          expected="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          test "$actual" = "$expected"
+          echo "VAZIR_GF_REPOSITORY_SHA=$actual" >> "$GITHUB_ENV"
+          mkdir -p "$VAZIR_GF_WP_PATH" "$VAZIR_GF_PACKAGE_DIR" "$VAZIR_GF_ARTIFACT_DIR"
+          printf '{"repository":"%s","sha":"%s"}\n' "$GITHUB_REPOSITORY" "$actual" > "$VAZIR_GF_ARTIFACT_DIR/repository-identity.json"
+          if git ls-files '*.zip' | grep -q .; then
+            echo "Committed ZIP archives are forbidden in the licensed evidence lab." >&2
+            exit 1
+          fi
+
+      - name: Set up PHP 8.3 and WP-CLI
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.3'
+          coverage: none
+          extensions: mysqli
+          tools: wp-cli
+
+      - name: Provision fresh WordPress 7.1 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          wp core download --version=7.1 --path="$VAZIR_GF_WP_PATH" --force
+          wp config create --dbname=wordpress --dbuser=root --dbpass=vazir-lab-root --dbhost=127.0.0.1:3306 --path="$VAZIR_GF_WP_PATH" --skip-check
+          wp core install --url="$VAZIR_GF_BASE_URL" --title='Vazir Licensed GF Lab' --admin_user="$VAZIR_GF_ADMIN_USER" --admin_password="$VAZIR_GF_ADMIN_PASSWORD" --admin_email='vazir-lab@example.invalid' --skip-email --path="$VAZIR_GF_WP_PATH"
+          test "$(wp core version --path="$VAZIR_GF_WP_PATH")" = "7.1"
+          wp theme install twentytwentyfive --activate --path="$VAZIR_GF_WP_PATH"
+
+      - name: Download and fail-closed verify Owner-supplied Gravity Forms
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 4 --retry-all-errors -o "$VAZIR_GF_ZIP" "https://drive.usercontent.google.com/download?id=10pDROZVyqELKzSzIiJrOyEWKjxS8r22Q&export=download&confirm=t"
+
+          if tests/gravityforms-evidence-lab/verify-package.sh "$VAZIR_GF_ZIP" 1 "$VAZIR_GF_SHA256" "$VAZIR_GF_VERSION"; then
+            echo "Negative size-identity check unexpectedly passed." >&2
+            exit 1
+          fi
+          if tests/gravityforms-evidence-lab/verify-package.sh "$VAZIR_GF_ZIP" "$VAZIR_GF_SIZE" "0000000000000000000000000000000000000000000000000000000000000000" "$VAZIR_GF_VERSION"; then
+            echo "Negative hash-identity check unexpectedly passed." >&2
+            exit 1
+          fi
+
+          tests/gravityforms-evidence-lab/verify-package.sh "$VAZIR_GF_ZIP" "$VAZIR_GF_SIZE" "$VAZIR_GF_SHA256" "$VAZIR_GF_VERSION"
+          unzip -q "$VAZIR_GF_ZIP" -d "$VAZIR_GF_WP_PATH/wp-content/plugins"
+          test -f "$VAZIR_GF_WP_PATH/wp-content/plugins/gravityforms/gravityforms.php"
+          grep -q '^Version:[[:space:]]*3\.1\.1\.1$' "$VAZIR_GF_WP_PATH/wp-content/plugins/gravityforms/gravityforms.php"
+
+      - name: Install and activate exact Vazir code under test
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Deliberate future seam: replace this source symlink with extraction of a
+          # canonical production ZIP in a later release-system batch; all runtime,
+          # fixture, and browser steps below remain unchanged.
+          ln -s "$GITHUB_WORKSPACE" "$VAZIR_GF_WP_PATH/wp-content/plugins/vazir-font-wp"
+          wp plugin activate gravityforms vazir-font-wp --path="$VAZIR_GF_WP_PATH"
+          wp plugin status gravityforms --path="$VAZIR_GF_WP_PATH"
+          wp plugin status vazir-font-wp --path="$VAZIR_GF_WP_PATH"
+          test "$(wp plugin get gravityforms --field=version --path="$VAZIR_GF_WP_PATH")" = "$VAZIR_GF_VERSION"
+          test "$(wp plugin get gravityforms --field=status --path="$VAZIR_GF_WP_PATH")" = "active"
+          test "$(wp plugin get vazir-font-wp --field=status --path="$VAZIR_GF_WP_PATH")" = "active"
+
+      - name: Create deterministic synthetic Gravity Forms fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/setup-fixtures.php" --path="$VAZIR_GF_WP_PATH"
+          test -s "$VAZIR_GF_ARTIFACT_DIR/fixture-manifest.json"
+
+      - name: Run native WordPress and Gravity Forms assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/runtime-contract.php" --path="$VAZIR_GF_WP_PATH"
+          test -s "$VAZIR_GF_ARTIFACT_DIR/runtime-identity.json"
+          test -s "$VAZIR_GF_ARTIFACT_DIR/php-results.json"
+
+      - name: Set up exact Node runtime
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.19.0'
+
+      - name: Install bounded Playwright/Chromium runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = "v22.19.0"
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          node -e "const p=require('playwright/package.json'); if(p.version!=='1.55.0') process.exit(1)"
+
+      - name: Start ephemeral WordPress server
+        shell: bash
+        run: |
+          set -euo pipefail
+          wp server --host=127.0.0.1 --port=8080 --path="$VAZIR_GF_WP_PATH" > /tmp/vazir-gf-wp-server.log 2>&1 &
+          echo $! > /tmp/vazir-gf-wp-server.pid
+          for i in $(seq 1 30); do
+            if curl -fsS "$VAZIR_GF_BASE_URL/wp-login.php" >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/vazir-gf-wp-server.log >&2
+          exit 1
+
+      - name: Run licensed Gravity Forms Chromium characterization
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/gravityforms-evidence-lab/browser-characterization.mjs
+          test -s "$VAZIR_GF_ARTIFACT_DIR/browser-results.json"
+
+      - name: Assert licensed package is outside published evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e "$VAZIR_GF_ARTIFACT_DIR/gravityforms.zip"
+          if find "$VAZIR_GF_ARTIFACT_DIR" -type f -name '*.zip' -print -quit | grep -q .; then
+            echo "Licensed ZIP bytes must never enter the evidence artifact directory." >&2
+            exit 1
+          fi
+
+      - name: Upload bounded evidence
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vazir-licensed-gf-evidence-${{ env.VAZIR_GF_REPOSITORY_SHA }}
+          path: |
+            /tmp/vazir-gf-artifacts/repository-identity.json
+            /tmp/vazir-gf-artifacts/runtime-identity.json
+            /tmp/vazir-gf-artifacts/fixture-manifest.json
+            /tmp/vazir-gf-artifacts/php-results.json
+            /tmp/vazir-gf-artifacts/browser-results.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload bounded failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vazir-licensed-gf-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            /tmp/vazir-gf-artifacts
+            /tmp/vazir-gf-wp-server.log
+          if-no-files-found: ignore
+          retention-days: 7
