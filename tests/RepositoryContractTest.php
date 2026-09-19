@@ -4,10 +4,43 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 final class RepositoryContractTest extends TestCase {
-	public function test_supported_font_assets_exist(): void {
-		foreach ( [ '300', '400', '500', '700', '900' ] as $weight ) {
-			$this->assertFileExists( VAZIR_TEST_ROOT . '/assets/fonts/vazir-' . $weight . '.woff2' );
+	public function test_supported_font_assets_match_pinned_vazirmatn_release(): void {
+		$expected = [
+			'300' => 'a3aa104f9a256734ca6769e017b4a2697c3036221e13758e0995a0cbeea969c4',
+			'400' => 'e382101336c6eb32cfb31381c027d02d2e0354bad08f6a395d4088beb3db3d91',
+			'500' => '3333e31188a2b628db8780ca22fd5aad85bc083ccee9beb8d4d52db18cb98d48',
+			'700' => '836fae7d42d83faa249bc00e0099592be98a1fa260d22d82f269b6091e585627',
+			'900' => 'e65a05523e6c0a434265913805746ebe6ed48af843e6126a936d06f69d7d47ad',
+		];
+
+		foreach ( $expected as $weight => $sha256 ) {
+			$path = VAZIR_TEST_ROOT . '/assets/fonts/vazirmatn-' . $weight . '.woff2';
+			$this->assertFileExists( $path );
+			$this->assertSame( $sha256, hash_file( 'sha256', $path ) );
+			$this->assertFileDoesNotExist( VAZIR_TEST_ROOT . '/assets/fonts/vazir-' . $weight . '.woff2' );
 		}
+
+		$this->assertSame(
+			'17e355067c8284f47743a1ee3b1ef7ff684ff0601eda357f9353b10b3016ab31',
+			hash_file( 'sha256', VAZIR_TEST_ROOT . '/assets/fonts/OFL.txt' )
+		);
+		$this->assertSame(
+			'b57746a5f7002c0974c76c32af74079ff7ef1aaf8f35495e9409cfa1eb11e1ca',
+			hash_file( 'sha256', VAZIR_TEST_ROOT . '/assets/fonts/AUTHORS.txt' )
+		);
+		$this->assertFileExists( VAZIR_TEST_ROOT . '/assets/fonts/Vazirmatn-PROVENANCE.md' );
+	}
+
+	public function test_vazirmatn_family_is_canonical_while_public_filter_is_preserved(): void {
+		$loader = file_get_contents( VAZIR_TEST_ROOT . '/includes/class-vazirfont-loader.php' );
+		$gravity = file_get_contents( VAZIR_TEST_ROOT . '/includes/class-vazirfont-gravityforms-integration.php' );
+		$this->assertIsString( $loader );
+		$this->assertIsString( $gravity );
+		$this->assertStringContainsString( "font-family: 'Vazirmatn'", $loader );
+		$this->assertStringContainsString( "'Vazirmatn', system-ui", $loader );
+		$this->assertStringContainsString( "'Vazirmatn', system-ui", $gravity );
+		$this->assertStringContainsString( "'vazir_font_family'", $loader );
+		$this->assertStringContainsString( "'vazir_font_family'", $gravity );
 	}
 
 	public function test_loader_references_only_woff2_font_sources(): void {

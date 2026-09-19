@@ -197,7 +197,7 @@ final class VazirFont_GravityForms_Integration {
 
 		$family = apply_filters(
 			'vazir_font_family',
-			"'Vazir', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif"
+			"'Vazirmatn', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif"
 		);
 		$negative_exclusions = $this->get_negative_scope_selectors();
 

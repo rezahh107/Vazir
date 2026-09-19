@@ -31,7 +31,7 @@ The plugin owns typography only. Preserve these boundaries:
 
 ## 3. Font Delivery Invariants
 
-Bundled font assets are static Vazir WOFF2 files for weights `300`, `400`, `500`, `700`, and `900`.
+Bundled font assets are pinned static Vazirmatn `v33.003` WOFF2 files for weights `300`, `400`, `500`, `700`, and `900`.
 
 Required behavior:
 
@@ -39,16 +39,17 @@ Required behavior:
 - retain `font-display: swap`;
 - do not add WOFF/TTF fallbacks unless matching packaged binaries are intentionally introduced and characterized;
 - do not add default preload behavior without measured justification;
-- keep the public `Vazir` family identity and `vazir_font_family` filter unless a separately characterized migration changes them;
-- keep `assets/fonts/OFL.txt` with bundled font files.
-
-A Vazirmatn migration is a separate typography migration, not a cleanup side effect.
+- use the truthful canonical `Vazirmatn` CSS family for the bundled upstream font;
+- retain the public `vazir_font_family` filter as the compatibility API for overriding the complete stack;
+- do not create a hidden legacy `Vazir` alias for Vazirmatn bytes;
+- keep exact upstream `assets/fonts/OFL.txt` and `assets/fonts/AUTHORS.txt` with the bundled files;
+- keep `assets/fonts/Vazirmatn-PROVENANCE.md` synchronized with the pinned release archive and bundled SHA-256 digests.
 
 ## 4. Exclusion Semantics
 
 `exclude_selectors` is the single exclusion authority.
 
-Element-level exclusions are negative applicability boundaries: Vazir `font-family` enforcement must not target an excluded root or its descendants. Do not implement generic exclusions by emitting competing `font-family: inherit`, `initial`, `revert`, or `revert-layer` rules.
+Element-level exclusions are negative applicability boundaries: Vazirmatn `font-family` enforcement must not target an excluded root or its descendants. Do not implement generic exclusions by emitting competing `font-family: inherit`, `initial`, `revert`, or `revert-layer` rules.
 
 Pseudo-element exclusions must not be forced into relational element guards. Dedicated icon-family protections remain responsible for Dashicons and equivalent icon contexts.
 
@@ -74,7 +75,7 @@ Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms ru
 | `includes/class-vazirfont-loader.php` | WordPress typography loading and generated CSS |
 | `includes/class-vazirfont-admin-settings.php` | Admin settings and validation |
 | `includes/class-vazirfont-gravityforms-integration.php` | Optional Gravity Forms compatibility adapter |
-| `assets/fonts/` | Packaged Vazir WOFF2 binaries and OFL license |
+| `assets/fonts/` | Pinned Vazirmatn WOFF2 binaries, upstream license/authors, and provenance |
 | `assets/css/` | Shared/static CSS assets |
 | `assets/js/` | Admin-side JavaScript |
 | `languages/` | Translation template/resources |

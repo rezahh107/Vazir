@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  expectVazir,
-  expectNotVazir,
+  expectVazirmatn,
+  expectNotVazirmatn,
   familyOf,
   login,
   makeRecorder,
-  observeVazirFontRequests,
+  observeVazirmatnFontRequests,
 } from '../../core/browser-helpers.mjs';
 
 const baseUrl = process.env.VAZIR_LAB_BASE_URL || 'http://127.0.0.1:8080';
@@ -33,13 +33,13 @@ const page = await context.newPage();
 
 await recorder.record('representative_gravityforms_surface', async () => {
   await page.goto(gf.orbital_url, { waitUntil: 'networkidle' });
-  await expectVazir(page.locator(`#gform_wrapper_${gf.orbital_form_id}`), 'combined-stack Gravity Forms wrapper');
+  await expectVazirmatn(page.locator(`#gform_wrapper_${gf.orbital_form_id}`), 'combined-stack Gravity Forms wrapper');
 });
 
 await recorder.record('representative_gravityview_surface', async () => {
   await page.goto(view.frontend_url, { waitUntil: 'networkidle' });
-  await expectVazir(page.locator('.gv-container').first(), 'combined-stack GravityView container');
-  await expectNotVazir(page.locator('#vf-view-excluded'), 'combined-stack GravityView exclusion', /monospace/i);
+  await expectVazirmatn(page.locator('.gv-container').first(), 'combined-stack GravityView container');
+  await expectNotVazirmatn(page.locator('#vf-view-excluded'), 'combined-stack GravityView exclusion', /monospace/i);
 });
 
 await login(page, baseUrl, user, password);
@@ -47,7 +47,7 @@ await login(page, baseUrl, user, password);
 await recorder.record('representative_gravityflow_surface', async () => {
   await page.goto(flow.admin_inbox_url, { waitUntil: 'domcontentloaded' });
   await page.locator('.gflow-inbox').first().waitFor({ state: 'visible', timeout: 30000 });
-  await expectVazir(page.locator('.gflow-inbox').first(), 'combined-stack Gravity Flow inbox');
+  await expectVazirmatn(page.locator('.gflow-inbox').first(), 'combined-stack Gravity Flow inbox');
 });
 
 await recorder.record('combined_no_conflict_and_icon_family', async () => {
@@ -83,7 +83,7 @@ await recorder.record('combined_no_conflict_and_icon_family', async () => {
 });
 
 await recorder.record('font_delivery_has_no_duplicate_url_requests', async () => {
-  return observeVazirFontRequests(browser, {
+  return observeVazirmatnFontRequests(browser, {
     url: gf.orbital_url,
     label: 'Combined stack representative render',
     waitForSurface: async requestPage => {

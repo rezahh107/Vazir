@@ -9,10 +9,10 @@
    composer lint
    composer compat
    ```
-4. Verify every generated `@font-face` URL resolves to a packaged WOFF2 asset.
+4. Verify every generated `@font-face` URL resolves to the pinned packaged Vazirmatn WOFF2 asset and matches `assets/fonts/Vazirmatn-PROVENANCE.md`.
 5. Verify default output contains no font preload unless a measured release requirement explicitly adds one.
 6. Test WordPress frontend, wp-admin, login, Block Editor iframe, and Site Editor canvas.
-7. Verify `exclude_selectors` as a negative applicability boundary: an excluded component with an explicit non-Vazir family must retain that family while neighboring text remains Vazir; no generic exclusion `font-family` reset may be emitted.
+7. Verify `exclude_selectors` as a negative applicability boundary: an excluded component with an explicit non-Vazirmatn family must retain that family while neighboring text remains Vazirmatn; no generic exclusion `font-family` reset may be emitted.
 8. With a licensed current Gravity Forms build, test Orbital/Theme Framework, supported Legacy Markup, Preview, Form Editor, No Conflict Mode, AJAX, multi-page navigation, validation rerenders, conditional logic, representative Gravity Forms icons, and both wrapper-level and descendant-level `exclude_selectors` behavior.
    - Record the exact Gravity Forms version actually installed and tested.
    - Use real browser/computed-style observations for Gravity Forms claims.

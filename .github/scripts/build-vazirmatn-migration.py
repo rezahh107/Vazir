@@ -67,7 +67,7 @@ if repository_test.count(old_asset_test) != 1:
 write('tests/RepositoryContractTest.php', repository_test.replace(old_asset_test, new_asset_test))
 
 replace_exact('tests/runtime-contract.php', 'vazir-{$weight}.woff2', 'vazirmatn-{$weight}.woff2')
-replace_exact('tests/runtime-contract.php', "/font-family:\\s*'Vazir'[^;]*!important;/", "/font-family:\\s*'Vazirmatn'[^;]*!important;/")
+replace_exact('tests/runtime-contract.php', "Vazir'[^;]*!important", "Vazirmatn'[^;]*!important")
 replace_exact('tests/runtime-contract.php', '"font-family: \'Vazir\'"', '"font-family: \'Vazirmatn\'"')
 
 wordpress_smoke = read('tests/wordpress-smoke.php')
