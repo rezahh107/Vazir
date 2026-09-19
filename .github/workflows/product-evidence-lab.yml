@@ -1,0 +1,211 @@
+name: Product-Wide Reproducible Evidence Lab
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/product-evidence-lab.yml'
+      - 'tests/product-evidence-lab/**'
+      - 'tests/gravityforms-evidence-lab/**'
+      - 'includes/class-vazirfont-gravityforms-integration.php'
+      - 'includes/class-vazirfont-loader.php'
+      - 'vazir-font-wp.php'
+      - 'assets/fonts/**'
+      - 'docs/CHARACTERIZATION.md'
+      - 'README.md'
+      - 'AGENTS.md'
+      - 'RELEASE.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  licensed-profile:
+    name: ${{ matrix.profile }} / WP 7.1 / PHP 8.3 / Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [gravityforms, gravityflow, gravityview, gravity-stack]
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress
+          MYSQL_ROOT_PASSWORD: vazir-lab-root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pvazir-lab-root"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      VAZIR_LAB_PROFILE: ${{ matrix.profile }}
+      VAZIR_LAB_WP_PATH: /tmp/vazir-lab-wordpress
+      VAZIR_LAB_PACKAGE_DIR: /tmp/vazir-lab-packages
+      VAZIR_LAB_ARTIFACT_DIR: /tmp/vazir-lab-artifacts
+      VAZIR_LAB_BASE_URL: http://127.0.0.1:8080
+      VAZIR_LAB_ADMIN_USER: vazir_lab_admin
+      VAZIR_LAB_ADMIN_PASSWORD: vazir-lab-admin-password
+      VAZIR_GF_ARTIFACT_DIR: /tmp/vazir-lab-artifacts
+      VAZIR_GF_BASE_URL: http://127.0.0.1:8080
+      VAZIR_GF_ADMIN_USER: vazir_lab_admin
+      VAZIR_GF_ADMIN_PASSWORD: vazir-lab-admin-password
+
+    steps:
+      - name: Checkout exact evaluated Head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+
+      - name: Assert repository and exact Head identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "rezahh107/Vazir"
+          actual="$(git rev-parse HEAD)"
+          expected="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          test "$actual" = "$expected"
+          echo "VAZIR_LAB_REPOSITORY_SHA=$actual" >> "$GITHUB_ENV"
+          echo "VAZIR_GF_REPOSITORY_SHA=$actual" >> "$GITHUB_ENV"
+          mkdir -p "$VAZIR_LAB_WP_PATH" "$VAZIR_LAB_PACKAGE_DIR" "$VAZIR_LAB_ARTIFACT_DIR"
+          printf '{"repository":"%s","sha":"%s","profile":"%s"}\n' "$GITHUB_REPOSITORY" "$actual" "$VAZIR_LAB_PROFILE" > "$VAZIR_LAB_ARTIFACT_DIR/repository-identity.json"
+          if git ls-files '*.zip' | grep -q .; then echo "Committed ZIP archives are forbidden in the Product Evidence Lab." >&2; exit 1; fi
+
+      - name: Set up PHP 8.3 and WP-CLI
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.3'
+          coverage: none
+          extensions: mysqli
+          tools: wp-cli
+
+      - name: Provision fresh WordPress 7.1 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          wp core download --version=7.1 --path="$VAZIR_LAB_WP_PATH" --force
+          wp config create --dbname=wordpress --dbuser=root --dbpass=vazir-lab-root --dbhost=127.0.0.1:3306 --path="$VAZIR_LAB_WP_PATH" --skip-check
+          wp core install --url="$VAZIR_LAB_BASE_URL" --title="Vazir ${VAZIR_LAB_PROFILE} Lab" --admin_user="$VAZIR_LAB_ADMIN_USER" --admin_password="$VAZIR_LAB_ADMIN_PASSWORD" --admin_email='vazir-lab@example.invalid' --skip-email --path="$VAZIR_LAB_WP_PATH"
+          test "$(wp core version --path="$VAZIR_LAB_WP_PATH")" = "7.1"
+          wp theme install twentytwentyfive --activate --path="$VAZIR_LAB_WP_PATH"
+
+      - name: Acquire and fail-closed verify approved licensed packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tests/product-evidence-lab/core/acquire-packages.sh "$VAZIR_LAB_PROFILE" "$VAZIR_LAB_PACKAGE_DIR" "$VAZIR_LAB_WP_PATH/wp-content/plugins" "$VAZIR_LAB_ARTIFACT_DIR"
+          source tests/product-evidence-lab/core/package-identities.sh
+          gf_zip="$VAZIR_LAB_PACKAGE_DIR/$VAZIR_LAB_GF_FILENAME"
+          verifier=tests/product-evidence-lab/core/verify-package.sh
+          if bash "$verifier" "$VAZIR_LAB_GF_LABEL" "$gf_zip" 1 "$VAZIR_LAB_GF_SHA256" "$VAZIR_LAB_GF_ENTRYPOINT" "$VAZIR_LAB_GF_PLUGIN_NAME" "$VAZIR_LAB_GF_VERSION"; then echo "Negative size identity check unexpectedly passed." >&2; exit 1; fi
+          if bash "$verifier" "$VAZIR_LAB_GF_LABEL" "$gf_zip" "$VAZIR_LAB_GF_SIZE" "0000000000000000000000000000000000000000000000000000000000000000" "$VAZIR_LAB_GF_ENTRYPOINT" "$VAZIR_LAB_GF_PLUGIN_NAME" "$VAZIR_LAB_GF_VERSION"; then echo "Negative hash identity check unexpectedly passed." >&2; exit 1; fi
+          if bash "$verifier" "$VAZIR_LAB_GF_LABEL" "$gf_zip" "$VAZIR_LAB_GF_SIZE" "$VAZIR_LAB_GF_SHA256" 'missing/plugin.php' "$VAZIR_LAB_GF_PLUGIN_NAME" "$VAZIR_LAB_GF_VERSION"; then echo "Negative entrypoint identity check unexpectedly passed." >&2; exit 1; fi
+
+      - name: Install and activate exact Vazir code and requested profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Future production-ZIP seam: replace only this source symlink; fixtures stay unchanged.
+          ln -s "$GITHUB_WORKSPACE" "$VAZIR_LAB_WP_PATH/wp-content/plugins/vazir-font-wp"
+          case "$VAZIR_LAB_PROFILE" in
+            gravityforms) plugins=(gravityforms vazir-font-wp) ;;
+            gravityflow) plugins=(gravityforms gravityflow vazir-font-wp) ;;
+            gravityview) plugins=(gravityforms gravityview vazir-font-wp) ;;
+            gravity-stack) plugins=(gravityforms gravityflow gravityview vazir-font-wp) ;;
+            *) echo "Unsupported profile $VAZIR_LAB_PROFILE" >&2; exit 64 ;;
+          esac
+          wp plugin activate "${plugins[@]}" --path="$VAZIR_LAB_WP_PATH"
+          for plugin in "${plugins[@]}"; do wp plugin status "$plugin" --path="$VAZIR_LAB_WP_PATH"; done
+          wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/core/capture-runtime.php" --path="$VAZIR_LAB_WP_PATH"
+
+      - name: Create deterministic profile fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$VAZIR_LAB_PROFILE" in
+            gravityforms) wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/setup-fixtures.php" --path="$VAZIR_LAB_WP_PATH" ;;
+            gravityflow) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityflow/setup-fixtures.php" --path="$VAZIR_LAB_WP_PATH" ;;
+            gravityview) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityview/setup-fixtures.php" --path="$VAZIR_LAB_WP_PATH" ;;
+            gravity-stack)
+              wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/setup-fixtures.php" --path="$VAZIR_LAB_WP_PATH"
+              wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityflow/setup-fixtures.php" --path="$VAZIR_LAB_WP_PATH"
+              wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityview/setup-fixtures.php" --path="$VAZIR_LAB_WP_PATH"
+              ;;
+          esac
+
+      - name: Run native profile assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$VAZIR_LAB_PROFILE" in
+            gravityforms) wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/runtime-contract.php" --path="$VAZIR_LAB_WP_PATH" ;;
+            gravityflow) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityflow/runtime-contract.php" --path="$VAZIR_LAB_WP_PATH" ;;
+            gravityview) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityview/runtime-contract.php" --path="$VAZIR_LAB_WP_PATH" ;;
+            gravity-stack) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravity-stack/runtime-contract.php" --path="$VAZIR_LAB_WP_PATH" ;;
+          esac
+
+      - name: Set up exact Node runtime
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.19.0'
+
+      - name: Install bounded Playwright and Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = "v22.19.0"
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          node -e "const p=require('playwright/package.json'); if(p.version!=='1.55.0') process.exit(1)"
+
+      - name: Start ephemeral WordPress server
+        shell: bash
+        run: |
+          set -euo pipefail
+          wp server --host=127.0.0.1 --port=8080 --path="$VAZIR_LAB_WP_PATH" > /tmp/vazir-lab-wp-server.log 2>&1 &
+          echo $! > /tmp/vazir-lab-wp-server.pid
+          for i in $(seq 1 30); do if curl -fsS "$VAZIR_LAB_BASE_URL/wp-login.php" >/dev/null; then exit 0; fi; sleep 1; done
+          cat /tmp/vazir-lab-wp-server.log >&2; exit 1
+
+      - name: Run profile Chromium characterization
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$VAZIR_LAB_PROFILE" in
+            gravityforms) node tests/gravityforms-evidence-lab/browser-characterization.mjs ;;
+            gravityflow) node tests/product-evidence-lab/profiles/gravityflow/browser-characterization.mjs ;;
+            gravityview) node tests/product-evidence-lab/profiles/gravityview/browser-characterization.mjs ;;
+            gravity-stack) node tests/product-evidence-lab/profiles/gravity-stack/browser-characterization.mjs ;;
+          esac
+
+      - name: Assert licensed package bytes are outside evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find "$VAZIR_LAB_ARTIFACT_DIR" -type f -name '*.zip' -print -quit | grep -q .; then echo "Licensed ZIP bytes must never enter the evidence artifact directory." >&2; exit 1; fi
+
+      - name: Upload bounded profile evidence
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vazir-${{ matrix.profile }}-evidence-${{ env.VAZIR_LAB_REPOSITORY_SHA }}
+          path: /tmp/vazir-lab-artifacts
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload bounded profile failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vazir-${{ matrix.profile }}-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            /tmp/vazir-lab-artifacts
+            /tmp/vazir-lab-wp-server.log
+          if-no-files-found: ignore
+          retention-days: 7
