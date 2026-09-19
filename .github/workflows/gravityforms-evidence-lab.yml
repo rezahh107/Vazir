@@ -96,16 +96,16 @@ jobs:
           set -euo pipefail
           curl -L --fail --retry 4 --retry-all-errors -o "$VAZIR_GF_ZIP" "https://drive.usercontent.google.com/download?id=10pDROZVyqELKzSzIiJrOyEWKjxS8r22Q&export=download&confirm=t"
 
-          if tests/gravityforms-evidence-lab/verify-package.sh "$VAZIR_GF_ZIP" 1 "$VAZIR_GF_SHA256" "$VAZIR_GF_VERSION"; then
+          if bash tests/gravityforms-evidence-lab/verify-package.sh "$VAZIR_GF_ZIP" 1 "$VAZIR_GF_SHA256" "$VAZIR_GF_VERSION"; then
             echo "Negative size-identity check unexpectedly passed." >&2
             exit 1
           fi
-          if tests/gravityforms-evidence-lab/verify-package.sh "$VAZIR_GF_ZIP" "$VAZIR_GF_SIZE" "0000000000000000000000000000000000000000000000000000000000000000" "$VAZIR_GF_VERSION"; then
+          if bash tests/gravityforms-evidence-lab/verify-package.sh "$VAZIR_GF_ZIP" "$VAZIR_GF_SIZE" "0000000000000000000000000000000000000000000000000000000000000000" "$VAZIR_GF_VERSION"; then
             echo "Negative hash-identity check unexpectedly passed." >&2
             exit 1
           fi
 
-          tests/gravityforms-evidence-lab/verify-package.sh "$VAZIR_GF_ZIP" "$VAZIR_GF_SIZE" "$VAZIR_GF_SHA256" "$VAZIR_GF_VERSION"
+          bash tests/gravityforms-evidence-lab/verify-package.sh "$VAZIR_GF_ZIP" "$VAZIR_GF_SIZE" "$VAZIR_GF_SHA256" "$VAZIR_GF_VERSION"
           unzip -q "$VAZIR_GF_ZIP" -d "$VAZIR_GF_WP_PATH/wp-content/plugins"
           test -f "$VAZIR_GF_WP_PATH/wp-content/plugins/gravityforms/gravityforms.php"
           grep -q '^Version:[[:space:]]*3\.1\.1\.1$' "$VAZIR_GF_WP_PATH/wp-content/plugins/gravityforms/gravityforms.php"
