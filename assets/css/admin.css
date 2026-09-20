@@ -1,0 +1,197 @@
+/* Vazir Font settings page only. */
+@font-face {
+	font-family: 'Vazirmatn Preview';
+	font-style: normal;
+	font-weight: 300;
+	font-display: swap;
+	src: url('../fonts/vazirmatn-300.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'Vazirmatn Preview';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url('../fonts/vazirmatn-400.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'Vazirmatn Preview';
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url('../fonts/vazirmatn-500.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'Vazirmatn Preview';
+	font-style: normal;
+	font-weight: 700;
+	font-display: swap;
+	src: url('../fonts/vazirmatn-700.woff2') format('woff2');
+}
+
+@font-face {
+	font-family: 'Vazirmatn Preview';
+	font-style: normal;
+	font-weight: 900;
+	font-display: swap;
+	src: url('../fonts/vazirmatn-900.woff2') format('woff2');
+}
+
+.vazir-font-settings {
+	max-width: 960px;
+}
+
+.vazir-font-settings .vazir-font-settings__orientation {
+	max-width: 72ch;
+	margin-block: 8px 24px;
+}
+
+.vazir-font-settings .vazir-font-settings__orientation > p:first-child {
+	font-size: 14px;
+	line-height: 1.7;
+}
+
+.vazir-font-settings .vazir-font-settings__section {
+	margin-top: 24px;
+	padding-top: 20px;
+	border-top: 1px solid #dcdcde;
+}
+
+.vazir-font-settings .vazir-font-settings__section > h2 {
+	margin: 0 0 6px;
+	font-size: 1.3em;
+}
+
+.vazir-font-settings .form-table {
+	margin-top: 8px;
+}
+
+.vazir-font-settings .form-table th,
+.vazir-font-settings .form-table td {
+	vertical-align: top;
+}
+
+.vazir-font-settings .vazir-font-setting-control {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	min-height: 30px;
+}
+
+.vazir-font-settings .vazir-font-setting-control input[type='checkbox'] {
+	flex: 0 0 auto;
+	margin: 1px 0 0;
+}
+
+.vazir-font-settings .vazir-font-setting-availability {
+	margin-top: 6px;
+}
+
+.vazir-font-settings .vazir-font-weight-options {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 10px 18px;
+	max-width: 720px;
+}
+
+.vazir-font-settings .vazir-font-weight-option {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 30px;
+}
+
+.vazir-font-settings .vazir-font-preview {
+	max-width: 720px;
+	margin-top: 18px;
+	padding: 16px;
+	border: 1px solid #dcdcde;
+	box-sizing: border-box;
+}
+
+.vazir-font-settings .vazir-font-preview h3 {
+	margin: 0 0 4px;
+}
+
+.vazir-font-settings .vazir-font-preview__samples {
+	margin-top: 12px;
+}
+
+.vazir-font-settings .vazir-font-preview__sample {
+	margin: 8px 0;
+	font-family: 'Vazirmatn Preview', sans-serif;
+	font-size: 16px;
+	line-height: 1.8;
+}
+
+.vazir-font-settings .vazir-font-preview__sample[hidden],
+.vazir-font-settings #vazir-font-preview-empty[hidden] {
+	display: none !important;
+}
+
+.vazir-font-settings .vazir-font-preview__phrase {
+	display: inline-block;
+	margin-inline-start: 12px;
+}
+
+.vazir-font-settings .vazir-font-settings__advanced {
+	margin-top: 26px;
+	padding-block: 2px;
+	border-block: 1px solid #dcdcde;
+}
+
+.vazir-font-settings .vazir-font-settings__advanced > summary {
+	padding: 12px 2px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.vazir-font-settings .vazir-font-settings__advanced > summary:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 2px;
+}
+
+.vazir-font-settings .vazir-font-settings__advanced-content {
+	padding: 4px 0 14px;
+}
+
+.vazir-font-settings .vazir-font-settings__advanced-content > p {
+	max-width: 72ch;
+}
+
+.vazir-font-settings .vazir-font-settings__examples code {
+	display: inline-block;
+	max-width: 100%;
+	unicode-bidi: isolate;
+	overflow-wrap: anywhere;
+}
+
+.vazir-font-settings #vazir-font-exclude_selectors {
+	max-width: 100%;
+	box-sizing: border-box;
+	direction: ltr;
+	text-align: left;
+	unicode-bidi: plaintext;
+	resize: vertical;
+}
+
+.vazir-font-settings .submit {
+	margin-bottom: 0;
+}
+
+@media screen and (max-width: 480px) {
+	.vazir-font-settings .vazir-font-weight-options {
+		grid-template-columns: 1fr;
+	}
+
+	.vazir-font-settings .vazir-font-preview {
+		padding: 12px;
+	}
+
+	.vazir-font-settings .vazir-font-preview__phrase {
+		display: block;
+		margin-inline-start: 0;
+	}
+}
