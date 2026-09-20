@@ -156,6 +156,17 @@ jobs:
           VAZIR_BASE_URL: http://127.0.0.1:8080
           VAZIR_BLOCK_THEME: ${{ matrix.block_theme }}
         run: node tests/browser-characterization.mjs
+      - name: Prepare RTL admin settings characterization
+        if: matrix.theme == 'twentytwentyfive'
+        run: |
+          wp language core install fa_IR --activate --path=/tmp/vazir-wordpress
+          ADMIN_ID=$(wp user get admin --field=ID --path=/tmp/vazir-wordpress)
+          wp user meta update "$ADMIN_ID" admin_color midnight --path=/tmp/vazir-wordpress
+      - name: Run admin settings browser characterization
+        if: matrix.theme == 'twentytwentyfive'
+        env:
+          VAZIR_BASE_URL: http://127.0.0.1:8080
+        run: node tests/admin-settings-characterization.mjs
       - name: Print WordPress server log on failure
         if: failure()
         run: cat /tmp/vazir-wp-server.log || true
