@@ -1,0 +1,522 @@
+name: Vazir Production Release
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/release.yml'
+      - '.github/workflows/product-evidence-lab.yml'
+      - 'scripts/release/**'
+      - 'tests/release/**'
+      - 'tests/product-evidence-lab/core/install-vazir-under-test.sh'
+      - 'vazir-font-wp.php'
+      - 'includes/**'
+      - 'assets/**'
+      - 'languages/**'
+      - 'README.md'
+      - 'RELEASE.md'
+      - 'AGENTS.md'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Dry-run the release system or explicitly authorize publication.'
+        type: choice
+        required: true
+        default: dry-run
+        options: [dry-run, publish]
+      version:
+        description: 'Publish: required explicit SemVer and must already match source. Dry-run: blank uses source version.'
+        type: string
+        required: false
+        default: ''
+      approved_sha:
+        description: 'Publish only: exact Owner-approved main SHA. Must equal dispatch SHA and current remote main.'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vazir-production-release-${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'dry-run' }}
+  cancel-in-progress: false
+
+env:
+  VAZIR_RELEASE_DB_NAME: wordpress
+  VAZIR_RELEASE_DB_USER: root
+  VAZIR_RELEASE_DB_PASS: vazir-release-root
+  VAZIR_RELEASE_DB_HOST: 127.0.0.1:3306
+  VAZIR_RELEASE_BASE_URL: http://127.0.0.1:8090
+  VAZIR_RELEASE_ADMIN_USER: admin
+  VAZIR_RELEASE_ADMIN_PASSWORD: admin-password
+
+jobs:
+  dry-run-candidate:
+    name: Dry-run / exact production ZIP
+    if: github.event_name == 'pull_request' || inputs.mode == 'dry-run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      INPUT_MODE: ${{ inputs.mode }}
+      INPUT_VERSION: ${{ inputs.version }}
+      INPUT_APPROVED_SHA: ${{ inputs.approved_sha }}
+    outputs:
+      source_sha: ${{ steps.identity.outputs.source_sha }}
+      version: ${{ steps.identity.outputs.version }}
+      artifact_name: ${{ steps.identity.outputs.artifact_name }}
+      zip_filename: ${{ steps.identity.outputs.zip_filename }}
+      zip_sha256: ${{ steps.build.outputs.zip_sha256 }}
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress
+          MYSQL_ROOT_PASSWORD: vazir-release-root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pvazir-release-root"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - name: Checkout exact dry-run source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Set up PHP, WP-CLI, Node and archive tools
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: wp-cli
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22.19.0'
+
+      - name: Install archive tools
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends zip unzip
+
+      - name: Bind dry-run identity to exact Head
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$expected"
+          mode="${INPUT_MODE:-dry-run}"
+          bash scripts/release/validate-release-inputs.sh "$mode" "$INPUT_VERSION" "$INPUT_APPROVED_SHA" "$expected"
+          source scripts/release/release-lib.sh
+          release_assert_version_mirrors .
+          version="$(release_plugin_version .)"
+          requested="$INPUT_VERSION"
+          if [[ -n "$requested" && "$requested" != "$version" ]]; then
+            echo "Dry-run version input must match source version ($version); source is never mutated by dry-run." >&2
+            exit 1
+          fi
+          artifact_name="vazir-release-candidate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "source_sha=$actual" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
+          echo "zip_filename=vazir-font-wp-$version.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Run release contract and falsification tests
+        run: |
+          bash tests/release/release-boundary-contract-tests.sh "$GITHUB_WORKSPACE"
+          bash tests/release/release-contract-tests.sh "$GITHUB_WORKSPACE"
+
+      - name: Build once and validate the canonical production ZIP
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='${{ steps.identity.outputs.version }}'
+          ZIP="$(bash scripts/release/build-release.sh . "$version" build/release | head -n1)"
+          SHA="$(sha256sum "$ZIP" | awk '{print $1}')"
+          bash scripts/release/validate-release.sh . "$ZIP" "$version" "$SHA"
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+          echo "zip_sha256=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Clean-install and activate the exact ZIP
+        shell: bash
+        run: bash scripts/release/smoke-zip.sh . '${{ steps.build.outputs.zip }}' '${{ steps.identity.outputs.version }}' /tmp/vazir-release-wordpress
+
+      - name: Start installed artifact WordPress and prove font assets are reachable
+        shell: bash
+        run: |
+          set -euo pipefail
+          wp server --host=127.0.0.1 --port=8090 --path=/tmp/vazir-release-wordpress > /tmp/vazir-release-wp.log 2>&1 &
+          echo $! > /tmp/vazir-release-wp.pid
+          for i in $(seq 1 30); do curl -fsS "$VAZIR_RELEASE_BASE_URL/wp-login.php" >/dev/null && break; sleep 1; done
+          curl -fsS "$VAZIR_RELEASE_BASE_URL/wp-content/plugins/vazir-font-wp/assets/fonts/vazirmatn-400.woff2" -o /tmp/vazir-400.woff2
+          test "$(wc -c < /tmp/vazir-400.woff2 | tr -d ' ')" = '50684'
+
+      - name: Reuse real admin settings browser characterization against installed ZIP
+        shell: bash
+        env:
+          VAZIR_BASE_URL: http://127.0.0.1:8090
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          node tests/admin-settings-characterization.mjs
+
+      - name: Write pre-qualification dry-run manifest
+        shell: bash
+        run: |
+          php scripts/release/write-manifest.php \
+            --output=build/release/release-manifest.json \
+            --mode=dry-run \
+            --source-sha='${{ steps.identity.outputs.source_sha }}' \
+            --version='${{ steps.identity.outputs.version }}' \
+            --zip='${{ steps.build.outputs.zip }}' \
+            --sha256='${{ steps.build.outputs.zip_sha256 }}' \
+            --validation=PASS --smoke=PASS --settings=PASS \
+            --qualification=PENDING_PRODUCT_EVIDENCE \
+            --publication=NOT_ATTEMPTED_DRY_RUN \
+            --run-id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+      - name: Upload exact candidate for downstream qualification
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ steps.identity.outputs.artifact_name }}
+          path: |
+            ${{ steps.build.outputs.zip }}
+            ${{ steps.build.outputs.zip }}.sha256
+            build/release/release-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Print WordPress log on failure
+        if: failure()
+        run: cat /tmp/vazir-release-wp.log || true
+
+  dry-run-product-evidence:
+    name: Dry-run / Product Evidence Lab on exact ZIP
+    needs: dry-run-candidate
+    uses: ./.github/workflows/product-evidence-lab.yml
+    with:
+      source_sha: ${{ needs.dry-run-candidate.outputs.source_sha }}
+      plugin_artifact_name: ${{ needs.dry-run-candidate.outputs.artifact_name }}
+      plugin_zip_filename: ${{ needs.dry-run-candidate.outputs.zip_filename }}
+      plugin_zip_sha256: ${{ needs.dry-run-candidate.outputs.zip_sha256 }}
+
+  dry-run-finalize:
+    name: Dry-run / bounded release evidence
+    if: always() && needs.dry-run-candidate.result == 'success'
+    needs: [dry-run-candidate, dry-run-product-evidence]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.dry-run-candidate.outputs.source_sha }}
+          fetch-depth: 1
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: ${{ needs.dry-run-candidate.outputs.artifact_name }}
+          path: build/release
+      - name: Emit final dry-run manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          qualification='NOT_PROVEN_OR_ENVIRONMENT_UNAVAILABLE'
+          if [[ '${{ needs.dry-run-product-evidence.result }}' == 'success' ]]; then qualification='PASS'; fi
+          ZIP="build/release/${{ needs.dry-run-candidate.outputs.zip_filename }}"
+          php scripts/release/write-manifest.php \
+            --output=build/release/release-manifest.json \
+            --mode=dry-run \
+            --source-sha='${{ needs.dry-run-candidate.outputs.source_sha }}' \
+            --version='${{ needs.dry-run-candidate.outputs.version }}' \
+            --zip="$ZIP" --sha256='${{ needs.dry-run-candidate.outputs.zip_sha256 }}' \
+            --validation=PASS --smoke=PASS --settings=PASS \
+            --qualification="$qualification" \
+            --publication=NOT_ATTEMPTED_DRY_RUN \
+            --run-id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+      - name: Upload bounded dry-run release evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vazir-release-dry-run-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/release/${{ needs.dry-run-candidate.outputs.zip_filename }}
+            build/release/${{ needs.dry-run-candidate.outputs.zip_filename }}.sha256
+            build/release/release-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-candidate:
+    name: Publish / qualify exact Owner-approved main
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      INPUT_MODE: ${{ inputs.mode }}
+      INPUT_VERSION: ${{ inputs.version }}
+      INPUT_APPROVED_SHA: ${{ inputs.approved_sha }}
+      DISPATCH_SHA: ${{ github.sha }}
+    outputs:
+      source_sha: ${{ steps.identity.outputs.source_sha }}
+      version: ${{ steps.identity.outputs.version }}
+      artifact_name: ${{ steps.identity.outputs.artifact_name }}
+      zip_filename: ${{ steps.identity.outputs.zip_filename }}
+      zip_sha256: ${{ steps.build.outputs.zip_sha256 }}
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress
+          MYSQL_ROOT_PASSWORD: vazir-release-root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pvazir-release-root"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - name: Enforce explicit main publication authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$INPUT_MODE" = 'publish'
+          [[ "$INPUT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          test "$INPUT_VERSION" != '0.0.0'
+          [[ "$INPUT_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$DISPATCH_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$INPUT_APPROVED_SHA" = "$DISPATCH_SHA"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.approved_sha }}
+          fetch-depth: 0
+
+      - name: Set up PHP, WP-CLI, Node and archive tools
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: wp-cli
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22.19.0'
+      - run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends zip unzip
+
+      - name: Bind Owner approval to unchanged current main and source version
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/release/validate-release-inputs.sh "$INPUT_MODE" "$INPUT_VERSION" "$INPUT_APPROVED_SHA" "$DISPATCH_SHA"
+          approved="$INPUT_APPROVED_SHA"
+          version="$INPUT_VERSION"
+          test "$(git rev-parse HEAD)" = "$approved"
+          test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$approved"
+          source scripts/release/release-lib.sh
+          release_assert_version_mirrors .
+          release_is_production_version "$version"
+          test "$(release_plugin_version .)" = "$version"
+          tag="v$version"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "Production tag already exists: $tag" >&2; exit 1
+          fi
+          artifact_name="vazir-publish-candidate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "source_sha=$approved" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
+          echo "zip_filename=vazir-font-wp-$version.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Run release contract and falsification tests
+        run: |
+          bash tests/release/release-boundary-contract-tests.sh "$GITHUB_WORKSPACE"
+          bash tests/release/release-contract-tests.sh "$GITHUB_WORKSPACE"
+
+      - name: Build once and validate exact publish candidate
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='${{ steps.identity.outputs.version }}'
+          ZIP="$(bash scripts/release/build-release.sh . "$version" build/release | head -n1)"
+          SHA="$(sha256sum "$ZIP" | awk '{print $1}')"
+          bash scripts/release/validate-release.sh . "$ZIP" "$version" "$SHA"
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+          echo "zip_sha256=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Clean-install exact publish candidate
+        run: bash scripts/release/smoke-zip.sh . '${{ steps.build.outputs.zip }}' '${{ steps.identity.outputs.version }}' /tmp/vazir-release-wordpress
+
+      - name: Start installed candidate and run real admin settings characterization
+        shell: bash
+        env:
+          VAZIR_BASE_URL: http://127.0.0.1:8090
+        run: |
+          set -euo pipefail
+          wp server --host=127.0.0.1 --port=8090 --path=/tmp/vazir-release-wordpress > /tmp/vazir-release-wp.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS "$VAZIR_RELEASE_BASE_URL/wp-login.php" >/dev/null && break; sleep 1; done
+          curl -fsS "$VAZIR_RELEASE_BASE_URL/wp-content/plugins/vazir-font-wp/assets/fonts/vazirmatn-400.woff2" -o /tmp/vazir-400.woff2
+          test "$(wc -c < /tmp/vazir-400.woff2 | tr -d ' ')" = '50684'
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          node tests/admin-settings-characterization.mjs
+
+      - name: Write qualified-not-published manifest
+        run: |
+          php scripts/release/write-manifest.php \
+            --output=build/release/release-manifest.json --mode=publish \
+            --source-sha='${{ steps.identity.outputs.source_sha }}' \
+            --version='${{ steps.identity.outputs.version }}' \
+            --zip='${{ steps.build.outputs.zip }}' --sha256='${{ steps.build.outputs.zip_sha256 }}' \
+            --validation=PASS --smoke=PASS --settings=PASS --qualification=PENDING_PRODUCT_EVIDENCE \
+            --publication=QUALIFIED_NOT_PUBLISHED --run-id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+      - name: Upload exact candidate for licensed product qualification
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ steps.identity.outputs.artifact_name }}
+          path: |
+            ${{ steps.build.outputs.zip }}
+            ${{ steps.build.outputs.zip }}.sha256
+            build/release/release-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-product-evidence:
+    name: Publish / Product Evidence Lab on exact ZIP
+    needs: publish-candidate
+    uses: ./.github/workflows/product-evidence-lab.yml
+    with:
+      source_sha: ${{ needs.publish-candidate.outputs.source_sha }}
+      plugin_artifact_name: ${{ needs.publish-candidate.outputs.artifact_name }}
+      plugin_zip_filename: ${{ needs.publish-candidate.outputs.zip_filename }}
+      plugin_zip_sha256: ${{ needs.publish-candidate.outputs.zip_sha256 }}
+
+  publish:
+    name: Publish / explicit Owner production publication + last-mile verification
+    needs: [publish-candidate, publish-product-evidence]
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    env:
+      INPUT_APPROVED_SHA: ${{ inputs.approved_sha }}
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress
+          MYSQL_ROOT_PASSWORD: vazir-release-root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pvazir-release-root"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.publish-candidate.outputs.source_sha }}
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: wp-cli
+      - run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends zip unzip
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: ${{ needs.publish-candidate.outputs.artifact_name }}
+          path: build/release
+
+      - name: Recheck approval and immutable identity conflicts immediately before publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          approved='${{ needs.publish-candidate.outputs.source_sha }}'
+          version='${{ needs.publish-candidate.outputs.version }}'
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$INPUT_APPROVED_SHA" = "$approved"
+          test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$approved"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
+            echo "Production tag appeared after qualification; refusing publication." >&2; exit 1
+          fi
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "Production release appeared after qualification; refusing publication." >&2; exit 1
+          fi
+
+      - name: Publish exact qualified bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='${{ needs.publish-candidate.outputs.version }}'
+          ZIP="build/release/${{ needs.publish-candidate.outputs.zip_filename }}"
+          SHA='${{ needs.publish-candidate.outputs.zip_sha256 }}'
+          php scripts/release/write-manifest.php \
+            --output=build/release/release-manifest.json --mode=publish \
+            --source-sha='${{ needs.publish-candidate.outputs.source_sha }}' --version="$version" \
+            --zip="$ZIP" --sha256="$SHA" --validation=PASS --smoke=PASS --settings=PASS \
+            --qualification=PASS --publication=PUBLISHED \
+            --run-id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "v$version" "$ZIP" "$ZIP.sha256" build/release/release-manifest.json \
+            --target '${{ needs.publish-candidate.outputs.source_sha }}' \
+            --title "Vazir Font for WordPress v$version" \
+            --notes "Production artifact built and qualified from exact source ${{ needs.publish-candidate.outputs.source_sha }}."
+
+      - name: Download consumer-facing asset and re-verify published bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VAZIR_RELEASE_DB_NAME: wordpress
+          VAZIR_RELEASE_DB_USER: root
+          VAZIR_RELEASE_DB_PASS: vazir-release-root
+          VAZIR_RELEASE_DB_HOST: 127.0.0.1:3306
+          VAZIR_RELEASE_BASE_URL: http://127.0.0.1:8091
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='${{ needs.publish-candidate.outputs.version }}'
+          expected='${{ needs.publish-candidate.outputs.zip_sha256 }}'
+          mkdir -p build/release/published
+          gh release download "v$version" --pattern '${{ needs.publish-candidate.outputs.zip_filename }}' --dir build/release/published
+          PUBLISHED_ZIP="build/release/published/${{ needs.publish-candidate.outputs.zip_filename }}"
+          test "$(sha256sum "$PUBLISHED_ZIP" | awk '{print $1}')" = "$expected"
+          bash scripts/release/validate-release.sh . "$PUBLISHED_ZIP" "$version" "$expected"
+          bash scripts/release/smoke-zip.sh . "$PUBLISHED_ZIP" "$version" /tmp/vazir-release-published-wordpress
+
+      - name: Mark published asset verified only after last-mile success
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='${{ needs.publish-candidate.outputs.version }}'
+          ZIP="build/release/${{ needs.publish-candidate.outputs.zip_filename }}"
+          SHA='${{ needs.publish-candidate.outputs.zip_sha256 }}'
+          php scripts/release/write-manifest.php \
+            --output=build/release/release-manifest.json --mode=publish \
+            --source-sha='${{ needs.publish-candidate.outputs.source_sha }}' --version="$version" \
+            --zip="$ZIP" --sha256="$SHA" --validation=PASS --smoke=PASS --settings=PASS \
+            --qualification=PASS --publication=PUBLISHED_AND_VERIFIED \
+            --run-id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gh release upload "v$version" build/release/release-manifest.json --clobber
+
+      - name: Preserve last-mile manifest as Actions evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vazir-published-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/release/release-manifest.json
+          if-no-files-found: error
+          retention-days: 90
