@@ -57,6 +57,10 @@ jobs:
     if: github.event_name == 'pull_request' || inputs.mode == 'dry-run'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      INPUT_MODE: ${{ inputs.mode }}
+      INPUT_VERSION: ${{ inputs.version }}
+      INPUT_APPROVED_SHA: ${{ inputs.approved_sha }}
     outputs:
       source_sha: ${{ steps.identity.outputs.source_sha }}
       version: ${{ steps.identity.outputs.version }}
@@ -90,7 +94,7 @@ jobs:
           coverage: none
           tools: wp-cli
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '22.19.0'
 
@@ -105,10 +109,12 @@ jobs:
           expected="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
           actual="$(git rev-parse HEAD)"
           test "$actual" = "$expected"
+          mode="${INPUT_MODE:-dry-run}"
+          bash scripts/release/validate-release-inputs.sh "$mode" "$INPUT_VERSION" "$INPUT_APPROVED_SHA" "$expected"
           source scripts/release/release-lib.sh
           release_assert_version_mirrors .
           version="$(release_plugin_version .)"
-          requested='${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}'
+          requested="$INPUT_VERSION"
           if [[ -n "$requested" && "$requested" != "$version" ]]; then
             echo "Dry-run version input must match source version ($version); source is never mutated by dry-run." >&2
             exit 1
@@ -120,7 +126,9 @@ jobs:
           echo "zip_filename=vazir-font-wp-$version.zip" >> "$GITHUB_OUTPUT"
 
       - name: Run release contract and falsification tests
-        run: bash tests/release/release-contract-tests.sh "$GITHUB_WORKSPACE"
+        run: |
+          bash tests/release/release-boundary-contract-tests.sh "$GITHUB_WORKSPACE"
+          bash tests/release/release-contract-tests.sh "$GITHUB_WORKSPACE"
 
       - name: Build once and validate the canonical production ZIP
         id: build
@@ -210,7 +218,7 @@ jobs:
         with:
           ref: ${{ needs.dry-run-candidate.outputs.source_sha }}
           fetch-depth: 1
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           name: ${{ needs.dry-run-candidate.outputs.artifact_name }}
           path: build/release
@@ -249,6 +257,11 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
+    env:
+      INPUT_MODE: ${{ inputs.mode }}
+      INPUT_VERSION: ${{ inputs.version }}
+      INPUT_APPROVED_SHA: ${{ inputs.approved_sha }}
+      DISPATCH_SHA: ${{ github.sha }}
     outputs:
       source_sha: ${{ steps.identity.outputs.source_sha }}
       version: ${{ steps.identity.outputs.version }}
@@ -274,10 +287,12 @@ jobs:
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = 'refs/heads/main'
-          test '${{ inputs.mode }}' = 'publish'
-          test -n '${{ inputs.version }}'
-          test -n '${{ inputs.approved_sha }}'
-          test '${{ inputs.approved_sha }}' = '${{ github.sha }}'
+          test "$INPUT_MODE" = 'publish'
+          [[ "$INPUT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          test "$INPUT_VERSION" != '0.0.0'
+          [[ "$INPUT_APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$DISPATCH_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$INPUT_APPROVED_SHA" = "$DISPATCH_SHA"
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -290,7 +305,7 @@ jobs:
           php-version: '8.3'
           coverage: none
           tools: wp-cli
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '22.19.0'
       - run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends zip unzip
@@ -300,34 +315,39 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          approved='${{ inputs.approved_sha }}'
+          bash scripts/release/validate-release-inputs.sh "$INPUT_MODE" "$INPUT_VERSION" "$INPUT_APPROVED_SHA" "$DISPATCH_SHA"
+          approved="$INPUT_APPROVED_SHA"
+          version="$INPUT_VERSION"
           test "$(git rev-parse HEAD)" = "$approved"
           test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$approved"
           source scripts/release/release-lib.sh
           release_assert_version_mirrors .
-          release_is_production_version '${{ inputs.version }}'
-          test "$(release_plugin_version .)" = '${{ inputs.version }}'
-          tag="v${{ inputs.version }}"
+          release_is_production_version "$version"
+          test "$(release_plugin_version .)" = "$version"
+          tag="v$version"
           if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
             echo "Production tag already exists: $tag" >&2; exit 1
           fi
           artifact_name="vazir-publish-candidate-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           echo "source_sha=$approved" >> "$GITHUB_OUTPUT"
-          echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
-          echo "zip_filename=vazir-font-wp-${{ inputs.version }}.zip" >> "$GITHUB_OUTPUT"
+          echo "zip_filename=vazir-font-wp-$version.zip" >> "$GITHUB_OUTPUT"
 
       - name: Run release contract and falsification tests
-        run: bash tests/release/release-contract-tests.sh "$GITHUB_WORKSPACE"
+        run: |
+          bash tests/release/release-boundary-contract-tests.sh "$GITHUB_WORKSPACE"
+          bash tests/release/release-contract-tests.sh "$GITHUB_WORKSPACE"
 
       - name: Build once and validate exact publish candidate
         id: build
         shell: bash
         run: |
           set -euo pipefail
-          ZIP="$(bash scripts/release/build-release.sh . '${{ steps.identity.outputs.version }}' build/release | head -n1)"
+          version='${{ steps.identity.outputs.version }}'
+          ZIP="$(bash scripts/release/build-release.sh . "$version" build/release | head -n1)"
           SHA="$(sha256sum "$ZIP" | awk '{print $1}')"
-          bash scripts/release/validate-release.sh . "$ZIP" '${{ steps.identity.outputs.version }}' "$SHA"
+          bash scripts/release/validate-release.sh . "$ZIP" "$version" "$SHA"
           echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
           echo "zip_sha256=$SHA" >> "$GITHUB_OUTPUT"
 
@@ -387,6 +407,8 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: write
+    env:
+      INPUT_APPROVED_SHA: ${{ inputs.approved_sha }}
     services:
       mysql:
         image: mysql:8.0
@@ -411,7 +433,7 @@ jobs:
           coverage: none
           tools: wp-cli
       - run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends zip unzip
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           name: ${{ needs.publish-candidate.outputs.artifact_name }}
           path: build/release
@@ -425,7 +447,7 @@ jobs:
           approved='${{ needs.publish-candidate.outputs.source_sha }}'
           version='${{ needs.publish-candidate.outputs.version }}'
           test "$GITHUB_REF" = 'refs/heads/main'
-          test '${{ inputs.approved_sha }}' = "$approved"
+          test "$INPUT_APPROVED_SHA" = "$approved"
           test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$approved"
           if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
             echo "Production tag appeared after qualification; refusing publication." >&2; exit 1
