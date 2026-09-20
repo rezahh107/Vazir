@@ -137,7 +137,7 @@ final class VazirFont_Admin_Settings {
 			'vazir_font_advanced',
 			[
 				'name'      => 'exclude_selectors',
-				'label_for' => 'vazir-font-exclude-selectors',
+				'label_for' => 'vazir-font-exclude_selectors',
 				'class'     => 'vazir-font-setting-row vazir-font-setting-row--advanced',
 			]
 		);
