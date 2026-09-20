@@ -20,6 +20,24 @@ expect_fail() {
   fi
 }
 
+publication_state_before_release_create() {
+  local file="$1"
+  local create_line state
+  create_line="$(grep -n -m1 -F 'gh release create ' "$file" | cut -d: -f1)"
+  [[ -n "$create_line" ]] || return 1
+  state="$(head -n "$create_line" "$file" | grep -o -- '--publication=[A-Z_]*' | tail -n1 | cut -d= -f2)"
+  [[ -n "$state" ]] || return 1
+  printf '%s\n' "$state"
+}
+
+assert_initial_release_manifest_is_published() {
+  [[ "$(publication_state_before_release_create "$1")" == 'PUBLISHED' ]]
+}
+
+line_of() {
+  grep -n -m1 -F -- "$1" "$RELEASE_WORKFLOW" | cut -d: -f1
+}
+
 # No workflow_dispatch string input may be embedded into Bash source. Declarative
 # Action inputs/if/env expressions are intentionally outside this check.
 unsafe_run_interpolation="$({
@@ -98,6 +116,70 @@ fi
 grep -Fq 'actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5' "$RELEASE_WORKFLOW"
 grep -Fq 'actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6' "$RELEASE_WORKFLOW"
 grep -Fq 'actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5' "$EVIDENCE_WORKFLOW"
+
+# Publication-state truth boundary. QUALIFIED_NOT_PUBLISHED remains internal
+# candidate evidence, but the manifest attached by release creation must already
+# describe the irreversible public state as PUBLISHED.
+grep -Fq '      - name: Publish exact qualified bytes' "$RELEASE_WORKFLOW"
+[[ "$(grep -c -- '--publication=QUALIFIED_NOT_PUBLISHED' "$RELEASE_WORKFLOW")" -eq 1 ]]
+assert_initial_release_manifest_is_published "$RELEASE_WORKFLOW"
+publish_step="$(awk '
+  /^      - name: Publish exact qualified bytes$/ { capture=1; next }
+  capture && /^      - name:/ { exit }
+  capture { print }
+' "$RELEASE_WORKFLOW")"
+grep -Fq -- '--qualification=PASS --publication=PUBLISHED \' <<< "$publish_step"
+grep -Fq 'gh release create "v$version" "$ZIP" "$ZIP.sha256" build/release/release-manifest.json \' <<< "$publish_step"
+! grep -Fq 'QUALIFIED_NOT_PUBLISHED' <<< "$publish_step"
+! grep -Fq 'gh release upload ' <<< "$publish_step"
+
+candidate_state_line="$(line_of '--publication=QUALIFIED_NOT_PUBLISHED')"
+create_line="$(line_of 'gh release create "v$version"')"
+published_line="$(line_of '--qualification=PASS --publication=PUBLISHED \')"
+[[ "$candidate_state_line" -lt "$published_line" && "$published_line" -lt "$create_line" ]]
+
+# Last-mile verification must remain strictly after consumer download, exact SHA
+# comparison, package validation, and clean-install smoke. Only that success may
+# promote the public manifest to PUBLISHED_AND_VERIFIED.
+download_line="$(line_of 'gh release download "v$version"')"
+sha_line="$(line_of 'test "$(sha256sum "$PUBLISHED_ZIP"')"
+validate_line="$(line_of 'bash scripts/release/validate-release.sh . "$PUBLISHED_ZIP"')"
+smoke_line="$(line_of 'bash scripts/release/smoke-zip.sh . "$PUBLISHED_ZIP"')"
+verified_line="$(line_of '--qualification=PASS --publication=PUBLISHED_AND_VERIFIED \')"
+verified_upload_line="$(line_of 'gh release upload "v$version" build/release/release-manifest.json --clobber')"
+[[ "$create_line" -lt "$download_line" ]]
+[[ "$download_line" -lt "$sha_line" && "$sha_line" -lt "$validate_line" && "$validate_line" -lt "$smoke_line" ]]
+[[ "$smoke_line" -lt "$verified_line" && "$verified_line" -lt "$verified_upload_line" ]]
+[[ "$(grep -Fc 'gh release upload "v$version" build/release/release-manifest.json --clobber' "$RELEASE_WORKFLOW")" -eq 1 ]]
+
+# Mutation controls mechanically falsify the original bad ordering while
+# accepting the intended internal-candidate -> PUBLISHED -> verified lifecycle.
+old_order_fixture="$(mktemp /tmp/vazir-release-old-order.XXXXXX)"
+new_order_fixture="$(mktemp /tmp/vazir-release-new-order.XXXXXX)"
+cat > "$old_order_fixture" <<'EOF'
+--publication=QUALIFIED_NOT_PUBLISHED
+gh release create "v$version" "$ZIP" "$ZIP.sha256" build/release/release-manifest.json
+--publication=PUBLISHED
+gh release upload "v$version" build/release/release-manifest.json --clobber
+EOF
+cat > "$new_order_fixture" <<'EOF'
+--publication=QUALIFIED_NOT_PUBLISHED
+--publication=PUBLISHED
+gh release create "v$version" "$ZIP" "$ZIP.sha256" build/release/release-manifest.json
+gh release download "v$version"
+sha256sum "$PUBLISHED_ZIP"
+validate-release.sh "$PUBLISHED_ZIP"
+smoke-zip.sh "$PUBLISHED_ZIP"
+--publication=PUBLISHED_AND_VERIFIED
+gh release upload "v$version" build/release/release-manifest.json --clobber
+EOF
+if assert_initial_release_manifest_is_published "$old_order_fixture"; then
+  echo 'Old publication ordering fixture unexpectedly satisfied the truth boundary.' >&2
+  rm -f "$old_order_fixture" "$new_order_fixture"
+  exit 1
+fi
+assert_initial_release_manifest_is_published "$new_order_fixture"
+rm -f "$old_order_fixture" "$new_order_fixture"
 
 # Permission and exact-artifact verification locks.
 [[ "$(grep -c '^[[:space:]]*contents: write[[:space:]]*$' "$RELEASE_WORKFLOW")" -eq 1 ]]
