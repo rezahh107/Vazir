@@ -469,19 +469,12 @@ jobs:
             --output=build/release/release-manifest.json --mode=publish \
             --source-sha='${{ needs.publish-candidate.outputs.source_sha }}' --version="$version" \
             --zip="$ZIP" --sha256="$SHA" --validation=PASS --smoke=PASS --settings=PASS \
-            --qualification=PASS --publication=QUALIFIED_NOT_PUBLISHED \
+            --qualification=PASS --publication=PUBLISHED \
             --run-id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           gh release create "v$version" "$ZIP" "$ZIP.sha256" build/release/release-manifest.json \
             --target '${{ needs.publish-candidate.outputs.source_sha }}' \
             --title "Vazir Font for WordPress v$version" \
             --notes "Production artifact built and qualified from exact source ${{ needs.publish-candidate.outputs.source_sha }}."
-          php scripts/release/write-manifest.php \
-            --output=build/release/release-manifest.json --mode=publish \
-            --source-sha='${{ needs.publish-candidate.outputs.source_sha }}' --version="$version" \
-            --zip="$ZIP" --sha256="$SHA" --validation=PASS --smoke=PASS --settings=PASS \
-            --qualification=PASS --publication=PUBLISHED \
-            --run-id="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          gh release upload "v$version" build/release/release-manifest.json --clobber
 
       - name: Download consumer-facing asset and re-verify published bytes
         env:
