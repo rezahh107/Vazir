@@ -47,11 +47,12 @@ mutated_zip() {
 
 repack() {
   local dir="$1"
+  local root_name="${2:-$VAZIR_RELEASE_SLUG}"
   local out="$dir/$VAZIR_RELEASE_SLUG-$VERSION.zip"
   rm -f "$out"
   (
     cd "$dir/unpacked"
-    find . -type f -print0 | LC_ALL=C sort -z | xargs -0 zip -X -q "$out"
+    find "$root_name" -type f -print0 | LC_ALL=C sort -z | xargs -0 zip -X -q "$out"
   )
   printf '%s\n' "$out"
 }
@@ -89,7 +90,7 @@ expect_fail 'wrong plugin entrypoint' bash "$ROOT/scripts/release/validate-relea
 
 case_dir="$(mutated_zip wrong-root)"
 mv "$case_dir/unpacked/$VAZIR_RELEASE_SLUG" "$case_dir/unpacked/wrong-root"
-case_zip="$(repack "$case_dir")"
+case_zip="$(repack "$case_dir" wrong-root)"
 expect_fail 'wrong archive root' bash "$ROOT/scripts/release/validate-release.sh" "$ROOT" "$case_zip" "$VERSION" "$(sha256sum "$case_zip" | awk '{print $1}')"
 
 MANIFEST="$TMP/release-manifest.json"
