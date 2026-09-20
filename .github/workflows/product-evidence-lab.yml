@@ -16,6 +16,24 @@ on:
       - 'AGENTS.md'
       - 'RELEASE.md'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      source_sha:
+        description: 'Exact repository source SHA whose tests/fixtures own the qualification.'
+        required: true
+        type: string
+      plugin_artifact_name:
+        description: 'Same-run Actions artifact containing the already-built production ZIP.'
+        required: true
+        type: string
+      plugin_zip_filename:
+        description: 'Exact production ZIP filename inside the artifact.'
+        required: true
+        type: string
+      plugin_zip_sha256:
+        description: 'Expected SHA-256 of the already-built production ZIP.'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -59,7 +77,7 @@ jobs:
       - name: Checkout exact evaluated Head
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
 
       - name: Assert repository and exact Head identity
@@ -68,13 +86,31 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = "rezahh107/Vazir"
           actual="$(git rev-parse HEAD)"
-          expected="${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          expected='${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}'
           test "$actual" = "$expected"
           echo "VAZIR_LAB_REPOSITORY_SHA=$actual" >> "$GITHUB_ENV"
           echo "VAZIR_GF_REPOSITORY_SHA=$actual" >> "$GITHUB_ENV"
           mkdir -p "$VAZIR_LAB_WP_PATH" "$VAZIR_LAB_PACKAGE_DIR" "$VAZIR_LAB_ARTIFACT_DIR"
           printf '{"repository":"%s","sha":"%s","profile":"%s"}\n' "$GITHUB_REPOSITORY" "$actual" "$VAZIR_LAB_PROFILE" > "$VAZIR_LAB_ARTIFACT_DIR/repository-identity.json"
           if git ls-files '*.zip' | grep -q .; then echo "Committed ZIP archives are forbidden in the Product Evidence Lab." >&2; exit 1; fi
+
+      - name: Download already-built production ZIP when called by release qualification
+        if: ${{ inputs.plugin_artifact_name != '' }}
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ inputs.plugin_artifact_name }}
+          path: /tmp/vazir-lab-plugin-artifact
+
+      - name: Verify artifact-input contract
+        if: ${{ inputs.plugin_artifact_name != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n '${{ inputs.plugin_zip_filename }}'
+          test -n '${{ inputs.plugin_zip_sha256 }}'
+          ZIP="/tmp/vazir-lab-plugin-artifact/${{ inputs.plugin_zip_filename }}"
+          test -f "$ZIP"
+          test "$(sha256sum "$ZIP" | awk '{print $1}')" = '${{ inputs.plugin_zip_sha256 }}'
 
       - name: Falsify artifact upload safety guards
         shell: bash
@@ -124,12 +160,15 @@ jobs:
           if bash "$verifier" "$VAZIR_LAB_GF_LABEL" "$gf_zip" "$VAZIR_LAB_GF_SIZE" "0000000000000000000000000000000000000000000000000000000000000000" "$VAZIR_LAB_GF_ENTRYPOINT" "$VAZIR_LAB_GF_PLUGIN_NAME" "$VAZIR_LAB_GF_VERSION"; then echo "Negative hash identity check unexpectedly passed." >&2; exit 1; fi
           if bash "$verifier" "$VAZIR_LAB_GF_LABEL" "$gf_zip" "$VAZIR_LAB_GF_SIZE" "$VAZIR_LAB_GF_SHA256" 'missing/plugin.php' "$VAZIR_LAB_GF_PLUGIN_NAME" "$VAZIR_LAB_GF_VERSION"; then echo "Negative entrypoint identity check unexpectedly passed." >&2; exit 1; fi
 
-      - name: Install and activate exact Vazir code and requested profile
+      - name: Install exact Vazir subject and activate requested profile
         shell: bash
         run: |
           set -euo pipefail
-          # Future production-ZIP seam: replace only this source symlink; fixtures stay unchanged.
-          ln -s "$GITHUB_WORKSPACE" "$VAZIR_LAB_WP_PATH/wp-content/plugins/vazir-font-wp"
+          if [[ -n '${{ inputs.plugin_artifact_name }}' ]]; then
+            export VAZIR_LAB_PLUGIN_ZIP="/tmp/vazir-lab-plugin-artifact/${{ inputs.plugin_zip_filename }}"
+            export VAZIR_LAB_PLUGIN_ZIP_SHA256='${{ inputs.plugin_zip_sha256 }}'
+          fi
+          bash tests/product-evidence-lab/core/install-vazir-under-test.sh "$GITHUB_WORKSPACE" "$VAZIR_LAB_WP_PATH" "$VAZIR_LAB_ARTIFACT_DIR"
           case "$VAZIR_LAB_PROFILE" in
             gravityforms) plugins=(gravityforms vazir-font-wp) ;;
             gravityflow) plugins=(gravityforms gravityflow vazir-font-wp) ;;
