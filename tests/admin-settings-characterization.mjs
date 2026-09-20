@@ -82,7 +82,7 @@ await page.waitForLoadState('networkidle');
 assert.equal(await page.locator('html').getAttribute('dir'), 'rtl', 'Persian admin must render RTL');
 assert.match(await page.locator('body').getAttribute('class') || '', /admin-color-midnight/, 'non-default admin color scheme must be active');
 await page.getByRole('heading', { level: 1, name: 'تنظیمات فونت وزیر' }).waitFor();
-await page.getByText(/Vazirmatn نسخه 33\.003/).waitFor();
+await root().locator('.vazir-font-settings__orientation').getByText(/Vazirmatn نسخه 33\.003/).waitFor();
 await page.getByLabel('سایت (فرانت‌اند)').waitFor();
 await page.getByLabel('مدیریت و ویرایشگر وردپرس').waitFor();
 await page.getByLabel('Gravity Forms').waitFor();
