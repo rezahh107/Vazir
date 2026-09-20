@@ -17,6 +17,7 @@ const advanced = () => page.locator('#vazir-font-advanced');
 const advancedSummary = () => advanced().locator('summary');
 const selectorTextarea = () => page.locator('#vazir-font-exclude_selectors');
 const weight = value => page.locator(`input[name="vazir_font_options[font_weights][]"][value="${value}"]`);
+const preview = value => page.locator(`.vazir-font-preview__sample[data-weight="${value}"]`);
 
 const saveSettings = async () => {
   await Promise.all([
@@ -96,6 +97,12 @@ const initialSelectors = await selectorTextarea().inputValue();
 assert.match(initialSelectors, /\[class\^="dashicons-"\]/, 'default attribute selector must be present before save');
 assert.match(initialSelectors, /\[data-icon\]:before/, 'default data-icon selector must be present before save');
 
+for (const candidate of ['300', '400', '500', '700', '900']) {
+  const expectedSelected = candidate === '400' || candidate === '700';
+  assert.equal(await weight(candidate).isChecked(), expectedSelected, `initial weight ${candidate} checked state mismatch`);
+  assert.equal(await preview(candidate).isVisible(), expectedSelected, `initial preview ${candidate} visibility mismatch`);
+}
+
 await weight('900').focus();
 await page.keyboard.press('Tab');
 assert.equal(await page.evaluate(() => document.activeElement?.tagName), 'SUMMARY', 'tab order should move from weights to advanced disclosure');
@@ -115,15 +122,15 @@ const ids = await root().locator('[id]').evaluateAll(elements => elements.map(el
 const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
 assert.deepEqual(duplicateIds, [], `settings controls must not have duplicate IDs: ${duplicateIds.join(',')}`);
 
-const preview400 = page.locator('.vazir-font-preview__sample[data-weight="400"]');
+const preview400 = preview('400');
 await preview400.waitFor({ state: 'visible' });
 const previewFamily = await preview400.evaluate(element => getComputedStyle(element).fontFamily);
 assert.match(previewFamily, /Vazirmatn Preview/i, `preview must use the bundled Vazirmatn preview family; got ${previewFamily}`);
 
 for (const candidate of ['300', '500', '900']) await weight(candidate).uncheck();
-assert.equal(await page.locator('.vazir-font-preview__sample[data-weight="300"]').isVisible(), false, 'preview must hide unselected weight 300');
+assert.equal(await preview('300').isVisible(), false, 'preview must hide unselected weight 300');
 assert.equal(await preview400.isVisible(), true, 'preview must retain selected weight 400');
-assert.equal(await page.locator('.vazir-font-preview__sample[data-weight="700"]').isVisible(), true, 'preview must retain selected weight 700');
+assert.equal(await preview('700').isVisible(), true, 'preview must retain selected weight 700');
 
 await page.getByLabel('سایت (فرانت‌اند)').uncheck();
 await saveSettings();

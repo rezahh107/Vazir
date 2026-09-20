@@ -137,7 +137,7 @@ final class VazirFont_Admin_Settings {
 			'vazir_font_advanced',
 			[
 				'name'      => 'exclude_selectors',
-				'label_for' => 'vazir-font-exclude_selectors',
+				'label_for' => 'vazir-font-exclude-selectors',
 				'class'     => 'vazir-font-setting-row vazir-font-setting-row--advanced',
 			]
 		);
@@ -216,13 +216,17 @@ final class VazirFont_Admin_Settings {
 		if ( ! is_array( $selected ) ) {
 			$selected = [ '400' ];
 		}
-		$weights = $this->get_weight_labels();
+		$weights = $this->get_weight_metadata();
 		?>
 		<div class="vazir-font-preview" aria-labelledby="vazir-font-preview-heading">
 			<h3 id="vazir-font-preview-heading"><?php esc_html_e( 'پیش‌نمایش Vazirmatn', 'vazir-font-wp' ); ?></h3>
 			<p class="description"><?php esc_html_e( 'نمونه‌های زیر فقط وزن‌هایی را نشان می‌دهند که در فرم انتخاب شده‌اند.', 'vazir-font-wp' ); ?></p>
 			<div class="vazir-font-preview__samples">
-				<?php foreach ( $weights as $weight => $label ) : ?>
+				<?php foreach ( $weights as $weight_metadata ) : ?>
+					<?php
+					$weight = $weight_metadata['weight'];
+					$label  = $weight_metadata['label'];
+					?>
 					<p class="vazir-font-preview__sample" data-weight="<?php echo esc_attr( $weight ); ?>"<?php echo in_array( $weight, $selected, true ) ? '' : ' hidden'; ?> style="font-weight: <?php echo esc_attr( $weight ); ?>;">
 						<span dir="ltr"><?php echo esc_html( $weight ); ?></span>
 						<span aria-hidden="true"> — </span>
@@ -465,7 +469,9 @@ final class VazirFont_Admin_Settings {
 
 		echo '<fieldset class="vazir-font-weight-options" aria-describedby="vazir-font-weights-help">';
 		echo '<legend class="screen-reader-text">' . esc_html__( 'وزن‌های قابل بارگذاری Vazirmatn', 'vazir-font-wp' ) . '</legend>';
-		foreach ( $this->get_weight_labels() as $weight => $label ) {
+		foreach ( $this->get_weight_metadata() as $weight_metadata ) {
+			$weight  = $weight_metadata['weight'];
+			$label   = $weight_metadata['label'];
 			$id      = 'vazir-font-weight-' . $weight;
 			$checked = in_array( $weight, $selected, true );
 			echo '<label for="' . esc_attr( $id ) . '" class="vazir-font-weight-option">';
@@ -477,15 +483,30 @@ final class VazirFont_Admin_Settings {
 	}
 
 	/**
-	 * @return array<string, string>
+	 * @return array<int, array{weight: string, label: string}>
 	 */
-	private function get_weight_labels(): array {
+	private function get_weight_metadata(): array {
 		return [
-			'300' => __( 'نازک', 'vazir-font-wp' ),
-			'400' => __( 'معمولی', 'vazir-font-wp' ),
-			'500' => __( 'متوسط', 'vazir-font-wp' ),
-			'700' => __( 'ضخیم', 'vazir-font-wp' ),
-			'900' => __( 'بسیار ضخیم', 'vazir-font-wp' ),
+			[
+				'weight' => '300',
+				'label'  => __( 'نازک', 'vazir-font-wp' ),
+			],
+			[
+				'weight' => '400',
+				'label'  => __( 'معمولی', 'vazir-font-wp' ),
+			],
+			[
+				'weight' => '500',
+				'label'  => __( 'متوسط', 'vazir-font-wp' ),
+			],
+			[
+				'weight' => '700',
+				'label'  => __( 'ضخیم', 'vazir-font-wp' ),
+			],
+			[
+				'weight' => '900',
+				'label'  => __( 'بسیار ضخیم', 'vazir-font-wp' ),
+			],
 		];
 	}
 
