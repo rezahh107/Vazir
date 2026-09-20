@@ -62,13 +62,6 @@ final class VazirFont_Admin_Settings {
 
 		wp_enqueue_style( 'vazir-font-admin', VAZIR_FONT_ASSETS_URL . 'css/admin.css', [], VAZIR_FONT_VERSION );
 		wp_enqueue_script( 'vazir-font-admin', VAZIR_FONT_ASSETS_URL . 'js/admin.js', [ 'jquery' ], VAZIR_FONT_VERSION, true );
-		wp_localize_script(
-			'vazir-font-admin',
-			'vazirFontAdminL10n',
-			[
-				'confirmReset' => __( 'Are you sure you want to reset settings?', 'vazir-font-wp' ),
-			]
-		);
 	}
 
 	public function add_admin_menu(): void {
@@ -90,60 +83,43 @@ final class VazirFont_Admin_Settings {
 
 		add_settings_section(
 			'vazir_font_general',
-			__( 'تنظیمات عمومی', 'vazir-font-wp' ),
+			__( 'محل اعمال فونت', 'vazir-font-wp' ),
 			[ $this, 'render_general_section_desc' ],
 			self::PAGE_SLUG
 		);
 
-		add_settings_field(
+		$this->add_checkbox_setting(
 			'enable_frontend',
-			__( 'فعال‌سازی در فرانت‌اند', 'vazir-font-wp' ),
-			[ $this, 'render_checkbox_field' ],
-			self::PAGE_SLUG,
-			'vazir_font_general',
-			[
-				'name'  => 'enable_frontend',
-				'label' => __( 'فونت وزیر در تمام صفحات سایت اعمال شود', 'vazir-font-wp' ),
-			]
+			__( 'سایت (فرانت‌اند)', 'vazir-font-wp' ),
+			__( 'متن و کنترل‌های بخش عمومی سایت با Vazirmatn نمایش داده شوند.', 'vazir-font-wp' )
 		);
-
-		add_settings_field(
+		$this->add_checkbox_setting(
 			'enable_admin',
-			__( 'فعال‌سازی در پنل مدیریت', 'vazir-font-wp' ),
-			[ $this, 'render_checkbox_field' ],
-			self::PAGE_SLUG,
-			'vazir_font_general',
-			[
-				'name'  => 'enable_admin',
-				'label' => __( 'فونت وزیر در پنل مدیریت وردپرس اعمال شود', 'vazir-font-wp' ),
-			]
+			__( 'مدیریت و ویرایشگر وردپرس', 'vazir-font-wp' ),
+			__( 'رابط مدیریت، صفحه ورود و محتوای ویرایشگرهای وردپرس با Vazirmatn نمایش داده شوند.', 'vazir-font-wp' )
 		);
-
-		add_settings_field(
+		$this->add_checkbox_setting(
 			'enable_gravity_forms',
-			__( 'فعال‌سازی در گرویتی فرمز', 'vazir-font-wp' ),
-			[ $this, 'render_checkbox_field' ],
-			self::PAGE_SLUG,
-			'vazir_font_general',
-			[
-				'name'  => 'enable_gravity_forms',
-				'label' => __( 'فونت وزیر در فرم‌های گرویتی فرمز اعمال شود', 'vazir-font-wp' ),
-			]
+			__( 'Gravity Forms', 'vazir-font-wp' ),
+			__( 'در صورت در دسترس بودن Gravity Forms، تایپوگرافی فرم‌ها نیز با تنظیمات همین افزونه هماهنگ شود.', 'vazir-font-wp' )
 		);
 
 		add_settings_section(
 			'vazir_font_weights',
-			__( 'وزن‌های فونت', 'vazir-font-wp' ),
+			__( 'وزن‌های Vazirmatn', 'vazir-font-wp' ),
 			[ $this, 'render_weights_section_desc' ],
 			self::PAGE_SLUG
 		);
 
 		add_settings_field(
 			'font_weights',
-			__( 'وزن‌های مورد استفاده', 'vazir-font-wp' ),
+			__( 'وزن‌های قابل بارگذاری', 'vazir-font-wp' ),
 			[ $this, 'render_weights_field' ],
 			self::PAGE_SLUG,
-			'vazir_font_weights'
+			'vazir_font_weights',
+			[
+				'class' => 'vazir-font-setting-row vazir-font-setting-row--weights',
+			]
 		);
 
 		add_settings_section(
@@ -155,13 +131,31 @@ final class VazirFont_Admin_Settings {
 
 		add_settings_field(
 			'exclude_selectors',
-			__( 'استثناء انتخابگرها', 'vazir-font-wp' ),
+			__( 'استثناءهای CSS', 'vazir-font-wp' ),
 			[ $this, 'render_textarea_field' ],
 			self::PAGE_SLUG,
 			'vazir_font_advanced',
 			[
-				'name'        => 'exclude_selectors',
-				'description' => __( 'انتخابگرهای CSS که نباید فونت وزیر روی آن‌ها اعمال شود (هر کدام در خط جداگانه)', 'vazir-font-wp' ),
+				'name'      => 'exclude_selectors',
+				'label_for' => 'vazir-font-exclude_selectors',
+				'class'     => 'vazir-font-setting-row vazir-font-setting-row--advanced',
+			]
+		);
+	}
+
+	private function add_checkbox_setting( string $name, string $title, string $description ): void {
+		$id = 'vazir-font-' . sanitize_key( $name );
+		add_settings_field(
+			$name,
+			$title,
+			[ $this, 'render_checkbox_field' ],
+			self::PAGE_SLUG,
+			'vazir_font_general',
+			[
+				'name'        => $name,
+				'description' => $description,
+				'label_for'   => $id,
+				'class'       => 'vazir-font-setting-row',
 			]
 		);
 	}
@@ -171,44 +165,72 @@ final class VazirFont_Admin_Settings {
 			wp_die( esc_html__( 'شما دسترسی لازم برای مشاهده این صفحه را ندارید.', 'vazir-font-wp' ) );
 		}
 		?>
-		<div class="wrap">
+		<div class="wrap vazir-font-settings">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-
-			<div class="vazir-font-admin-header">
-				<p><?php esc_html_e( 'این افزونه فونت وزیر را به تمام بخش‌های وردپرس شما اضافه می‌کند.', 'vazir-font-wp' ); ?></p>
+			<div class="vazir-font-settings__orientation">
+				<p><?php esc_html_e( 'این صفحه تنظیمات افزونه «فونت وزیر» است. قلم همراه افزونه Vazirmatn نسخه 33.003 است.', 'vazir-font-wp' ); ?></p>
+				<p class="description"><?php esc_html_e( 'گزینه‌های علامت‌خورده نشان می‌دهند فونت در کدام بخش‌ها فعال است. برای بیشتر سایت‌ها همین تنظیمات اصلی کافی است.', 'vazir-font-wp' ); ?></p>
 			</div>
 
 			<?php settings_errors(); ?>
 
-			<form method="post" action="options.php">
-				<?php
-				settings_fields( 'vazir_font_settings' );
-				do_settings_sections( self::PAGE_SLUG );
-				submit_button( __( 'ذخیره تنظیمات', 'vazir-font-wp' ) );
-				?>
+			<form id="vazir-font-settings-form" method="post" action="options.php">
+				<?php settings_fields( 'vazir_font_settings' ); ?>
+
+				<section class="vazir-font-settings__section" aria-labelledby="vazir-font-general-heading">
+					<h2 id="vazir-font-general-heading"><?php esc_html_e( 'محل اعمال فونت', 'vazir-font-wp' ); ?></h2>
+					<?php $this->render_general_section_desc(); ?>
+					<table class="form-table" role="presentation">
+						<?php do_settings_fields( self::PAGE_SLUG, 'vazir_font_general' ); ?>
+					</table>
+				</section>
+
+				<section class="vazir-font-settings__section" aria-labelledby="vazir-font-weights-heading">
+					<h2 id="vazir-font-weights-heading"><?php esc_html_e( 'وزن‌های Vazirmatn', 'vazir-font-wp' ); ?></h2>
+					<?php $this->render_weights_section_desc(); ?>
+					<table class="form-table" role="presentation">
+						<?php do_settings_fields( self::PAGE_SLUG, 'vazir_font_weights' ); ?>
+					</table>
+					<?php $this->render_font_preview(); ?>
+				</section>
+
+				<details class="vazir-font-settings__advanced" id="vazir-font-advanced">
+					<summary><?php esc_html_e( 'تنظیمات پیشرفته: استثناءها', 'vazir-font-wp' ); ?></summary>
+					<div class="vazir-font-settings__advanced-content">
+						<?php $this->render_advanced_section_desc(); ?>
+						<table class="form-table" role="presentation">
+							<?php do_settings_fields( self::PAGE_SLUG, 'vazir_font_advanced' ); ?>
+						</table>
+					</div>
+				</details>
+
+				<?php submit_button( __( 'ذخیره تنظیمات', 'vazir-font-wp' ) ); ?>
 			</form>
+		</div>
+		<?php
+	}
 
-			<div class="vazir-font-preview">
-				<h3><?php esc_html_e( 'پیش‌نمایش فونت', 'vazir-font-wp' ); ?></h3>
-				<div class="vazir-font-preview__text">
-					<?php
-					$weights = [
-						'300' => __( '300 (Light)', 'vazir-font-wp' ),
-						'400' => __( '400 (Regular)', 'vazir-font-wp' ),
-						'500' => __( '500 (Medium)', 'vazir-font-wp' ),
-						'700' => __( '700 (Bold)', 'vazir-font-wp' ),
-						'900' => __( '900 (Black)', 'vazir-font-wp' ),
-					];
-
-					foreach ( $weights as $weight => $label ) {
-						printf(
-							'<p style="font-family: \'Vazirmatn\', sans-serif; font-size: 16px; font-weight: %1$s;">%2$s</p>',
-							esc_attr( $weight ),
-							esc_html( $label )
-						);
-					}
-					?>
-				</div>
+	private function render_font_preview(): void {
+		$options  = VazirFontPlugin::get_options();
+		$selected = $options['font_weights'] ?? [ '400' ];
+		if ( ! is_array( $selected ) ) {
+			$selected = [ '400' ];
+		}
+		$weights = $this->get_weight_labels();
+		?>
+		<div class="vazir-font-preview" aria-labelledby="vazir-font-preview-heading">
+			<h3 id="vazir-font-preview-heading"><?php esc_html_e( 'پیش‌نمایش Vazirmatn', 'vazir-font-wp' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'نمونه‌های زیر فقط وزن‌هایی را نشان می‌دهند که در فرم انتخاب شده‌اند.', 'vazir-font-wp' ); ?></p>
+			<div class="vazir-font-preview__samples">
+				<?php foreach ( $weights as $weight => $label ) : ?>
+					<p class="vazir-font-preview__sample" data-weight="<?php echo esc_attr( $weight ); ?>"<?php echo in_array( $weight, $selected, true ) ? '' : ' hidden'; ?> style="font-weight: <?php echo esc_attr( $weight ); ?>;">
+						<span dir="ltr"><?php echo esc_html( $weight ); ?></span>
+						<span aria-hidden="true"> — </span>
+						<?php echo esc_html( $label ); ?>
+						<span class="vazir-font-preview__phrase"><?php esc_html_e( 'متن فارسی برای پیش‌نمایش خوانایی', 'vazir-font-wp' ); ?></span>
+					</p>
+				<?php endforeach; ?>
+				<p id="vazir-font-preview-empty" class="description" role="status" aria-live="polite" hidden><?php esc_html_e( 'وزنی انتخاب نشده است. هنگام ذخیره، وزن 400 به‌صورت خودکار فعال می‌شود.', 'vazir-font-wp' ); ?></p>
 			</div>
 		</div>
 		<?php
@@ -223,7 +245,7 @@ final class VazirFont_Admin_Settings {
 	public function sanitize_options( $input ): array {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			$this->log_security_event( 'Unauthorized settings update blocked.', 'critical' );
-			wp_die( esc_html__( 'Unauthorized access.', 'vazir-font-wp' ) );
+			wp_die( esc_html__( 'شما اجازه تغییر این تنظیمات را ندارید.', 'vazir-font-wp' ) );
 		}
 
 		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( $_POST['_wpnonce'], 'vazir_font_settings-options' ) ) {
@@ -231,7 +253,7 @@ final class VazirFont_Admin_Settings {
 			add_settings_error(
 				VAZIR_FONT_OPTION_NAME,
 				'nonce_failed',
-				esc_html__( 'Security verification failed.', 'vazir-font-wp' ),
+				esc_html__( 'اعتبارسنجی امنیتی انجام نشد. صفحه را تازه کنید و دوباره ذخیره کنید.', 'vazir-font-wp' ),
 				'error'
 			);
 			return VazirFontPlugin::get_options();
@@ -246,7 +268,7 @@ final class VazirFont_Admin_Settings {
 			add_settings_error(
 				VAZIR_FONT_OPTION_NAME,
 				'rate_limit',
-				esc_html__( 'Too many save attempts. Please wait a minute.', 'vazir-font-wp' ),
+				esc_html__( 'تعداد تلاش‌های ذخیره زیاد است. یک دقیقه صبر کنید و دوباره تلاش کنید.', 'vazir-font-wp' ),
 				'error'
 			);
 			return VazirFontPlugin::get_options();
@@ -255,6 +277,7 @@ final class VazirFont_Admin_Settings {
 
 		$current_options = VazirFontPlugin::get_options();
 		$sanitized       = [];
+		$input           = is_array( $input ) ? $input : [];
 
 		$checkboxes = [ 'enable_frontend', 'enable_admin', 'enable_gravity_forms' ];
 		foreach ( $checkboxes as $checkbox ) {
@@ -266,47 +289,62 @@ final class VazirFont_Admin_Settings {
 			$sanitized[ $checkbox ] = $value;
 		}
 
-		if ( isset( $input['font_weights'] ) && is_array( $input['font_weights'] ) ) {
-			$selected = array_map( 'sanitize_text_field', $input['font_weights'] );
-			$valid    = array_values( array_intersect( $selected, self::ALLOWED_WEIGHTS ) );
-			if ( empty( $valid ) ) {
-				$valid = [ '400' ];
-				add_settings_error(
-					VAZIR_FONT_OPTION_NAME,
-					'no_weights_selected',
-					esc_html__( 'At least one font weight must be selected. Weight 400 was enabled automatically.', 'vazir-font-wp' ),
-					'warning'
-				);
-				$this->log_security_event( 'No font weights selected; defaulted to 400.', 'notice' );
-			}
-			$sanitized['font_weights'] = $valid;
-		} else {
-			$sanitized['font_weights'] = $current_options['font_weights'] ?? [ '400' ];
+		$selected = isset( $input['font_weights'] ) && is_array( $input['font_weights'] )
+			? array_map( 'sanitize_text_field', $input['font_weights'] )
+			: [];
+		$valid = array_values( array_intersect( $selected, self::ALLOWED_WEIGHTS ) );
+		if ( empty( $valid ) ) {
+			$valid = [ '400' ];
+			add_settings_error(
+				VAZIR_FONT_OPTION_NAME,
+				'no_weights_selected',
+				esc_html__( 'هیچ وزن معتبری انتخاب نشده بود؛ وزن 400 به‌صورت خودکار فعال شد.', 'vazir-font-wp' ),
+				'warning'
+			);
+			$this->log_security_event( 'No valid font weights selected; defaulted to 400.', 'notice' );
 		}
+		$sanitized['font_weights'] = $valid;
 
 		$sanitized['exclude_selectors'] = $current_options['exclude_selectors'] ?? self::DEFAULT_EXCLUDE_SELECTORS;
 		if ( isset( $input['exclude_selectors'] ) && is_string( $input['exclude_selectors'] ) ) {
 			$raw_lines = explode( "\n", $input['exclude_selectors'] );
 			$raw_lines = array_map( 'trim', $raw_lines );
-			$raw_lines = array_filter( $raw_lines );
+			$raw_lines = array_filter( $raw_lines, static fn( string $selector ): bool => '' !== $selector );
 
-			$clean = [];
+			$clean    = [];
+			$rejected = 0;
 			foreach ( $raw_lines as $selector ) {
 				$sanitized_selector = $this->sanitize_css_selector( $selector );
-				if ( '' === $sanitized_selector ) {
-					$this->log_security_event( sprintf( 'CSS selector rejected during sanitization: %s', $selector ), 'critical' );
-					continue;
-				}
-
-				$validated = $this->validate_css_selector( $sanitized_selector );
+				$validated          = $this->validate_css_selector( $sanitized_selector );
 				if ( '' === $validated ) {
-					$this->log_security_event( sprintf( 'CSS selector failed validation: %s', $selector ), 'critical' );
+					++$rejected;
+					$this->log_security_event( sprintf( 'CSS selector rejected during validation: %s', $selector ), 'notice' );
 					continue;
 				}
 				$clean[] = $validated;
 			}
 
-			$clean                           = array_values( array_unique( $clean ) );
+			$clean = array_values( array_unique( $clean ) );
+			if ( $rejected > 0 ) {
+				add_settings_error(
+					VAZIR_FONT_OPTION_NAME,
+					'invalid_selectors',
+					sprintf(
+						/* translators: %d: number of rejected CSS selector lines. */
+						esc_html__( '%d خط از استثناءها معتبر نبود و ذخیره نشد. هر خط باید یک CSS selector ساده و مستقل باشد.', 'vazir-font-wp' ),
+						$rejected
+					),
+					'warning'
+				);
+			}
+			if ( count( $clean ) > 50 ) {
+				add_settings_error(
+					VAZIR_FONT_OPTION_NAME,
+					'selector_limit',
+					esc_html__( 'حداکثر 50 استثناء ذخیره می‌شود؛ موارد بعدی ذخیره نشدند.', 'vazir-font-wp' ),
+					'warning'
+				);
+			}
 			$sanitized['exclude_selectors'] = array_slice( $clean, 0, 50 );
 		}
 
@@ -318,14 +356,11 @@ final class VazirFont_Admin_Settings {
 	}
 
 	private function sanitize_css_selector( string $selector ): string {
-		$selector = str_ireplace( [ '@import', 'url(' ], '', $selector );
-		$selector = (string) preg_replace( '/\/\*.*?\*\//', '', $selector );
-		$selector = str_replace( [ '{', '}', ';' ], ' ', $selector );
-		$selector = (string) preg_replace( '/[^a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~]/', '', $selector );
+		$selector = sanitize_text_field( $selector );
 		$selector = trim( (string) preg_replace( '/\s+/', ' ', $selector ) );
 
 		if ( strlen( $selector ) > 200 ) {
-			$selector = substr( $selector, 0, 200 );
+			return '';
 		}
 
 		return $selector;
@@ -335,16 +370,28 @@ final class VazirFont_Admin_Settings {
 		if ( '' === $selector ) {
 			return '';
 		}
+		if ( false !== stripos( $selector, '@import' ) || false !== stripos( $selector, 'url(' ) ) {
+			return '';
+		}
 		if ( false !== strpos( $selector, '{' ) || false !== strpos( $selector, '}' ) || false !== strpos( $selector, ';' ) ) {
 			return '';
 		}
-		if ( false !== strpos( $selector, '/*' ) ) {
+		if ( false !== strpos( $selector, '/*' ) || false !== strpos( $selector, '*/' ) ) {
 			return '';
 		}
-		if ( ! preg_match( '/^[a-zA-Z.#]/', $selector ) ) {
+		if ( ! preg_match( '/^[a-zA-Z.#\[]/', $selector ) ) {
 			return '';
 		}
-		if ( ! preg_match( '/^[a-zA-Z0-9\s\-\_\.\:#\*\[\]\(\),>+~]+$/', $selector ) ) {
+		if ( ! preg_match( '/^[a-zA-Z0-9\s\-_\.#:\*\[\]\(\),>+~="\'\^\$\|]+$/', $selector ) ) {
+			return '';
+		}
+		if ( substr_count( $selector, '[' ) !== substr_count( $selector, ']' ) ) {
+			return '';
+		}
+		if ( substr_count( $selector, '(' ) !== substr_count( $selector, ')' ) ) {
+			return '';
+		}
+		if ( substr_count( $selector, '"' ) % 2 !== 0 || substr_count( $selector, "'" ) % 2 !== 0 ) {
 			return '';
 		}
 
@@ -372,33 +419,41 @@ final class VazirFont_Admin_Settings {
 	}
 
 	public function render_general_section_desc(): void {
-		echo '<p>' . esc_html__( 'انتخاب کنید فونت در کدام بخش‌ها فعال باشد.', 'vazir-font-wp' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'هر گزینه فقط همان محیط را کنترل می‌کند. با برداشتن علامت، فونت در آن محیط اعمال نمی‌شود.', 'vazir-font-wp' ) . '</p>';
 	}
 
 	public function render_weights_section_desc(): void {
-		echo '<p>' . esc_html__( 'وزن‌های مورد نیاز را انتخاب کنید تا فقط فونت‌های ضروری بارگذاری شوند.', 'vazir-font-wp' ) . '</p>';
+		echo '<p id="vazir-font-weights-help" class="description">' . esc_html__( 'فقط وزن‌هایی را انتخاب کنید که واقعاً نیاز دارید. وزن‌های کمتر می‌توانند دانلود فونت را کاهش دهند. اگر هیچ وزن معتبری انتخاب نشود، وزن 400 هنگام ذخیره برگردانده می‌شود.', 'vazir-font-wp' ) . '</p>';
 	}
 
 	public function render_advanced_section_desc(): void {
-		echo '<p>' . esc_html__( 'انتخابگرهایی که باید از اعمال فونت مستثنی شوند را تعیین کنید.', 'vazir-font-wp' ) . '</p>';
+		echo '<p>' . esc_html__( 'اگر بخشی از سایت باید فونت خودش را نگه دارد، می‌توانید آن را از اعمال Vazirmatn مستثنی کنید. این بخش برای کاربران آشنا با CSS است و در استفاده عادی لازم نیست تغییر کند.', 'vazir-font-wp' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'هر خط یک CSS selector مستقل است. خطوط نامعتبر نادیده گرفته می‌شوند و پس از ذخیره هشدار نمایش داده می‌شود.', 'vazir-font-wp' ) . '</p>';
+		echo '<p class="description vazir-font-settings__examples">' . esc_html__( 'نمونه:', 'vazir-font-wp' ) . ' <code dir="ltr">.no-vazirmatn</code> ' . esc_html__( 'یا', 'vazir-font-wp' ) . ' <code dir="ltr">#legacy-widget</code></p>';
 	}
 
 	/**
 	 * @param array<string, string> $args Field arguments.
 	 */
 	public function render_checkbox_field( array $args ): void {
-		$options = VazirFontPlugin::get_options();
-		$name    = $args['name'];
-		$label   = $args['label'];
-		$id      = 'vazir-font-' . sanitize_key( $name );
-		$checked = ! empty( $options[ $name ] );
+		$options     = VazirFontPlugin::get_options();
+		$name        = $args['name'];
+		$description = $args['description'] ?? '';
+		$id          = 'vazir-font-' . sanitize_key( $name );
+		$checked     = ! empty( $options[ $name ] );
+		$desc_id     = $id . '-description';
 
-		echo '<fieldset>';
-		echo '<label for="' . esc_attr( $id ) . '">';
-		echo '<input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( VAZIR_FONT_OPTION_NAME ) . '[' . esc_attr( $name ) . ']" value="1" ' . checked( $checked, true, false ) . ' />';
-		echo ' ' . esc_html( $label );
-		echo '</label>';
-		echo '</fieldset>';
+		echo '<div class="vazir-font-setting-control">';
+		echo '<input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( VAZIR_FONT_OPTION_NAME ) . '[' . esc_attr( $name ) . ']" value="1" aria-describedby="' . esc_attr( $desc_id ) . '" ' . checked( $checked, true, false ) . ' />';
+		echo '<span>' . esc_html__( 'فعال باشد', 'vazir-font-wp' ) . '</span>';
+		echo '</div>';
+		if ( '' !== $description ) {
+			echo '<p class="description" id="' . esc_attr( $desc_id ) . '">' . esc_html( $description ) . '</p>';
+		}
+
+		if ( 'enable_gravity_forms' === $name && ! class_exists( 'GFForms' ) ) {
+			echo '<p class="description vazir-font-setting-availability">' . esc_html__( 'Gravity Forms اکنون فعال نیست. این ترجیح ذخیره می‌شود و در صورت فعال‌شدن Gravity Forms اعمال خواهد شد.', 'vazir-font-wp' ) . '</p>';
+		}
 	}
 
 	public function render_weights_field(): void {
@@ -408,41 +463,43 @@ final class VazirFont_Admin_Settings {
 			$selected = [ '400' ];
 		}
 
-		$weights = [
-			'300' => __( '300 (Light)', 'vazir-font-wp' ),
-			'400' => __( '400 (Regular)', 'vazir-font-wp' ),
-			'500' => __( '500 (Medium)', 'vazir-font-wp' ),
-			'700' => __( '700 (Bold)', 'vazir-font-wp' ),
-			'900' => __( '900 (Black)', 'vazir-font-wp' ),
-		];
-
-		echo '<fieldset>';
-		foreach ( $weights as $weight => $label ) {
+		echo '<fieldset class="vazir-font-weight-options" aria-describedby="vazir-font-weights-help">';
+		echo '<legend class="screen-reader-text">' . esc_html__( 'وزن‌های قابل بارگذاری Vazirmatn', 'vazir-font-wp' ) . '</legend>';
+		foreach ( $this->get_weight_labels() as $weight => $label ) {
 			$id      = 'vazir-font-weight-' . $weight;
 			$checked = in_array( $weight, $selected, true );
 			echo '<label for="' . esc_attr( $id ) . '" class="vazir-font-weight-option">';
 			echo '<input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( VAZIR_FONT_OPTION_NAME ) . '[font_weights][]" value="' . esc_attr( $weight ) . '" ' . checked( $checked, true, false ) . ' /> ';
-			echo esc_html( $label );
-			echo '</label><br />';
+			echo '<span dir="ltr">' . esc_html( $weight ) . '</span> — ' . esc_html( $label );
+			echo '</label>';
 		}
 		echo '</fieldset>';
+	}
+
+	/**
+	 * @return array<string, string>
+	 */
+	private function get_weight_labels(): array {
+		return [
+			'300' => __( 'نازک', 'vazir-font-wp' ),
+			'400' => __( 'معمولی', 'vazir-font-wp' ),
+			'500' => __( 'متوسط', 'vazir-font-wp' ),
+			'700' => __( 'ضخیم', 'vazir-font-wp' ),
+			'900' => __( 'بسیار ضخیم', 'vazir-font-wp' ),
+		];
 	}
 
 	/**
 	 * @param array<string, string> $args Field arguments.
 	 */
 	public function render_textarea_field( array $args ): void {
-		$options     = VazirFontPlugin::get_options();
-		$name        = $args['name'];
-		$description = $args['description'] ?? '';
-		$id          = 'vazir-font-' . sanitize_key( $name );
-		$value       = isset( $options[ $name ] ) && is_array( $options[ $name ] ) ? implode( "\n", $options[ $name ] ) : '';
+		$options = VazirFontPlugin::get_options();
+		$name    = $args['name'];
+		$id      = 'vazir-font-' . sanitize_key( $name );
+		$value   = isset( $options[ $name ] ) && is_array( $options[ $name ] ) ? implode( "\n", $options[ $name ] ) : '';
 
-		echo '<label class="screen-reader-text" for="' . esc_attr( $id ) . '">' . esc_html__( 'استثناء انتخابگرها', 'vazir-font-wp' ) . '</label>';
-		echo '<textarea id="' . esc_attr( $id ) . '" name="' . esc_attr( VAZIR_FONT_OPTION_NAME ) . '[' . esc_attr( $name ) . ']" rows="6" cols="50" class="large-text code">' . esc_textarea( $value ) . '</textarea>';
-		if ( ! empty( $description ) ) {
-			echo '<p class="description">' . esc_html( $description ) . '</p>';
-		}
+		echo '<textarea id="' . esc_attr( $id ) . '" name="' . esc_attr( VAZIR_FONT_OPTION_NAME ) . '[' . esc_attr( $name ) . ']" rows="8" class="large-text code" dir="ltr" spellcheck="false" aria-describedby="vazir-font-exclude_selectors-help">' . esc_textarea( $value ) . '</textarea>';
+		echo '<p class="description" id="vazir-font-exclude_selectors-help">' . esc_html__( 'هر selector را در یک خط بنویسید. حداکثر 50 مورد ذخیره می‌شود.', 'vazir-font-wp' ) . '</p>';
 	}
 
 	/**
