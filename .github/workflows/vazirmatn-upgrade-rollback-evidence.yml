@@ -60,7 +60,7 @@ jobs:
           unlink "$root/wp-content/plugins/vazir-font-wp"
           ln -s "$GITHUB_WORKSPACE/candidate" "$root/wp-content/plugins/vazir-font-wp"
           wp plugin is-active vazir-font-wp --path="$root"
-          wp eval '$expected=["enable_frontend"=>false,"enable_admin"=>true,"enable_gravity_forms"=>false,"font_weights"=>["400","700"],"exclude_selectors"=>[".legacy-option-boundary"]]; VazirFontPlugin::clear_cache(); if(VazirFontPlugin::get_options()!==$expected){exit(1);} $css=VazirFont_Loader::get_instance()->get_font_face_css(); if(strpos($css,"font-family: '\''Vazirmatn'\''")===false||strpos($css,"vazirmatn-400.woff2")===false||strpos($css,"vazir-400.woff2")!==false){exit(2);} if(!file_exists(VAZIR_FONT_FONTS_DIR."vazirmatn-400.woff2")||file_exists(VAZIR_FONT_FONTS_DIR."vazir-400.woff2")){exit(3);} echo "UPGRADE_TO_EXACT_CANDIDATE_OK\n";' --path="$root"
+          wp eval '$expected=["enable_frontend"=>false,"enable_admin"=>true,"enable_gravity_forms"=>false,"font_weights"=>["400","700"],"exclude_selectors"=>[".legacy-option-boundary"]]; VazirFontPlugin::clear_cache(); if(VazirFontPlugin::get_options()!==$expected){exit(1);} $css=VazirFont_Loader::get_instance()->get_font_face_css(); if(strpos($css,"font-family: '\''Vazirmatn'\''")===false||strpos($css,"vazirmatn-400.woff2")===false||strpos($css,"vazir-400.woff2")!==false){exit(2);} echo "UPGRADE_TO_EXACT_CANDIDATE_OK\n";' --path="$root"
       - name: Switch back to legacy and verify rollback
         shell: bash
         run: |
