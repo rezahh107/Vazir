@@ -17,17 +17,29 @@ Automated PHP and repository contracts verify the loading/API paths. Real-WordPr
 
 ## Font delivery
 
-Version 1.3.0 deliberately keeps the existing bundled static Vazir WOFF2 assets (300, 400, 500, 700, 900). Changing the shipped font binaries or public family identity without a visual baseline would combine an architecture refactor with an unverified typography migration.
+The bundled typeface is the official upstream **Vazirmatn v33.003** release from `rastikerdar/vazirmatn`, pinned to release commit `83629f877e8f084cc07b47030b5d3a0ff06c76ec`. The plugin self-hosts the static WOFF2 files for weights `300`, `400`, `500`, `700`, and `900`; it does not fetch font bytes at runtime.
+
+`assets/fonts/Vazirmatn-PROVENANCE.md` records the exact upstream release archive identity, source paths, byte sizes, SHA-256 digests, license, and author material used to reproduce the bundled files.
+
+Static delivery remains intentional. The product already exposes five discrete weight selections, while the upstream variable webfont is 111,152 bytes and each selected static face is approximately 50–51 KiB. Static faces preserve the existing settings model and let the browser request only weights actually used by a page. Variable delivery would become advantageous only when enough distinct weights are consumed on the same surface to outweigh its larger single request and the additional migration/verification complexity.
 
 The runtime:
 
-- references only packaged `.woff2` files;
+- references only packaged `vazirmatn-*.woff2` files;
+- exposes the truthful canonical CSS family `Vazirmatn`;
+- retains the public `vazir_font_family` filter as the existing compatibility API for overriding the complete family stack;
+- does **not** create a hidden `Vazir` alias for Vazirmatn bytes;
 - uses `font-display: swap`;
 - performs no default font preloading;
-- has no CDN dependency;
-- keeps the public `vazir_font_family` filter and the `Vazir` family identity.
+- has no CDN dependency.
 
-The upstream Vazirmatn project remains the canonical successor to Vazir. A future Vazirmatn migration should be a separate, characterized change with binary provenance, mixed Persian/Latin rendering checks, and computed-style/visual regression evidence.
+Existing callbacks on `vazir_font_family` continue to run unchanged. A callback that deliberately returns the legacy `Vazir` family name remains responsible for providing that family itself; the plugin no longer bundles legacy Vazir binaries under that identity.
+
+### Upgrade and rollback
+
+The persisted option name and schema are unchanged: existing frontend/admin/Gravity Forms toggles, selected weights, and `exclude_selectors` retain their previous meaning. Upgrading replaces only the bundled typeface/default family behavior; it does not reinterpret user options or require a database migration subsystem.
+
+For this personal plugin, rollback is intentionally simple: reinstall/restore the previous pre-migration plugin revision/package. Because the option schema is unchanged, the prior version can reuse the same saved settings. The migration therefore does not keep a second legacy font payload solely for rollback.
 
 ## Gravity Forms compatibility
 
@@ -41,7 +53,7 @@ The adapter uses current Gravity Forms APIs for stylesheet delivery:
 
 The plugin does not flush `GFCache`, delete Gravity Forms-generated CSS, delete Gravity Forms transients, or schedule periodic Gravity Forms/font cleanup.
 
-Gravity Flow and GravityView are currently evidence profiles, not dedicated production integration layers. Their licensed profiles characterize how Vazir coexists with the exact Owner-supplied products without inventing Flow/View-specific CSS or runtime ownership.
+Gravity Flow and GravityView are currently evidence profiles, not dedicated production integration layers. Their licensed profiles characterize how the bundled typography coexists with the exact Owner-supplied products without inventing Flow/View-specific CSS or runtime ownership.
 
 ## Requirements and PHP policy
 
@@ -64,7 +76,7 @@ The existing option schema is preserved:
 - `font_weights`;
 - `exclude_selectors`.
 
-`exclude_selectors` means that Vazir `font-family` enforcement must not target matching element roots or their descendants. The runtime implements this as a negative selector boundary; it does not emit competing `font-family` reset declarations for generic element exclusions.
+`exclude_selectors` means that Vazirmatn `font-family` enforcement must not target matching element roots or their descendants. The runtime implements this as a negative selector boundary; it does not emit competing `font-family` reset declarations for generic element exclusions.
 
 ## Development
 
@@ -81,4 +93,4 @@ The Product-Wide Reproducible Evidence Lab adds separately diagnosable licensed 
 
 ## Licensing
 
-Plugin code is GPL-2.0-or-later. Bundled font files are distributed with `assets/fonts/OFL.txt` under the SIL Open Font License 1.1.
+Plugin code is GPL-2.0-or-later. Bundled Vazirmatn font files are distributed with the exact upstream `assets/fonts/OFL.txt` and `assets/fonts/AUTHORS.txt`; reproducible source identity and SHA-256 digests are recorded in `assets/fonts/Vazirmatn-PROVENANCE.md`.
