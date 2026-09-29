@@ -70,7 +70,7 @@ The approved GravityView bytes are not described as a vanilla upstream archive. 
 
 - `wordpress`: existing WordPress smoke/browser characterization only.
 - `gravityforms`: deep real Gravity Forms typography/dynamic/admin characterization; it proves only the scenarios that execute in that profile.
-- `gravityflow`: exact GF + Flow + Vazir activation, a real `Gravity_Flow_API` approval step/entry, current inbox surfaces, prerequisite GF rendering, exclusions, and rendered icon-family checks when the real node exists. Fixture-created workflow state does not prove every production setup path.
+- `gravityflow`: exact GF + Flow + Vazir activation, a real `Gravity_Flow_API` approval step/entries, admin and frontend Inbox reachability, computed `font-family` on the actual AG Grid theme root/header/cell/pagination/filter/date-picker surfaces that render, dynamic pagination rerender, prerequisite GF rendering, exclusions, and protected AG Grid/Gravity Flow/WordPress icon-family checks. Fixture-created workflow state does not prove every production setup path; secondary surfaces that cannot be rendered remain `NOT_PROVEN`.
 - `gravityview`: exact GF + GravityView + Vazir activation, a real `gravityview` post bound to a synthetic GF form using inspected 3.3.4 View metadata, front-end View/search/result state, admin editor, exclusions, pagination/icon checks when rendered. AJAX remains `NOT_PROVEN` unless an observable runtime path is actually exercised.
 - `gravity-stack`: representative coexistence/regression checks with all three Gravity products and Vazir active. It is not exhaustive compatibility evidence for any individual product.
 
@@ -82,7 +82,21 @@ The initial PR #12 attempts that failed to receive runners were later superseded
 
 On that exact Head, normal CI run #160 passed all 10 jobs, and Product-Wide Reproducible Evidence Lab run #30 passed all four licensed profiles: `gravityforms`, `gravityflow`, `gravityview`, and `gravity-stack`. The Gravity Forms profile included the Theme Framework/Orbital, supported Legacy Markup, Preview, Form Editor, No Conflict, iframe AJAX validation/rerender, multipage forward/back behavior, protected icon families, exclusions, and duplicate-free bundled font request characterization described in PR #12.
 
+The historical Gravity Flow PASS on PR #12 must be interpreted only at the surfaces its then-current test measured. That browser characterization asserted `.gflow-inbox` plus selected controls/icon families and did **not** measure the actual `.gflow-grid .ag-theme-alpine` root, representative AG Grid header/cell/pager text, or Flow-bound Flatpickr calendar. It therefore was not evidence that all inner Inbox text resolved to Vazirmatn.
+
 The merge commit `cb35e57f7ad62824e642e14576e1df9f8fb8e0f9` contains the same file tree as that successfully characterized PR Head, but the PR-head run must not be represented as an exact-SHA run of the later merge commit. These results are the legacy-Vazir baseline; they do not by themselves prove a later Vazirmatn candidate.
+
+## Gravity Flow 3.1.0 inner-component typography repair
+
+The first strengthened Gravity Flow characterization for the production repair batch intentionally ran before the repair. On exact evidence-only Head `a53acd49cdf87c2f31c202681fa5d6d37a879736`, package/runtime setup and native workflow assertions passed while Chromium reproduced the typography defect: the Inbox wrapper and search control resolved to Vazirmatn, but the real AG Grid root, header, row/cell, pagination text, and Flow-bound Flatpickr calendar resolved to Gravity Flow's system stack. The same run preserved `agGridAlpine`, `gflow-icons-common`, and Dashicons on representative icon surfaces.
+
+Exact Gravity Flow `3.1.0` source explains that result. Its admin/theme bundles declare a system `font-family` directly on `.gflow-grid .ag-theme-alpine`, material AG Grid inputs/date-filter controls, and `.flatpickr-calendar`. The product also provides `gravityflow_enqueue_admin_scripts` and `gravityflow_enqueue_frontend_scripts` after its own relevant styles are enqueued, with stable host handles including `gravityflow_admin_css` and `gravityflow_theme_css`.
+
+The production compatibility boundary is therefore a dedicated `VazirFont_GravityFlow_Integration` adapter that is version-bound to `3.1.0`, adds no JavaScript, depends on those host styles, and overrides only the material text surfaces that explicitly defeat normal inheritance. It does not own or replace Inbox query/state, assignment, authorization, workflow state, search, pagination, filtering, navigation, AG Grid lifecycle, or icon rendering. The adapter reuses the existing `enable_gravity_forms` stored Gravity-compatibility option together with the relevant frontend/admin context toggle; no new option schema is introduced.
+
+`exclude_selectors` remains authoritative for the Flow repair. Element-level exclusions are applied as negative selector boundaries, inheritable rules reject excluded descendant subtrees, pseudo-element exclusions are not inserted into relational guards, and unsafe nested-`:has()` inheritance cases fail closed. The adapter does not emit additional `@font-face` rules; bundled font delivery remains Loader-owned.
+
+A future claim that this repair is runtime-qualified requires an exact-Head licensed `gravityflow` browser run demonstrating the inner-component surfaces above, protected icon families, exclusions, dynamic rerender, and the existing Flow behavior boundary. Source inspection or wrapper PASS alone is insufficient.
 
 ## Exclusion semantics
 
