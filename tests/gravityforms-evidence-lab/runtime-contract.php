@@ -35,16 +35,27 @@ $assert( is_plugin_active( 'gravityforms/gravityforms.php' ), 'Gravity Forms is 
 $assert( is_plugin_active( 'vazir-font-wp/vazir-font-wp.php' ), 'Vazir plugin under test is not active.' );
 $assert( true === (bool) get_option( 'gform_enable_noconflict' ), 'Gravity Forms No Conflict Mode is not enabled.' );
 
-$orbital = GFAPI::get_form( (int) $manifest['orbital_form_id'] );
-$dynamic = GFAPI::get_form( (int) $manifest['dynamic_form_id'] );
-$legacy  = GFAPI::get_form( (int) $manifest['legacy_form_id'] );
-$assert( is_array( $orbital ) && is_array( $dynamic ) && is_array( $legacy ), 'Synthetic Gravity Forms fixtures are unavailable.' );
+$orbital           = GFAPI::get_form( (int) $manifest['orbital_form_id'] );
+$dynamic           = GFAPI::get_form( (int) $manifest['dynamic_form_id'] );
+$legacy            = GFAPI::get_form( (int) $manifest['legacy_form_id'] );
+$legacy_steps      = GFAPI::get_form( (int) $manifest['legacy_steps_form_id'] );
+$legacy_percentage = GFAPI::get_form( (int) $manifest['legacy_percentage_form_id'] );
+$assert( is_array( $orbital ) && is_array( $dynamic ) && is_array( $legacy ) && is_array( $legacy_steps ) && is_array( $legacy_percentage ), 'Synthetic Gravity Forms fixtures are unavailable.' );
 $assert( 2 === (int) rgar( $orbital, 'markupVersion' ), 'Orbital fixture markupVersion must be 2.' );
 $assert( 2 === (int) rgar( $dynamic, 'markupVersion' ), 'Dynamic fixture markupVersion must be 2.' );
 $assert( 1 === (int) rgar( $legacy, 'markupVersion' ), 'Legacy fixture markupVersion must be 1.' );
+$assert( 1 === (int) rgar( $legacy_steps, 'markupVersion' ), 'Legacy steps fixture markupVersion must be 1.' );
+$assert( 1 === (int) rgar( $legacy_percentage, 'markupVersion' ), 'Legacy percentage fixture markupVersion must be 1.' );
 $assert( ! GFCommon::is_legacy_markup_enabled( $orbital ), 'Orbital fixture unexpectedly resolves to Legacy Markup.' );
 $assert( ! GFCommon::is_legacy_markup_enabled( $dynamic ), 'Dynamic fixture unexpectedly resolves to Legacy Markup.' );
 $assert( GFCommon::is_legacy_markup_enabled( $legacy ), 'Legacy fixture does not resolve to Legacy Markup.' );
+$assert( GFCommon::is_legacy_markup_enabled( $legacy_steps ), 'Legacy steps fixture does not resolve to Legacy Markup.' );
+$assert( GFCommon::is_legacy_markup_enabled( $legacy_percentage ), 'Legacy percentage fixture does not resolve to Legacy Markup.' );
+$assert( 'steps' === (string) rgars( $legacy_steps, 'pagination/type' ), 'Legacy steps fixture does not use native step pagination.' );
+$assert( 'percentage' === (string) rgars( $legacy_percentage, 'pagination/type' ), 'Legacy percentage fixture does not use native percentage pagination.' );
+
+$entry_count = GFAPI::count_entries( (int) $manifest['dynamic_form_id'] );
+$assert( ! is_wp_error( $entry_count ) && (int) $entry_count >= 35, 'Gravity Forms admin list fixture does not contain enough real entries for list/pagination characterization.' );
 
 $integration = VazirFont_GravityForms_Integration::get_instance();
 $preview     = apply_filters( 'gform_preview_styles', array(), $dynamic );
@@ -70,12 +81,15 @@ $identity = array(
 		'vazir'        => is_plugin_active( 'vazir-font-wp/vazir-font-wp.php' ),
 	),
 	'host_assertions'       => array(
-		'orbital_markup_runtime' => 'PASS',
-		'dynamic_markup_runtime' => 'PASS',
-		'legacy_markup_runtime'  => 'PASS',
-		'preview_handle'         => 'PASS',
-		'noconflict_handles'     => 'PASS',
-		'compatibility_hooks'    => 'PASS',
+		'orbital_markup_runtime'           => 'PASS',
+		'dynamic_markup_runtime'           => 'PASS',
+		'legacy_basic_markup_runtime'      => 'PASS',
+		'legacy_steps_markup_runtime'      => 'PASS',
+		'legacy_percentage_markup_runtime' => 'PASS',
+		'admin_entries_fixture'            => 'PASS',
+		'preview_handle'                   => 'PASS',
+		'noconflict_handles'               => 'PASS',
+		'compatibility_hooks'              => 'PASS',
 	),
 );
 

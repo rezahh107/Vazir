@@ -1,0 +1,153 @@
+name: Gravity Forms Selector Admission
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/gravityforms-selector-admission.yml'
+      - 'tests/gravityforms-evidence-lab/**'
+      - 'tests/product-evidence-lab/core/**'
+      - 'includes/class-vazirfont-gravityforms-integration.php'
+      - 'assets/fonts/**'
+      - 'vazir-font-wp.php'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-rendered-selector-admission:
+    name: GF 3.1.1.1 / WP 7.1 / PHP 8.3 / Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress
+          MYSQL_ROOT_PASSWORD: vazir-lab-root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pvazir-lab-root"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      VAZIR_LAB_PROFILE: gravityforms
+      VAZIR_LAB_WP_PATH: /tmp/vazir-selector-wordpress
+      VAZIR_LAB_PACKAGE_DIR: /tmp/vazir-selector-packages
+      VAZIR_LAB_ARTIFACT_DIR: /tmp/vazir-selector-artifacts
+      VAZIR_LAB_BASE_URL: http://127.0.0.1:8080
+      VAZIR_LAB_ADMIN_USER: vazir_lab_admin
+      VAZIR_LAB_ADMIN_PASSWORD: vazir-lab-admin-password
+      VAZIR_GF_ARTIFACT_DIR: /tmp/vazir-selector-artifacts
+      VAZIR_GF_BASE_URL: http://127.0.0.1:8080
+      VAZIR_GF_ADMIN_USER: vazir_lab_admin
+      VAZIR_GF_ADMIN_PASSWORD: vazir-lab-admin-password
+
+    steps:
+      - name: Checkout exact PR Head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+
+      - name: Bind qualification to exact Head
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          expected='${{ github.event.pull_request.head.sha || github.sha }}'
+          test "$actual" = "$expected"
+          echo "VAZIR_GF_REPOSITORY_SHA=$actual" >> "$GITHUB_ENV"
+          echo "VAZIR_LAB_REPOSITORY_SHA=$actual" >> "$GITHUB_ENV"
+          mkdir -p "$VAZIR_LAB_WP_PATH" "$VAZIR_LAB_PACKAGE_DIR" "$VAZIR_LAB_ARTIFACT_DIR"
+          printf '{"repository":"%s","sha":"%s","profile":"gravityforms-selector-admission"}\n' "$GITHUB_REPOSITORY" "$actual" > "$VAZIR_LAB_ARTIFACT_DIR/repository-identity.json"
+          if git ls-files '*.zip' | grep -q .; then echo 'Committed ZIP archives are forbidden.' >&2; exit 1; fi
+
+      - name: Set up PHP 8.3 and WP-CLI
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.3'
+          coverage: none
+          extensions: mysqli
+          tools: wp-cli
+
+      - name: Provision fresh WordPress 7.1 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          wp core download --version=7.1 --path="$VAZIR_LAB_WP_PATH" --force
+          wp config create --dbname=wordpress --dbuser=root --dbpass=vazir-lab-root --dbhost=127.0.0.1:3306 --path="$VAZIR_LAB_WP_PATH" --skip-check
+          wp core install --url="$VAZIR_LAB_BASE_URL" --title='Vazir GF Selector Admission' --admin_user="$VAZIR_LAB_ADMIN_USER" --admin_password="$VAZIR_LAB_ADMIN_PASSWORD" --admin_email='vazir-lab@example.invalid' --skip-email --path="$VAZIR_LAB_WP_PATH"
+          test "$(wp core version --path="$VAZIR_LAB_WP_PATH")" = '7.1'
+          wp theme install twentytwentyfive --activate --path="$VAZIR_LAB_WP_PATH"
+
+      - name: Acquire exact licensed Gravity Forms package
+        shell: bash
+        run: bash tests/product-evidence-lab/core/acquire-packages.sh gravityforms "$VAZIR_LAB_PACKAGE_DIR" "$VAZIR_LAB_WP_PATH/wp-content/plugins" "$VAZIR_LAB_ARTIFACT_DIR"
+
+      - name: Install exact Vazir source and fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tests/product-evidence-lab/core/install-vazir-under-test.sh "$GITHUB_WORKSPACE" "$VAZIR_LAB_WP_PATH" "$VAZIR_LAB_ARTIFACT_DIR"
+          wp plugin activate gravityforms vazir-font-wp --path="$VAZIR_LAB_WP_PATH"
+          wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/core/capture-runtime.php" --use-include --path="$VAZIR_LAB_WP_PATH"
+          wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/setup-fixtures.php" --use-include --path="$VAZIR_LAB_WP_PATH"
+          wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/runtime-contract.php" --use-include --path="$VAZIR_LAB_WP_PATH"
+
+      - name: Set up exact Node runtime
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.19.0'
+
+      - name: Install bounded Playwright and Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = 'v22.19.0'
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          node -e "const p=require('playwright/package.json'); if(p.version!=='1.55.0') process.exit(1)"
+
+      - name: Start ephemeral WordPress server
+        shell: bash
+        run: |
+          set -euo pipefail
+          wp server --host=127.0.0.1 --port=8080 --path="$VAZIR_LAB_WP_PATH" > /tmp/vazir-selector-wp.log 2>&1 &
+          for i in $(seq 1 30); do if curl -fsS "$VAZIR_LAB_BASE_URL/wp-login.php" >/dev/null; then exit 0; fi; sleep 1; done
+          cat /tmp/vazir-selector-wp.log >&2
+          exit 1
+
+      - name: Measure exact rendered selector admission boundary
+        id: selector_measurement
+        continue-on-error: true
+        shell: bash
+        run: node tests/gravityforms-evidence-lab/selector-admission-characterization.mjs
+
+      - name: Assert evidence directory is safe
+        id: artifact_safety
+        if: always()
+        shell: bash
+        run: bash tests/product-evidence-lab/core/artifact-safety.sh "$VAZIR_LAB_ARTIFACT_DIR"
+
+      - name: Upload selector-admission evidence
+        if: ${{ always() && steps.artifact_safety.outputs.safe == 'true' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vazir-gravityforms-selector-admission-${{ env.VAZIR_GF_REPOSITORY_SHA }}
+          path: |
+            /tmp/vazir-selector-artifacts/**
+            !/tmp/vazir-selector-artifacts/**/*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce selector-admission characterization result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test '${{ steps.selector_measurement.outcome }}' = 'success'
+          test '${{ steps.artifact_safety.outcome }}' = 'success'
