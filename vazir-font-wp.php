@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Vazir Font for WordPress
  * Plugin URI:        https://github.com/rezahh107/Vazir
- * Description:       Self-hosted Persian typography for WordPress, editor contexts, and Gravity Forms.
+ * Description:       Self-hosted Persian typography for WordPress, editor contexts, Gravity Forms, and Gravity Flow.
  * Version:           1.3.0
  * Requires at least: 6.7
  * Requires PHP:      7.4
@@ -89,6 +89,10 @@ final class VazirFontPlugin {
 
 		if ( class_exists( 'GFForms' ) && class_exists( 'VazirFont_GravityForms_Integration' ) ) {
 			VazirFont_GravityForms_Integration::get_instance();
+		}
+
+		if ( class_exists( 'Gravity_Flow' ) && class_exists( 'VazirFont_GravityFlow_Integration' ) ) {
+			VazirFont_GravityFlow_Integration::get_instance();
 		}
 	}
 
