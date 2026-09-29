@@ -11,6 +11,7 @@ $expected = array(
 	'gravityforms' => array( 'gravityforms/gravityforms.php' => '3.1.1.1' ),
 	'gravityflow' => array( 'gravityforms/gravityforms.php' => '3.1.1.1', 'gravityflow/gravityflow.php' => '3.1.0' ),
 	'gravityview' => array( 'gravityforms/gravityforms.php' => '3.1.1.1', 'gravityview/gravityview.php' => '3.3.4' ),
+	'gravityperks' => array( 'gravityforms/gravityforms.php' => '3.1.1.1', 'gravityperks/gravityperks.php' => '2.3.16' ),
 	'gravity-stack' => array( 'gravityforms/gravityforms.php' => '3.1.1.1', 'gravityflow/gravityflow.php' => '3.1.0', 'gravityview/gravityview.php' => '3.3.4' ),
 );
 if ( ! isset( $expected[ $profile ] ) ) { throw new RuntimeException( 'Unsupported licensed Product Evidence Lab profile: ' . $profile ); }
