@@ -34,6 +34,7 @@ jobs:
           --health-timeout=5s
           --health-retries=20
     env:
+      VAZIR_LAB_PROFILE: gravityforms
       VAZIR_LAB_WP_PATH: /tmp/vazir-selector-wordpress
       VAZIR_LAB_PACKAGE_DIR: /tmp/vazir-selector-packages
       VAZIR_LAB_ARTIFACT_DIR: /tmp/vazir-selector-artifacts
@@ -60,6 +61,7 @@ jobs:
           expected='${{ github.event.pull_request.head.sha || github.sha }}'
           test "$actual" = "$expected"
           echo "VAZIR_GF_REPOSITORY_SHA=$actual" >> "$GITHUB_ENV"
+          echo "VAZIR_LAB_REPOSITORY_SHA=$actual" >> "$GITHUB_ENV"
           mkdir -p "$VAZIR_LAB_WP_PATH" "$VAZIR_LAB_PACKAGE_DIR" "$VAZIR_LAB_ARTIFACT_DIR"
           printf '{"repository":"%s","sha":"%s","profile":"gravityforms-selector-admission"}\n' "$GITHUB_REPOSITORY" "$actual" > "$VAZIR_LAB_ARTIFACT_DIR/repository-identity.json"
           if git ls-files '*.zip' | grep -q .; then echo 'Committed ZIP archives are forbidden.' >&2; exit 1; fi
