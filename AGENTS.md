@@ -55,7 +55,7 @@ Element-level exclusions are negative applicability boundaries: Vazirmatn `font-
 
 Pseudo-element exclusions must not be forced into relational element guards. Dedicated icon-family protections remain responsible for Dashicons and equivalent icon contexts.
 
-Gravity compatibility adapters must consume the same `vazir_font_options['exclude_selectors']` authority. Do not introduce a second incompatible selector model or a PHP/DOM imitation of arbitrary CSS selector matching. Inheritable Gravity Flow rules must fail closed when an exclusion cannot be represented safely.
+Gravity compatibility adapters must consume the same `vazir_font_options['exclude_selectors']` authority. Do not introduce a second incompatible selector model or a PHP/DOM imitation of arbitrary CSS selector matching. Inheritable Gravity Forms/Flow rules must fail closed when an exclusion cannot be represented safely.
 
 ## 5. Gravity Compatibility
 
@@ -68,6 +68,15 @@ Preserve the registered-style-handle architecture around:
 - `gform_noconflict_styles`.
 
 `gform_field_content`, `gform_field_css_class`, and scoped Gravity Forms `!important` compatibility rules remain provisional compatibility mechanisms until licensed real-Gravity-Forms browser characterization proves they can be narrowed or removed safely.
+
+Exact Gravity Forms `3.1.1.1` browser characterization is the current authority for the bounded direct-font corrections added beyond the existing Theme Framework/current/Legacy form rules. Preserve these boundaries:
+
+- Legacy multipage correction is limited to the rendered step number/label and percentage progress title/value surfaces that defeat wrapper inheritance;
+- admin-component correction is limited to runtime-proven `gform-dropdown` text and `gform-button` surfaces; do not replace it with `.gform-admin *` or another blanket wp-admin rule;
+- Preview chrome correction is limited to the runtime-proven `#preview_hdr` and `#preview_note` nodes; do not treat the Preview body or every preview descendant as owned typography;
+- all such selectors must continue through the existing `exclude_selectors` negative-applicability machinery rather than a second selector language;
+- do not target Gravity Forms icon pseudo-elements or replace `gform-icons-orbital`, `gform-icons-admin`, `gform-icons-common`, `gravity-components-icons`, Dashicons, or any other host glyph family;
+- source-only risk, an unrendered admin component family, or a selector found in vendor CSS is not authority to add production repair. Require exact-runtime computed-style evidence first.
 
 ### Gravity Flow
 
@@ -101,7 +110,7 @@ Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms/Fl
 | `assets/js/` | Admin-side JavaScript |
 | `languages/` | Translation template/resources |
 | `tests/gravityflow-runtime-contract.php` | Deterministic Gravity Flow admission/adapter contract |
-| `tests/gravityforms-evidence-lab/` | Deep Gravity Forms profile retained from the first PR #12 batch |
+| `tests/gravityforms-evidence-lab/` | Deep Gravity Forms exact-runtime/browser profile |
 | `tests/product-evidence-lab/` | Shared licensed package/runtime core plus Gravity Flow, GravityView, and combined-stack profiles |
 | `docs/CHARACTERIZATION.md` | Evidence boundaries and characterization status |
 | `RELEASE.md` | Release verification checklist |
@@ -158,7 +167,8 @@ A PASS belongs only to the profile and scenarios that executed. Gravity Forms PA
 - Production behavior changes require a deterministic contract test where feasible.
 - CSS/typography changes that depend on cascade or computed style require browser characterization, not source inspection alone.
 - Changes to Gravity Forms compatibility should preserve Preview/No Conflict registered handles and include deterministic repository/runtime contracts.
-- Any claim about real Orbital/Theme Framework, Legacy Markup, Preview, Form Editor, AJAX, multi-page, validation rerender, conditional logic, or Gravity Forms icons requires the licensed `gravityforms` profile.
+- Any claim about real Orbital/Theme Framework, Legacy Markup, Preview, Form Editor, AJAX, multi-page, validation rerender, conditional logic, admin components, or Gravity Forms icons requires the licensed `gravityforms` profile.
+- A source declaration in `admin-components.min.css`, `preview.css`, or Legacy CSS is only risk evidence. Production repair requires a rendered exact-runtime failure on the actual text-bearing node; already-correct components must not receive speculative broad fixes.
 - Gravity Flow admission changes require deterministic coverage separating version identity from actual host capabilities. Real Gravity Flow typography claims still require the licensed `gravityflow` profile to measure the actual rendered inner AG Grid/Flatpickr component, not only `.gflow-inbox`. Wrapper PASS must not be promoted to proof of inner AG Grid typography.
 - Claims about GravityView surfaces require the licensed `gravityview` profile; fixture-created state proves behavior after that state exists, not production reachability of every setup path.
 - Keep exact-Head CI evidence bound to the commit and profile being evaluated.
