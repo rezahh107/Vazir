@@ -28,10 +28,10 @@ msgstr ""
 msgid "رابط مدیریت، صفحه ورود و محتوای ویرایشگرهای وردپرس با Vazirmatn نمایش داده شوند."
 msgstr ""
 
-msgid "Gravity Forms / Flow"
+msgid "Gravity Forms / Flow / Perks"
 msgstr ""
 
-msgid "در صورت در دسترس بودن Gravity Forms یا Gravity Flow، تایپوگرافی این محصولات با تنظیمات همین افزونه هماهنگ شود."
+msgid "در صورت در دسترس بودن Gravity Forms، Gravity Flow یا Gravity Perks، تایپوگرافی این محصولات با تنظیمات همین افزونه هماهنگ شود."
 msgstr ""
 
 msgid "وزن‌های Vazirmatn"
@@ -112,7 +112,7 @@ msgstr ""
 msgid "فعال باشد"
 msgstr ""
 
-msgid "Gravity Forms و Gravity Flow اکنون فعال نیستند. این ترجیح ذخیره می‌شود و در صورت فعال‌شدن هرکدام اعمال خواهد شد."
+msgid "Gravity Forms، Gravity Flow و Gravity Perks اکنون فعال نیستند. این ترجیح ذخیره می‌شود و در صورت فعال‌شدن هرکدام اعمال خواهد شد."
 msgstr ""
 
 msgid "وزن‌های قابل بارگذاری Vazirmatn"
