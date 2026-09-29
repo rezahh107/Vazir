@@ -67,19 +67,32 @@ DOC;
 	}
 }
 
-// Evidence-only sentinels. They do not change typography. The first asks whether
-// inline CSS attached to Gravity Perks' own handle survives the standalone
-// wp_print_styles() boundary. The second proves which links traverse the normal
-// WordPress style_loader_tag pipeline; the literal Google Fonts link should not.
-add_action( 'admin_enqueue_scripts', function() {
-	if ( ! isset( $_GET['page'] ) || 'gwp_perks' !== $_GET['page'] ) { return; }
-	if ( wp_style_is( 'gwp-admin', 'registered' ) ) {
+// Evidence-only sentinels. They do not change typography. This filter proves
+// the exact early standalone Settings wp_print_styles() call reaches the
+// supported WordPress print_styles_array seam while Gravity Perks' own
+// gwp-admin handle is both selected and registered. The handle list is returned
+// byte-for-byte unchanged; only harmless inline custom properties are attached
+// to the existing host handle through the WordPress style API.
+add_filter( 'print_styles_array', function( $handles ) {
+	if ( ! is_admin() || ! is_array( $handles ) ) { return $handles; }
+	if ( ! isset( $_GET['page'] ) || 'gwp_perks' !== $_GET['page'] ) { return $handles; }
+	if ( ! isset( $_GET['view'] ) || '' === (string) $_GET['view'] ) { return $handles; }
+
+	$original = $handles;
+	if ( in_array( 'gwp-admin', $handles, true ) && wp_style_is( 'gwp-admin', 'registered' ) ) {
 		$options = class_exists( 'VazirFontPlugin' ) ? VazirFontPlugin::get_options() : array();
 		$exclusions = isset( $options['exclude_selectors'] ) && is_array( $options['exclude_selectors'] ) ? count( $options['exclude_selectors'] ) : -1;
-		wp_add_inline_style( 'gwp-admin', ':root{--vazir-gravityperks-gwp-admin-seam-probe:1;--vazir-gravityperks-exclusion-count:' . (int) $exclusions . ';}' );
+		wp_add_inline_style(
+			'gwp-admin',
+			':root{--vazir-gravityperks-gwp-admin-seam-probe:1;--vazir-gravityperks-print-styles-array-probe:1;--vazir-gravityperks-gwp-admin-in-todo:1;--vazir-gravityperks-gwp-admin-registered:1;--vazir-gravityperks-exclusion-count:' . (int) $exclusions . ';}'
+		);
 	}
+
+	return $original;
 }, 999 );
 
+// Evidence-only marker for links that traverse WordPress' style-loader output
+// pipeline. It does not alter resource identity or typography.
 add_filter( 'style_loader_tag', function( $html, $handle ) {
 	if ( 'gwp-admin' === $handle ) {
 		return str_replace( '<link ', '<link data-vazir-gp-style-loader-probe="gwp-admin" ', $html );
