@@ -14,7 +14,7 @@ This document defines repository-specific contribution rules for human contribut
 - **Class prefix:** `VazirFont_`
 - **Autoloader:** bounded SPL autoloader in `vazir-font-wp.php`
 - **Persisted option:** `vazir_font_options`
-- **Optional integrations:** Gravity Forms; Gravity Flow `3.1.0` typography compatibility
+- **Optional integrations:** Gravity Forms; capability-admitted Gravity Flow typography compatibility
 
 When changing version metadata, update the plugin header and `VAZIR_FONT_VERSION` in `vazir-font-wp.php` together.
 
@@ -25,7 +25,7 @@ The plugin owns typography only. Preserve these boundaries:
 - WordPress frontend, wp-admin, login, Block Editor, and Site Editor typography is handled by `VazirFont_Loader`.
 - Editor content uses the current `enqueue_block_assets` path.
 - Gravity Forms compatibility is handled by `VazirFont_GravityForms_Integration` through WordPress/Gravity Forms style hooks and registered handles.
-- Gravity Flow `3.1.0` typography compatibility is handled by `VazirFont_GravityFlow_Integration` through `gravityflow_enqueue_admin_scripts` / `gravityflow_enqueue_frontend_scripts` and host stylesheet dependencies. Gravity Flow continues to own Inbox data/query, assignment, authorization, workflow state, search, pagination, filtering, navigation, AG Grid lifecycle, and icon rendering.
+- Gravity Flow typography compatibility is handled by `VazirFont_GravityFlow_Integration` through `gravityflow_enqueue_admin_scripts` / `gravityflow_enqueue_frontend_scripts` and host stylesheet dependencies. Gravity Flow continues to own Inbox data/query, assignment, authorization, workflow state, search, pagination, filtering, navigation, AG Grid lifecycle, and icon rendering.
 - GravityView remains an evidence profile, not a dedicated production integration layer.
 - Do not introduce a second settings authority, JavaScript DOM typography engine, or Gravity Forms/Flow/View cache/file ownership.
 - Do not flush third-party caches, delete generated files/transients, or add periodic third-party cleanup jobs.
@@ -71,15 +71,19 @@ Preserve the registered-style-handle architecture around:
 
 ### Gravity Flow
 
-The dedicated adapter is deliberately bounded to the exact qualified Gravity Flow `3.1.0` runtime. Preserve these invariants:
+The dedicated adapter uses capability-based runtime admission. Preserve these invariants:
 
-- initialize only when the real supported Gravity Flow runtime is loaded;
-- use the product's supported admin/frontend enqueue actions after its own styles are enqueued;
-- depend on `gravityflow_admin_css` / `gravityflow_theme_css` rather than editing host assets;
+- runtime admission is not version-gated and must not use an accepted-version whitelist;
+- initialize when the Gravity Flow runtime is present, then attach only through the product's supported admin/frontend enqueue actions;
+- at the actual enqueue boundary, require the corresponding host stylesheet handle (`gravityflow_admin_css` / `gravityflow_theme_css`) to be registered; if it is unavailable, fail closed for that surface instead of emitting broad fallback CSS;
+- depend on those host styles rather than editing host assets;
 - repair only material text surfaces that explicitly defeat normal inheritance: the AG Grid theme root, AG text/date inputs, and the Flow-bound Flatpickr popup;
+- allow selector drift to become a natural no-op when a later runtime stops rendering a known selector; do not compensate with broad selectors merely to force coverage;
 - do not add JS or DOM mutation for typography;
 - do not overwrite `agGridAlpine`, `gflow-icons-common`, Dashicons, Gravity Forms icon families, or other host glyph families;
 - gate Flow repair through the existing Gravity compatibility option plus the corresponding frontend/admin context option; do not introduce a new stored settings schema for Flow alone.
+
+Runtime admission and compatibility evidence are separate. Real browser/runtime qualification currently covers the exact Gravity Flow `3.1.0` package used by the licensed evidence lab. A synthetic alternate-version runtime contract may prove that version identity does not control production admission, but it must never be represented as real compatibility evidence for that version.
 
 Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms/Flow runtime proof. If licensed characterization is unavailable, report it as unavailable rather than PASS.
 
@@ -91,12 +95,12 @@ Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms/Fl
 | `includes/class-vazirfont-loader.php` | WordPress typography loading and generated CSS |
 | `includes/class-vazirfont-admin-settings.php` | Admin settings and validation |
 | `includes/class-vazirfont-gravityforms-integration.php` | Optional Gravity Forms compatibility adapter |
-| `includes/class-vazirfont-gravityflow-integration.php` | Version-bounded Gravity Flow typography adapter |
+| `includes/class-vazirfont-gravityflow-integration.php` | Capability-bounded Gravity Flow typography adapter |
 | `assets/fonts/` | Pinned Vazirmatn WOFF2 binaries, upstream license/authors, and provenance |
 | `assets/css/` | Shared/static CSS assets |
 | `assets/js/` | Admin-side JavaScript |
 | `languages/` | Translation template/resources |
-| `tests/gravityflow-runtime-contract.php` | Deterministic Gravity Flow adapter contract |
+| `tests/gravityflow-runtime-contract.php` | Deterministic Gravity Flow admission/adapter contract |
 | `tests/gravityforms-evidence-lab/` | Deep Gravity Forms profile retained from the first PR #12 batch |
 | `tests/product-evidence-lab/` | Shared licensed package/runtime core plus Gravity Flow, GravityView, and combined-stack profiles |
 | `docs/CHARACTERIZATION.md` | Evidence boundaries and characterization status |
@@ -118,7 +122,7 @@ composer lint
 composer compat
 ```
 
-`composer test` runs the standalone core/Gravity Forms contract, the Gravity Flow adapter contract, and PHPUnit repository contracts. `composer lint` uses the repository PHPCS ruleset. `composer compat` checks the production PHP surfaces against the configured PHP compatibility range.
+`composer test` runs the standalone core/Gravity Forms contract, the Gravity Flow adapter contract for both the currently qualified `3.1.0` identity and a synthetic alternate version identity, and PHPUnit repository contracts. The synthetic alternate identity proves only that admission is not version-gated. `composer lint` uses the repository PHPCS ruleset. `composer compat` checks the production PHP surfaces against the configured PHP compatibility range.
 
 ## 8. Coding Standards
 
@@ -155,7 +159,7 @@ A PASS belongs only to the profile and scenarios that executed. Gravity Forms PA
 - CSS/typography changes that depend on cascade or computed style require browser characterization, not source inspection alone.
 - Changes to Gravity Forms compatibility should preserve Preview/No Conflict registered handles and include deterministic repository/runtime contracts.
 - Any claim about real Orbital/Theme Framework, Legacy Markup, Preview, Form Editor, AJAX, multi-page, validation rerender, conditional logic, or Gravity Forms icons requires the licensed `gravityforms` profile.
-- Gravity Flow typography claims require the licensed `gravityflow` profile to measure the actual rendered inner AG Grid/Flatpickr component, not only `.gflow-inbox`. Wrapper PASS must not be promoted to proof of inner AG Grid typography.
+- Gravity Flow admission changes require deterministic coverage separating version identity from actual host capabilities. Real Gravity Flow typography claims still require the licensed `gravityflow` profile to measure the actual rendered inner AG Grid/Flatpickr component, not only `.gflow-inbox`. Wrapper PASS must not be promoted to proof of inner AG Grid typography.
 - Claims about GravityView surfaces require the licensed `gravityview` profile; fixture-created state proves behavior after that state exists, not production reachability of every setup path.
 - Keep exact-Head CI evidence bound to the commit and profile being evaluated.
 
@@ -178,7 +182,7 @@ At minimum:
 - verify packaged font URLs/assets;
 - run WordPress computed-style characterization;
 - run the relevant licensed product profile for any Gravity Forms/Flow/View compatibility claim made by the release;
-- do not promote unavailable, stub-only, wrapper-only, or different-profile evidence to PASS;
+- do not promote unavailable, stub-only, wrapper-only, synthetic-version, or different-profile evidence to PASS;
 - build the production artifact without development-only tooling unless explicitly required;
 - publish only with Owner authorization.
 
