@@ -101,9 +101,9 @@ if ( ! is_plugin_active( $fixture_basename ) ) { throw new RuntimeException( 'Te
 
 $perk = GP_Perk::get_perk( $fixture_basename );
 if ( is_wp_error( $perk ) || ! $perk instanceof GP_Perk || ! $perk instanceof GP_Vazir_Evidence ) { throw new RuntimeException( 'Gravity Perks did not instantiate the real test Perk through GP_Perk::get_perk().' ); }
-$documentation_url = $perk->get_link_for( 'documentation', $fixture_basename );
-$settings_url = $perk->get_link_for( 'settings', $fixture_basename );
-if ( ! is_string( $documentation_url ) || '' === $documentation_url || ! is_string( $settings_url ) || '' === $settings_url ) { throw new RuntimeException( 'Gravity Perks did not generate Documentation/Settings URLs for the real test Perk.' ); }
+$documentation_url = html_entity_decode( (string) $perk->get_link_for( 'documentation', $fixture_basename ), ENT_QUOTES, 'UTF-8' );
+$settings_url = html_entity_decode( (string) $perk->get_link_for( 'settings', $fixture_basename ), ENT_QUOTES, 'UTF-8' );
+if ( '' === $documentation_url || '' === $settings_url ) { throw new RuntimeException( 'Gravity Perks did not generate Documentation/Settings URLs for the real test Perk.' ); }
 
 $options = get_option( 'vazir_font_options', array() );
 if ( ! is_array( $options ) ) { $options = array(); }
