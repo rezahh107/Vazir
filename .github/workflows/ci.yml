@@ -23,8 +23,7 @@ jobs:
           tools: composer:v2
       - run: composer install --no-interaction --prefer-dist
       - run: find . -path ./vendor -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
-      - run: php tests/runtime-contract.php
-      - run: vendor/bin/phpunit
+      - run: composer test
 
   standards:
     runs-on: ubuntu-latest
