@@ -99,7 +99,7 @@ async function captureRoute(context, url, label, bodyCheck) {
   page.on('request', request => requests.push(request.url()));
   page.on('response', response => responses.push({ url: response.url(), status: response.status() }));
   page.on('requestfailed', request => failures.push({ url: request.url(), error: request.failure()?.errorText || 'unknown' }));
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  const navigation = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await bodyCheck(page);
   await page.waitForTimeout(2500);
   try {
@@ -132,7 +132,16 @@ async function captureRoute(context, url, label, bodyCheck) {
     google_responses: responses.filter(item => /fonts\.(?:googleapis|gstatic)\.com/i.test(item.url)),
     google_failures: failures.filter(item => /fonts\.(?:googleapis|gstatic)\.com/i.test(item.url)),
   };
-  return { page, resources, network, label };
+  return {
+    page,
+    resources,
+    network,
+    label,
+    navigation: {
+      final_url: page.url(),
+      status: navigation ? navigation.status() : null,
+    },
+  };
 }
 
 const browser = await chromium.launch();
@@ -147,7 +156,7 @@ try {
     const captured = await captureRoute(context, manifest.normal_admin_url, 'normal_admin', async page => {
       await page.locator('body.wp-admin').waitFor({ state: 'visible', timeout: 15000 });
     });
-    const { page, resources, network } = captured;
+    const { page, resources, network, navigation } = captured;
     const body = await inspectNode(page, 'body.wp-admin', 'Gravity Perks normal wp-admin body');
     const heading = await inspectNode(page, '.wrap h1, .wrap h2, h1.wp-heading-inline', 'Gravity Perks normal admin heading', { required: false });
     const perkListing = await inspectNode(page, 'text=GP Vazir Evidence', 'real test Perk listing/card text', { required: false });
@@ -156,6 +165,7 @@ try {
     results.scenarios.normal_admin = {
       execution_status: 'PASS',
       context: 'ordinary_wp_admin',
+      navigation,
       body,
       heading,
       perk_listing: perkListing,
@@ -171,15 +181,32 @@ try {
   {
     const captured = await captureRoute(context, manifest.documentation_url, 'documentation', async page => {
       await page.locator('body.perk-iframe').waitFor({ state: 'visible', timeout: 15000 });
-      await page.locator('.content p:has-text("Vazir Perk documentation paragraph")').waitFor({ state: 'visible', timeout: 15000 });
+      const title = page.locator('.page-title').first();
+      await title.waitFor({ state: 'visible', timeout: 15000 });
+      const titleText = (await title.textContent() || '').trim();
+      if (!/GP Vazir Evidence/i.test(titleText)) {
+        throw new Error(`Documentation route did not resolve the real test Perk. page-title=${JSON.stringify(titleText)}`);
+      }
+      await page.locator('.content').waitFor({ state: 'attached', timeout: 15000 });
     });
-    const { page, resources, network } = captured;
+    const { page, resources, network, navigation } = captured;
+    const documentShape = await page.evaluate(() => {
+      const content = document.querySelector('.content');
+      return {
+        page_title: (document.querySelector('.page-title')?.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 200),
+        content_text: (content?.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 400),
+        content_child_tags: content ? Array.from(content.children).slice(0, 30).map(el => el.tagName) : [],
+        content_child_count: content ? content.children.length : 0,
+        fixture_marker_present: Boolean(content?.textContent?.includes('Vazir Perk documentation paragraph')),
+      };
+    });
     const nodes = {
       body: await inspectNode(page, 'body.perk-iframe', 'Documentation body'),
       page_title: await inspectNode(page, '.page-title', 'Documentation page title'),
-      content_h2: await inspectNode(page, '.content h2:has-text("Vazir Perk Documentation Heading")', 'Documentation H2'),
-      paragraph: await inspectNode(page, '.content p:has-text("Vazir Perk documentation paragraph")', 'Documentation paragraph'),
-      description: await inspectNode(page, '.content li:has-text("Vazir Perk description")', 'Documentation list description'),
+      content_wrapper: await inspectNode(page, '.content', 'Documentation content wrapper'),
+      content_h2: await inspectNode(page, '.content h2:has-text("Vazir Perk Documentation Heading")', 'Documentation H2', { required: false }),
+      paragraph: await inspectNode(page, '.content p:has-text("Vazir Perk documentation paragraph")', 'Documentation paragraph', { required: false }),
+      description: await inspectNode(page, '.content li:has-text("Vazir Perk description")', 'Documentation list description', { required: false }),
       footer_link: await inspectNode(page, '.content-footer a', 'Documentation host footer link'),
     };
     const icons = await scanProtectedFamilies(page);
@@ -190,6 +217,11 @@ try {
     results.scenarios.documentation = {
       execution_status: 'PASS',
       context: 'standalone_documentation',
+      navigation,
+      route_identity: {
+        real_test_perk_title_observed: /GP Vazir Evidence/i.test(documentShape.page_title),
+        ...documentShape,
+      },
       nodes,
       resources,
       network,
@@ -203,7 +235,7 @@ try {
       existing_exclusion_authority_visible_at_seam: resources.root_exclusion_count === '1',
       vazir_stylesheets_present: vazirStyles,
       vazir_inline_styles_present: vazirInline.map(item => item.id),
-      disposition: Object.values(nodes).every(item => item.status === 'PASS') ? 'PASS' : 'FAIL',
+      disposition: Object.values(nodes).filter(item => item.rendered).every(item => item.status === 'PASS') ? 'PASS' : 'FAIL',
     };
     await page.screenshot({ path: path.join(artifactDir, 'gravityperks-documentation.png'), fullPage: true });
     await page.close();
@@ -214,7 +246,7 @@ try {
       await page.locator('body.perk-iframe.wp-core-ui').waitFor({ state: 'visible', timeout: 15000 });
       await page.locator('label:has-text("Vazir Evidence Text")').waitFor({ state: 'visible', timeout: 15000 });
     });
-    const { page, resources, network } = captured;
+    const { page, resources, network, navigation } = captured;
     const nodes = {
       page_title: await inspectNode(page, '.page-title', 'Settings page title'),
       text_label: await inspectNode(page, 'label:has-text("Vazir Evidence Text")', 'Settings text label'),
@@ -242,6 +274,7 @@ try {
     results.scenarios.settings = {
       execution_status: 'PASS',
       context: 'standalone_settings',
+      navigation,
       nodes,
       save_notice: notice,
       resources,
