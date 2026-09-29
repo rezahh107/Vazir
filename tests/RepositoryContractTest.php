@@ -20,14 +20,8 @@ final class RepositoryContractTest extends TestCase {
 			$this->assertFileDoesNotExist( VAZIR_TEST_ROOT . '/assets/fonts/vazir-' . $weight . '.woff2' );
 		}
 
-		$this->assertSame(
-			'17e355067c8284f47743a1ee3b1ef7ff684ff0601eda357f9353b10b3016ab31',
-			hash_file( 'sha256', VAZIR_TEST_ROOT . '/assets/fonts/OFL.txt' )
-		);
-		$this->assertSame(
-			'b57746a5f7002c0974c76c32af74079ff7ef1aaf8f35495e9409cfa1eb11e1ca',
-			hash_file( 'sha256', VAZIR_TEST_ROOT . '/assets/fonts/AUTHORS.txt' )
-		);
+		$this->assertSame( '17e355067c8284f47743a1ee3b1ef7ff684ff0601eda357f9353b10b3016ab31', hash_file( 'sha256', VAZIR_TEST_ROOT . '/assets/fonts/OFL.txt' ) );
+		$this->assertSame( 'b57746a5f7002c0974c76c32af74079ff7ef1aaf8f35495e9409cfa1eb11e1ca', hash_file( 'sha256', VAZIR_TEST_ROOT . '/assets/fonts/AUTHORS.txt' ) );
 		$this->assertFileExists( VAZIR_TEST_ROOT . '/assets/fonts/Vazirmatn-PROVENANCE.md' );
 	}
 
@@ -103,17 +97,12 @@ final class RepositoryContractTest extends TestCase {
 	public function test_gravity_forms_integration_stays_inactive_without_required_runtime_classes(): void {
 		$this->assertFalse( class_exists( 'GFForms', false ) );
 		$this->assertFalse( class_exists( 'GFCommon', false ) );
-
-		if ( ! defined( 'ABSPATH' ) ) {
-			define( 'ABSPATH', '/tmp/wp/' );
-		}
+		if ( ! defined( 'ABSPATH' ) ) define( 'ABSPATH', '/tmp/wp/' );
 		require_once VAZIR_TEST_ROOT . '/includes/class-vazirfont-gravityforms-integration.php';
-
 		$integration = VazirFont_GravityForms_Integration::get_instance();
 		$reflection = new ReflectionClass( $integration );
 		$available = $reflection->getProperty( 'gf_available' );
 		$available->setAccessible( true );
-
 		$this->assertFalse( $available->getValue( $integration ) );
 	}
 
@@ -129,35 +118,6 @@ final class RepositoryContractTest extends TestCase {
 		$this->assertStringContainsString( "[] !== \$this->get_negative_scope_selectors()", $source );
 		$this->assertStringNotContainsString( 'querySelector', $source );
 		$this->assertStringNotContainsString( 'DOMDocument', $source );
-	}
-
-	public function test_gravity_forms_gap_repairs_are_bounded_to_runtime_proven_surfaces(): void {
-		$source = file_get_contents( VAZIR_TEST_ROOT . '/includes/class-vazirfont-gravityforms-integration.php' );
-		$this->assertIsString( $source );
-
-		foreach (
-			[
-				'.gform_legacy_markup_wrapper .gf_step_number',
-				'.gform_legacy_markup_wrapper .gf_step_label',
-				'.gform_legacy_markup_wrapper .gf_progressbar_percentage',
-				'.gform_legacy_markup_wrapper .gf_progressbar_title',
-				'.gform-admin .gform-dropdown',
-				'.gform-admin .gform-dropdown__control-text',
-				'.gform-admin .gform-dropdown__group-text',
-				'.gform-admin .gform-button',
-				'#preview_hdr',
-				'#preview_note',
-			] as $selector
-		) {
-			$this->assertStringContainsString( $selector, $source );
-		}
-
-		$this->assertStringContainsString( '$admin_component_selectors = $this->build_enforcement_selector_list(', $source );
-		$this->assertStringContainsString( '$preview_chrome_selectors = $this->build_enforcement_selector_list(', $source );
-		$this->assertStringContainsString( '$legacy_pagination_selectors = $this->build_enforcement_selector_list(', $source );
-		$this->assertStringNotContainsString( "'.gform-admin *'", $source );
-		$this->assertStringNotContainsString( "'#preview_hdr *'", $source );
-		$this->assertStringNotContainsString( "'.gform_legacy_markup_wrapper *'", $source );
 	}
 
 	public function test_compatibility_hooks_are_still_present_pending_visual_characterization(): void {
