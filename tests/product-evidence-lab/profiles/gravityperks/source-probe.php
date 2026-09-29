@@ -51,7 +51,7 @@ function vazir_perks_reflect_class( string $class_name, string $plugin_root ): a
 	ksort( $methods );
 	$defaults = array();
 	foreach ( $reflection->getDefaultProperties() as $key => $value ) {
-		if ( ! preg_match( '/(?:slug|version|name|id|min_|documentation|setting)/i', (string) $key ) ) { continue; }
+		if ( ! preg_match( '/(?:slug|version|name|id|min_|documentation|setting|view)/i', (string) $key ) ) { continue; }
 		if ( is_scalar( $value ) || null === $value || ( is_array( $value ) && count( $value ) <= 20 ) ) { $defaults[ $key ] = $value; }
 	}
 	return array(
@@ -88,12 +88,21 @@ function vazir_perks_method_semantics( string $class_name, string $method_name, 
 		'calls_get_settings' => 'get_settings(',
 		'calls_get_perk_settings' => 'get_perk_settings(',
 		'calls_save_perk_settings' => 'save_perk_settings(',
+		'calls_load_documentation' => 'load_documentation(',
+		'calls_load_perk_settings' => 'load_perk_settings(',
 		'uses_markdown' => 'markdown(',
 		'uses_wp_remote_get' => 'wp_remote_get',
 		'uses_file_get_contents' => 'file_get_contents',
 		'reads_get_slug' => '$_GET[\'slug\']',
 		'reads_get_perk' => '$_GET[\'perk\']',
+		'reads_get_view' => "gwget( 'view' )",
 		'reads_post' => '$_POST',
+		'literal_documentation' => "'documentation'",
+		'literal_perk_settings' => "'perk_settings'",
+		'dynamic_load_prefix' => "'load_'",
+		'has_call_user_func' => 'call_user_func',
+		'has_is_callable' => 'is_callable',
+		'has_method_exists' => 'method_exists',
 		'prints_wp_styles' => 'wp_print_styles',
 		'prints_gwp_admin' => 'gwp-admin',
 		'google_fonts' => 'fonts.googleapis.com',
@@ -135,6 +144,12 @@ $scan_patterns = array(
 	'get_settings' => 'get_settings',
 	'perk_settings' => 'perk_settings',
 	'documentation_url' => 'documentation_url',
+	'load_documentation_ref' => 'load_documentation',
+	'load_perk_settings_ref' => 'load_perk_settings',
+	'gwget_view' => "gwget( 'view' )",
+	'view_documentation_literal' => "'documentation'",
+	'view_perk_settings_literal' => "'perk_settings'",
+	'dynamic_load_prefix' => "'load_'",
 );
 $hits = array();
 $iterator = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $plugin_root, FilesystemIterator::SKIP_DOTS ) );
@@ -149,18 +164,19 @@ foreach ( $iterator as $file_info ) {
 }
 
 $classes = array();
-foreach ( array( 'GWPerk', 'GP_Perk', 'GWPerksPage', 'GWPerks' ) as $class_name ) { $classes[ $class_name ] = vazir_perks_reflect_class( $class_name, $plugin_root ); }
+foreach ( array( 'GravityPerks', 'GWPerks', 'GWPerk', 'GP_Perk', 'GWPerksPage' ) as $class_name ) { $classes[ $class_name ] = vazir_perks_reflect_class( $class_name, $plugin_root ); }
 $semantics = array();
 foreach ( array(
-	'GP_Perk' => array( '__construct', 'get_documentation', 'documentation', 'display_documentation', 'get_settings', 'settings', 'perk_settings', 'get_perk_data', 'get_perk', 'is_perk' ),
-	'GWPerksPage' => array( 'load_documentation', 'load_perk_settings' ),
+	'GP_Perk' => array( '__construct', 'get_documentation', 'documentation', 'display_documentation', 'get_settings', 'settings', 'perk_settings', 'get_perk_data', 'get_perk', 'get_link_for', 'is_perk' ),
+	'GWPerksPage' => array( 'load_page', 'load_documentation', 'load_perk_settings' ),
+	'GravityPerks' => array( 'init', 'admin_init', 'init_admin' ),
 ) as $class_name => $methods ) {
 	foreach ( $methods as $method_name ) { $semantics[ $class_name . '::' . $method_name ] = vazir_perks_method_semantics( $class_name, $method_name, $plugin_root ); }
 }
 
 $plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/gravityperks/gravityperks.php', false, false );
 $evidence = array(
-	'schema' => 2,
+	'schema' => 3,
 	'evidence_class' => 'GRAVITY_PERKS_2_3_16_EXACT_INSTALLED_STRUCTURAL_PROBE',
 	'repository_sha' => getenv( 'VAZIR_LAB_REPOSITORY_SHA' ) ?: null,
 	'gravity_forms_version' => class_exists( 'GFForms' ) && isset( GFForms::$version ) ? (string) GFForms::$version : null,
