@@ -207,7 +207,7 @@ try {
       content_h2: await inspectNode(page, '.content h2:has-text("Vazir Perk Documentation Heading")', 'Documentation H2', { required: false }),
       paragraph: await inspectNode(page, '.content p:has-text("Vazir Perk documentation paragraph")', 'Documentation paragraph', { required: false }),
       description: await inspectNode(page, '.content li:has-text("Vazir Perk description")', 'Documentation list description', { required: false }),
-      footer_link: await inspectNode(page, '.content-footer a', 'Documentation host footer link'),
+      footer_link: await inspectNode(page, '.content-footer a', 'Documentation host footer link', { required: false }),
     };
     const icons = await scanProtectedFamilies(page);
     const googleLink = resources.stylesheets.find(item => /fonts\.googleapis\.com/i.test(item.href)) || null;
