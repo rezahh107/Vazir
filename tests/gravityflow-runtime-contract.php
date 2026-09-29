@@ -76,15 +76,17 @@ vf_flow_assert( false === strpos( $css, "* {\n\tfont-family:" ), 'No blanket des
 vf_flow_assert( false === strpos( $css, 'font-family: "agGridAlpine"' ), 'Adapter does not replace AG Grid icon-family ownership.' );
 vf_flow_assert( false === strpos( $css, 'font-family: "gflow-icons-common"' ), 'Adapter does not replace Gravity Flow icon-family ownership.' );
 
-VazirFontPlugin::update_options( array( 'exclude_selectors' => array( '.ag-paging-panel', '[data-icon]:before' ) ) );
+VazirFontPlugin::update_options( array( 'exclude_selectors' => array( '.vf-flow-excluded', '[data-icon]:before' ) ) );
 vf_flow_reset_adapter( $integration );
 $integration->enqueue_frontend_assets();
 $frontend_handle = 'vazir-font-gravity-flow-frontend';
 vf_flow_assert( array( 'gravityflow_theme_css' ) === $GLOBALS['vf_flow_styles'][ $frontend_handle ]['deps'], 'Frontend style depends on Gravity Flow theme CSS.' );
 $excluded_css = implode( "\n", $GLOBALS['vf_flow_inline'][ $frontend_handle ] ?? array() );
-$guard = ':not(:where(.ag-paging-panel, .ag-paging-panel *)):not(:has(:where(.ag-paging-panel)))';
+$guard = ':not(:where(.vf-flow-excluded, .vf-flow-excluded *)):not(:has(:where(.vf-flow-excluded)))';
 vf_flow_assert( false !== strpos( $excluded_css, '.gflow-grid .ag-theme-alpine' . $guard ), 'Inheritable AG Grid rule fails closed across an excluded descendant subtree.' );
 vf_flow_assert( false === strpos( $excluded_css, '[data-icon]:before' . $guard ), 'Pseudo-element exclusions are not forced into relational element guards.' );
+$portal_guard = 'body:not(:has(.gflow-grid .ag-theme-alpine .ag-input-wrapper.custom-date-filter input:where(.vf-flow-excluded, .vf-flow-excluded *)))';
+vf_flow_assert( false !== strpos( $excluded_css, $portal_guard . ' .flatpickr-calendar.ag-custom-component-popup' ), 'Detached Flow date-picker correction is suppressed when its source input is inside an excluded root.' );
 
 VazirFontPlugin::update_options( array( 'enable_admin' => false, 'enable_gravity_forms' => true ) );
 vf_flow_reset_adapter( $integration );
