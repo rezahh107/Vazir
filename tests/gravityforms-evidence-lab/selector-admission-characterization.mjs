@@ -126,22 +126,24 @@ const results = {
   status: 'PASS',
 };
 
-for (const candidate of candidates.filter(item => item.context !== 'admin')) {
-  try {
-    results.candidates[candidate.selector] = await measureExact(candidate);
-  } catch (error) {
-    results.candidates[candidate.selector] = notProven(`${candidate.label} measurement failed without authorizing repair: ${error instanceof Error ? error.message : String(error)}`);
+const measureCandidates = async selected => {
+  for (const candidate of selected) {
+    try {
+      results.candidates[candidate.selector] = await measureExact(candidate);
+    } catch (error) {
+      results.candidates[candidate.selector] = notProven(`${candidate.label} measurement failed without authorizing repair: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
-}
+};
 
+await measureCandidates(candidates.filter(item => item.context.startsWith('legacy_')));
+
+// Preview is a real authenticated Gravity Forms route in this fixture, so its
+// chrome must be measured only after login. Admin targets share the same
+// authenticated browser context. Each candidate still receives its own record.
 await login();
-for (const candidate of candidates.filter(item => item.context === 'admin')) {
-  try {
-    results.candidates[candidate.selector] = await measureExact(candidate);
-  } catch (error) {
-    results.candidates[candidate.selector] = notProven(`${candidate.label} measurement failed without authorizing repair: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
+await measureCandidates(candidates.filter(item => item.context === 'preview'));
+await measureCandidates(candidates.filter(item => item.context === 'admin'));
 
 const violations = [];
 if (admissionManifest) {
