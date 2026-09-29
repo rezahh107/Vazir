@@ -91,12 +91,15 @@ function vazir_perks_method_semantics( string $class_name, string $method_name, 
 		'uses_markdown' => 'Markdown',
 		'uses_wp_remote_get' => 'wp_remote_get',
 		'uses_file_get_contents' => 'file_get_contents',
-		'reads_get_slug' => "$_GET['slug']",
-		'reads_get_perk' => "$_GET['perk']",
+		'reads_get_slug' => '$_GET[\'slug\']',
+		'reads_get_perk' => '$_GET[\'perk\']',
 		'reads_post' => '$_POST',
 		'prints_wp_styles' => 'wp_print_styles',
 		'prints_gwp_admin' => 'gwp-admin',
 		'google_fonts' => 'fonts.googleapis.com',
+		'has_apply_filters' => 'apply_filters',
+		'has_do_action' => 'do_action',
+		'has_wp_enqueue_style' => 'wp_enqueue_style',
 	);
 	$present = array();
 	foreach ( $tokens as $key => $needle ) { $present[ $key ] = false !== strpos( $body, $needle ); }
