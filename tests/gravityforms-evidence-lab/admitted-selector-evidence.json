@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "authority": "exact rendered-node computed-style evidence",
+  "gravity_forms_version": "3.1.1.1",
+  "evidence_only_head": "555a956849139cac48c646894bef83dd44191a2c",
+  "workflow_run_id": 36588232341,
+  "browser_version": "140.0.7339.16",
+  "pre_repair": {
+    ".gform_legacy_markup_wrapper .gf_step_number": {
+      "rendered": true,
+      "computed_family": "arial, sans-serif",
+      "disposition": "REPRODUCED"
+    },
+    ".gform_legacy_markup_wrapper .gf_step_label": {
+      "rendered": true,
+      "computed_family": "Vazirmatn, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans\", \"Liberation Sans\", sans-serif",
+      "disposition": "ALREADY_VAZIRMATN"
+    },
+    ".gform_legacy_markup_wrapper .gf_progressbar_percentage": {
+      "rendered": true,
+      "computed_family": "helvetica, arial, sans-serif",
+      "disposition": "REPRODUCED"
+    },
+    ".gform_legacy_markup_wrapper .gf_progressbar_title": {
+      "rendered": true,
+      "computed_family": "Vazirmatn, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans\", \"Liberation Sans\", sans-serif",
+      "disposition": "ALREADY_VAZIRMATN"
+    },
+    ".gform-admin .gform-dropdown": {
+      "rendered": true,
+      "computed_family": "inter, -apple-system, blinkmacsystemfont, \"Segoe UI\", roboto, oxygen-sans, ubuntu, cantarell, \"Helvetica Neue\", sans-serif",
+      "disposition": "REPRODUCED"
+    },
+    ".gform-admin .gform-dropdown__control-text": {
+      "rendered": true,
+      "computed_family": "inter, -apple-system, blinkmacsystemfont, \"Segoe UI\", roboto, oxygen-sans, ubuntu, cantarell, \"Helvetica Neue\", sans-serif",
+      "disposition": "REPRODUCED"
+    },
+    ".gform-admin .gform-dropdown__group-text": {
+      "rendered": false,
+      "computed_family": null,
+      "disposition": "NOT_PROVEN",
+      "reason": "No visible text-bearing node was deterministically rendered on the qualified admin routes."
+    },
+    ".gform-admin .gform-button": {
+      "rendered": true,
+      "computed_family": "inter, -apple-system, blinkmacsystemfont, \"Segoe UI\", roboto, oxygen-sans, ubuntu, cantarell, \"Helvetica Neue\", sans-serif",
+      "disposition": "REPRODUCED"
+    },
+    "#preview_hdr": {
+      "rendered": true,
+      "computed_family": "\"Open Sans\", sans-serif",
+      "disposition": "REPRODUCED"
+    },
+    "#preview_note": {
+      "rendered": true,
+      "computed_family": "\"lucida sans\", \"lucida grande\", lucida, sans-serif",
+      "disposition": "REPRODUCED"
+    }
+  },
+  "admitted_selectors": [
+    ".gform_legacy_markup_wrapper .gf_step_number",
+    ".gform_legacy_markup_wrapper .gf_progressbar_percentage",
+    ".gform-admin .gform-dropdown",
+    ".gform-admin .gform-dropdown__control-text",
+    ".gform-admin .gform-button",
+    "#preview_hdr",
+    "#preview_note"
+  ]
+}
