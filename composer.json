@@ -1,6 +1,6 @@
 {
   "name": "rezahh107/vazir-font-wp",
-  "description": "Self-hosted Persian typography for WordPress and Gravity integrations",
+  "description": "Self-hosted Persian typography for WordPress and Gravity Forms",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
   "require": {
