@@ -171,17 +171,16 @@ try {
   {
     const captured = await captureRoute(context, manifest.documentation_url, 'documentation', async page => {
       await page.locator('body.perk-iframe').waitFor({ state: 'visible', timeout: 15000 });
-      await page.locator('#vazir-gp-doc-paragraph').waitFor({ state: 'visible', timeout: 15000 });
+      await page.locator('.content p:has-text("Vazir Perk documentation paragraph")').waitFor({ state: 'visible', timeout: 15000 });
     });
     const { page, resources, network } = captured;
     const nodes = {
       body: await inspectNode(page, 'body.perk-iframe', 'Documentation body'),
       page_title: await inspectNode(page, '.page-title', 'Documentation page title'),
-      content_h2: await inspectNode(page, '.content h2', 'Documentation H2'),
-      paragraph: await inspectNode(page, '#vazir-gp-doc-paragraph', 'Documentation paragraph'),
-      description: await inspectNode(page, '.content li span.description', 'Documentation list description'),
+      content_h2: await inspectNode(page, '.content h2:has-text("Vazir Perk Documentation Heading")', 'Documentation H2'),
+      paragraph: await inspectNode(page, '.content p:has-text("Vazir Perk documentation paragraph")', 'Documentation paragraph'),
+      description: await inspectNode(page, '.content li:has-text("Vazir Perk description")', 'Documentation list description'),
       footer_link: await inspectNode(page, '.content-footer a', 'Documentation host footer link'),
-      excluded_probe: await inspectNode(page, '#vazir-gp-doc-excluded', 'Documentation excluded probe'),
     };
     const icons = await scanProtectedFamilies(page);
     const googleLink = resources.stylesheets.find(item => /fonts\.googleapis\.com/i.test(item.href)) || null;
@@ -204,9 +203,7 @@ try {
       existing_exclusion_authority_visible_at_seam: resources.root_exclusion_count === '1',
       vazir_stylesheets_present: vazirStyles,
       vazir_inline_styles_present: vazirInline.map(item => item.id),
-      disposition: Object.entries(nodes)
-        .filter(([key, item]) => key !== 'excluded_probe' && item.rendered)
-        .every(([, item]) => item.status === 'PASS') ? 'PASS' : 'FAIL',
+      disposition: Object.values(nodes).every(item => item.status === 'PASS') ? 'PASS' : 'FAIL',
     };
     await page.screenshot({ path: path.join(artifactDir, 'gravityperks-documentation.png'), fullPage: true });
     await page.close();
