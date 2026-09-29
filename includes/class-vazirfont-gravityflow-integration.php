@@ -6,7 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Gravity Flow 3.1.0 typography compatibility adapter.
+ * Gravity Flow typography compatibility adapter.
  *
  * Gravity Flow remains authoritative for Inbox behavior and AG Grid lifecycle.
  * This adapter only restores Vazirmatn on the bounded text surfaces whose host
@@ -14,7 +14,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * enqueue hooks after its own styles have been registered/enqueued.
  */
 final class VazirFont_GravityFlow_Integration {
-	private const SUPPORTED_VERSION   = '3.1.0';
 	private const STYLE_HANDLE        = 'vazir-font-gravity-flow';
 	private const ADMIN_DEPENDENCY    = 'gravityflow_admin_css';
 	private const FRONTEND_DEPENDENCY = 'gravityflow_theme_css';
@@ -25,7 +24,7 @@ final class VazirFont_GravityFlow_Integration {
 	private array $inline_handles = array();
 
 	private function __construct() {
-		$this->flow_available = $this->is_supported_gravity_flow_runtime();
+		$this->flow_available = $this->is_gravity_flow_runtime_available();
 		if ( $this->flow_available ) {
 			$this->init_hooks();
 		}
@@ -44,10 +43,8 @@ final class VazirFont_GravityFlow_Integration {
 		return self::$instance;
 	}
 
-	private function is_supported_gravity_flow_runtime(): bool {
-		return class_exists( 'Gravity_Flow' )
-			&& defined( 'GRAVITY_FLOW_VERSION' )
-			&& self::SUPPORTED_VERSION === (string) GRAVITY_FLOW_VERSION;
+	private function is_gravity_flow_runtime_available(): bool {
+		return class_exists( 'Gravity_Flow' );
 	}
 
 	private function init_hooks(): void {
@@ -65,6 +62,14 @@ final class VazirFont_GravityFlow_Integration {
 
 	private function enqueue_style( string $context, string $dependency ): void {
 		if ( ! $this->is_enabled( $context ) ) {
+			return;
+		}
+
+		// Runtime admission is version-neutral, but each surface is applied only
+		// when the host stylesheet capability expected at this lifecycle seam is
+		// actually registered. A host that changes/removes the handle therefore
+		// fails closed for that surface instead of receiving fallback/global CSS.
+		if ( ! wp_style_is( $dependency, 'registered' ) ) {
 			return;
 		}
 
@@ -112,9 +117,11 @@ final class VazirFont_GravityFlow_Integration {
 		$negative_exclusions = $this->get_negative_scope_selectors();
 		$css                 = '';
 
-		// Gravity Flow 3.1.0 declares a system stack directly on this AG Grid
-		// theme root. Guard the inheritable correction against any excluded
-		// descendant so exclusions cannot be crossed through inheritance.
+		// The currently qualified Gravity Flow runtime declares a system stack
+		// directly on this AG Grid theme root. Guard the inheritable correction
+		// against any excluded descendant so exclusions cannot be crossed through
+		// inheritance. If a later compatible runtime no longer renders this
+		// selector, the rule naturally becomes a no-op.
 		$grid_root = $this->apply_exclusion_boundary(
 			'.gflow-grid .ag-theme-alpine',
 			$negative_exclusions,
