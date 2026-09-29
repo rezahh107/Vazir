@@ -240,6 +240,57 @@ final class VazirFont_GravityForms_Integration {
 			$css .= $selectors . " {\n\tfont-family: {$family} !important;\n}\n";
 		}
 
+		// Exact Gravity Forms 3.1.1.1 browser evidence showed direct host font
+		// declarations defeating the wrapper on these real Legacy multipage nodes.
+		// Keep this correction limited to the supported Legacy Markup surfaces that
+		// actually failed; ordinary Legacy fields/buttons already pass above.
+		$legacy_pagination_selectors = $this->build_enforcement_selector_list(
+			[
+				'.gform_legacy_markup_wrapper .gf_step_number',
+				'.gform_legacy_markup_wrapper .gf_step_label',
+				'.gform_legacy_markup_wrapper .gf_progressbar_percentage',
+				'.gform_legacy_markup_wrapper .gf_progressbar_title',
+			],
+			$negative_exclusions,
+			true
+		);
+		if ( '' !== $legacy_pagination_selectors ) {
+			$css .= $legacy_pagination_selectors . " {\n\tfont-family: {$family} !important;\n}\n";
+		}
+
+		// Real GF admin list/editor routes proved a bounded subset of
+		// admin-components.min.css still resolved to Inter despite the normal admin
+		// Loader. Repair only those rendered component families; do not blanket
+		// override .gform-admin descendants or host icon pseudo-elements.
+		$admin_component_selectors = $this->build_enforcement_selector_list(
+			[
+				'.gform-admin .gform-dropdown',
+				'.gform-admin .gform-dropdown__control-text',
+				'.gform-admin .gform-dropdown__group-text',
+				'.gform-admin .gform-button',
+			],
+			$negative_exclusions,
+			true
+		);
+		if ( '' !== $admin_component_selectors ) {
+			$css .= $admin_component_selectors . " {\n\tfont-family: {$family} !important;\n}\n";
+		}
+
+		// Gravity Forms Preview ships direct font declarations on its surrounding
+		// chrome. Exact-runtime evidence proved only these two text-bearing nodes
+		// need correction; the form itself is handled by the existing paths.
+		$preview_chrome_selectors = $this->build_enforcement_selector_list(
+			[
+				'#preview_hdr',
+				'#preview_note',
+			],
+			$negative_exclusions,
+			true
+		);
+		if ( '' !== $preview_chrome_selectors ) {
+			$css .= $preview_chrome_selectors . " {\n\tfont-family: {$family} !important;\n}\n";
+		}
+
 		$this->cached_css = $css;
 		return $css;
 	}
