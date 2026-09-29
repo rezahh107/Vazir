@@ -1,0 +1,133 @@
+<?php
+declare(strict_types=1);
+
+$GLOBALS['vf_flow_actions'] = array();
+$GLOBALS['vf_flow_filters'] = array();
+$GLOBALS['vf_flow_styles'] = array();
+$GLOBALS['vf_flow_inline'] = array();
+$GLOBALS['vf_flow_options'] = array();
+$GLOBALS['vf_flow_host_styles'] = array(
+	'gravityflow_admin_css' => true,
+	'gravityflow_theme_css' => true,
+);
+
+$flow_version = isset( $argv[1] ) ? (string) $argv[1] : '3.1.0';
+$scenario     = isset( $argv[2] ) ? (string) $argv[2] : ( '3.1.0' === $flow_version ? 'qualified-identity' : 'synthetic-alternate-identity' );
+
+define( 'ABSPATH', '/tmp/wp/' );
+define( 'GRAVITY_FLOW_VERSION', $flow_version );
+
+function plugin_dir_url( $file ) { return 'https://example.test/wp-content/plugins/vazir/'; }
+function register_activation_hook( $file, $callback ) {}
+function register_deactivation_hook( $file, $callback ) {}
+function add_action( $hook, $callback, $priority = 10, $accepted_args = 1 ) { $GLOBALS['vf_flow_actions'][$hook][] = array( $callback, $priority, $accepted_args ); }
+function add_filter( $hook, $callback, $priority = 10, $accepted_args = 1 ) { $GLOBALS['vf_flow_filters'][$hook][] = array( $callback, $priority, $accepted_args ); }
+function apply_filters( $hook, $value ) { return $value; }
+function load_plugin_textdomain( ...$args ) { return true; }
+function plugin_basename( $file ) { return basename( $file ); }
+function get_option( $name, $default = false ) { return $GLOBALS['vf_flow_options'][$name] ?? $default; }
+function update_option( $name, $value ) { $GLOBALS['vf_flow_options'][$name] = $value; return true; }
+function is_admin() { return false; }
+function wp_clear_scheduled_hook( $hook ) { return 1; }
+function esc_url( $url ) { return $url; }
+function wp_style_is( $handle, $list = 'enqueued' ) {
+	if ( 'registered' === $list ) {
+		return ! empty( $GLOBALS['vf_flow_host_styles'][ $handle ] ) || isset( $GLOBALS['vf_flow_styles'][ $handle ] );
+	}
+	if ( 'enqueued' === $list ) {
+		return ! empty( $GLOBALS['vf_flow_styles'][ $handle ]['enqueued'] );
+	}
+	return false;
+}
+function wp_register_style( $handle, $src = false, $deps = array(), $ver = false ) { $GLOBALS['vf_flow_styles'][$handle] = array( 'src' => $src, 'deps' => $deps, 'ver' => $ver, 'enqueued' => false ); return true; }
+function wp_enqueue_style( $handle ) { $GLOBALS['vf_flow_styles'][$handle]['enqueued'] = true; }
+function wp_add_inline_style( $handle, $css ) { $GLOBALS['vf_flow_inline'][$handle][] = $css; return true; }
+function is_rtl() { return true; }
+
+class Gravity_Flow {}
+
+function vf_flow_assert( bool $condition, string $message ): void {
+	if ( ! $condition ) {
+		fwrite( STDERR, "FAIL: {$message}\n" );
+		exit( 1 );
+	}
+	fwrite( STDOUT, "PASS: {$message}\n" );
+}
+
+function vf_flow_reset_adapter( VazirFont_GravityFlow_Integration $integration ): void {
+	$reflection = new ReflectionClass( $integration );
+	foreach ( array( 'cached_css' => null, 'inline_handles' => array() ) as $name => $value ) {
+		$property = $reflection->getProperty( $name );
+		$property->setAccessible( true );
+		$property->setValue( $integration, $value );
+	}
+	$GLOBALS['vf_flow_styles'] = array();
+	$GLOBALS['vf_flow_inline'] = array();
+}
+
+$integration_source = (string) file_get_contents( dirname( __DIR__ ) . '/includes/class-vazirfont-gravityflow-integration.php' );
+vf_flow_assert( false === strpos( $integration_source, 'SUPPORTED_VERSION' ), 'Production adapter has no accepted-version constant.' );
+vf_flow_assert( false === strpos( $integration_source, 'GRAVITY_FLOW_VERSION' ), 'Production adapter does not compare Gravity Flow version identity for admission.' );
+
+require dirname( __DIR__ ) . '/vazir-font-wp.php';
+VazirFontPlugin::get_instance()->init();
+
+vf_flow_assert( isset( $GLOBALS['vf_flow_actions']['gravityflow_enqueue_admin_scripts'] ), 'Gravity Flow admin enqueue seam is registered.' );
+vf_flow_assert( isset( $GLOBALS['vf_flow_actions']['gravityflow_enqueue_frontend_scripts'] ), 'Gravity Flow frontend enqueue seam is registered.' );
+
+$integration = VazirFont_GravityFlow_Integration::get_instance();
+$reflection  = new ReflectionClass( $integration );
+$available   = $reflection->getProperty( 'flow_available' );
+$available->setAccessible( true );
+if ( 'qualified-identity' === $scenario ) {
+	vf_flow_assert( '3.1.0' === GRAVITY_FLOW_VERSION, 'Qualified contract scenario carries the currently browser-qualified Gravity Flow 3.1.0 identity.' );
+	vf_flow_assert( true === $available->getValue( $integration ), 'Qualified Gravity Flow 3.1.0 identity is admitted through the capability boundary.' );
+} else {
+	vf_flow_assert( '3.1.0' !== GRAVITY_FLOW_VERSION, 'Synthetic alternate-version scenario uses a different Gravity Flow version identity.' );
+	vf_flow_assert( true === $available->getValue( $integration ), 'Synthetic alternate version identity is not rejected solely because its version string differs.' );
+}
+
+$integration->enqueue_admin_assets();
+$admin_handle = 'vazir-font-gravity-flow-admin';
+vf_flow_assert( isset( $GLOBALS['vf_flow_styles'][ $admin_handle ] ), 'Gravity Flow admin style handle is registered when its host dependency capability exists.' );
+vf_flow_assert( array( 'gravityflow_admin_css' ) === $GLOBALS['vf_flow_styles'][ $admin_handle ]['deps'], 'Admin style depends on Gravity Flow admin CSS.' );
+vf_flow_assert( true === $GLOBALS['vf_flow_styles'][ $admin_handle ]['enqueued'], 'Gravity Flow admin style handle is enqueued.' );
+$css = implode( "\n", $GLOBALS['vf_flow_inline'][ $admin_handle ] ?? array() );
+vf_flow_assert( false !== strpos( $css, '.gflow-grid .ag-theme-alpine' ), 'AG Grid theme root correction is present.' );
+vf_flow_assert( false !== strpos( $css, '.ag-input-wrapper.custom-date-filter input' ), 'AG Grid date-filter input correction is present.' );
+vf_flow_assert( false !== strpos( $css, 'input[class^="ag-"]' ), 'AG Grid text-input correction is present.' );
+vf_flow_assert( false !== strpos( $css, '.flatpickr-calendar.ag-custom-component-popup' ), 'Flow-bound Flatpickr correction is present.' );
+vf_flow_assert( false === strpos( $css, '@font-face' ), 'Gravity Flow adapter does not duplicate font-face delivery.' );
+vf_flow_assert( false === strpos( $css, "* {\n\tfont-family:" ), 'No blanket descendant font override is emitted.' );
+vf_flow_assert( false === strpos( $css, 'font-family: "agGridAlpine"' ), 'Adapter does not replace AG Grid icon-family ownership.' );
+vf_flow_assert( false === strpos( $css, 'font-family: "gflow-icons-common"' ), 'Adapter does not replace Gravity Flow icon-family ownership.' );
+
+unset( $GLOBALS['vf_flow_host_styles']['gravityflow_admin_css'] );
+vf_flow_reset_adapter( $integration );
+$integration->enqueue_admin_assets();
+vf_flow_assert( ! isset( $GLOBALS['vf_flow_styles'][ $admin_handle ] ), 'Missing Gravity Flow admin stylesheet capability fails closed for that surface.' );
+$GLOBALS['vf_flow_host_styles']['gravityflow_admin_css'] = true;
+
+VazirFontPlugin::update_options( array( 'exclude_selectors' => array( '.vf-flow-excluded', '[data-icon]:before' ) ) );
+vf_flow_reset_adapter( $integration );
+$integration->enqueue_frontend_assets();
+$frontend_handle = 'vazir-font-gravity-flow-frontend';
+vf_flow_assert( array( 'gravityflow_theme_css' ) === $GLOBALS['vf_flow_styles'][ $frontend_handle ]['deps'], 'Frontend style depends on Gravity Flow theme CSS.' );
+$excluded_css = implode( "\n", $GLOBALS['vf_flow_inline'][ $frontend_handle ] ?? array() );
+$guard = ':not(:where(.vf-flow-excluded, .vf-flow-excluded *)):not(:has(:where(.vf-flow-excluded)))';
+vf_flow_assert( false !== strpos( $excluded_css, '.gflow-grid .ag-theme-alpine' . $guard ), 'Inheritable AG Grid rule fails closed across an excluded descendant subtree.' );
+vf_flow_assert( false === strpos( $excluded_css, '[data-icon]:before' . $guard ), 'Pseudo-element exclusions are not forced into relational element guards.' );
+$portal_guard = 'body:not(:has(.gflow-grid .ag-theme-alpine .ag-input-wrapper.custom-date-filter input:where(.vf-flow-excluded, .vf-flow-excluded *)))';
+vf_flow_assert( false !== strpos( $excluded_css, $portal_guard . ' .flatpickr-calendar.ag-custom-component-popup' ), 'Detached Flow date-picker correction is suppressed when its source input is inside an excluded root.' );
+
+VazirFontPlugin::update_options( array( 'enable_admin' => false, 'enable_gravity_forms' => true ) );
+vf_flow_reset_adapter( $integration );
+$integration->enqueue_admin_assets();
+vf_flow_assert( array() === $GLOBALS['vf_flow_styles'], 'Existing admin typography toggle disables admin Gravity Flow repair.' );
+
+VazirFontPlugin::update_options( array( 'enable_admin' => true, 'enable_frontend' => true, 'enable_gravity_forms' => false ) );
+vf_flow_reset_adapter( $integration );
+$integration->enqueue_frontend_assets();
+vf_flow_assert( array() === $GLOBALS['vf_flow_styles'], 'Existing Gravity compatibility toggle disables the Gravity Flow adapter.' );
+
+fwrite( STDOUT, sprintf( "ALL GRAVITY FLOW CONTRACT CHECKS PASSED (%s: %s)\n", $scenario, GRAVITY_FLOW_VERSION ) );

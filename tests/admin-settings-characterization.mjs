@@ -86,8 +86,8 @@ await page.getByRole('heading', { level: 1, name: 'تنظیمات فونت وز�
 await root().locator('.vazir-font-settings__orientation').getByText(/Vazirmatn نسخه 33\.003/).waitFor();
 await page.getByLabel('سایت (فرانت‌اند)').waitFor();
 await page.getByLabel('مدیریت و ویرایشگر وردپرس').waitFor();
-await page.getByLabel('Gravity Forms').waitFor();
-await page.getByText(/Gravity Forms اکنون فعال نیست/).waitFor();
+await page.getByLabel('Gravity Forms / Flow', { exact: true }).waitFor();
+await page.getByText(/Gravity Forms و Gravity Flow اکنون فعال نیستند/).waitFor();
 assert.equal(await page.locator(pluginStyle).count(), 1, 'settings CSS must load exactly once on the settings page');
 assert.equal(await page.locator(pluginScript).count(), 1, 'settings JS must load exactly once on the settings page');
 
