@@ -25,6 +25,7 @@ if (
 	is_array( $existing )
 	&& ! empty( $existing['form_id'] )
 	&& ! empty( $existing['entry_id'] )
+	&& ! empty( $existing['excluded_frontend_inbox_url'] )
 	&& isset( $existing['entry_ids'] )
 	&& is_array( $existing['entry_ids'] )
 	&& count( $existing['entry_ids'] ) >= $target_entry_count
@@ -156,21 +157,36 @@ if ( is_wp_error( $page_id ) ) {
 	throw new RuntimeException( $page_id->get_error_message() );
 }
 
+$excluded_page_id = wp_insert_post(
+	array(
+		'post_type'    => 'page',
+		'post_status'  => 'publish',
+		'post_title'   => 'Vazir Gravity Flow Exclusion Evidence',
+		'post_name'    => 'vazir-gravity-flow-exclusion-evidence',
+		'post_content' => '<div class="vf-flow-excluded" id="vf-flow-excluded-root">' . sprintf( '[gravityflow page="inbox" form_id="%d"]', $form_id ) . '</div>',
+	),
+	true
+);
+if ( is_wp_error( $excluded_page_id ) ) {
+	throw new RuntimeException( $excluded_page_id->get_error_message() );
+}
+
 $primary_entry_id = (int) $entry_ids[0];
 $manifest         = array(
-	'form_id'             => $form_id,
-	'entry_id'            => $primary_entry_id,
-	'entry_ids'           => $entry_ids,
-	'entry_count'         => count( $entry_ids ),
-	'step_id'             => (int) $current->get_id(),
-	'step_name'           => (string) $current->get_name(),
-	'operator_id'         => (int) $operator->ID,
-	'frontend_inbox_url'  => get_permalink( (int) $page_id ),
-	'gravity_forms_url'   => get_permalink( (int) $form_page_id ),
-	'admin_inbox_url'     => admin_url( 'admin.php?page=gravityflow-inbox' ),
-	'admin_entry_url'     => admin_url( 'admin.php?page=gravityflow-inbox&view=entry&id=' . $form_id . '&lid=' . $primary_entry_id ),
-	'exclude_selector'    => '.vf-flow-excluded',
-	'gravityflow_version' => GRAVITY_FLOW_VERSION,
+	'form_id'                     => $form_id,
+	'entry_id'                    => $primary_entry_id,
+	'entry_ids'                   => $entry_ids,
+	'entry_count'                 => count( $entry_ids ),
+	'step_id'                     => (int) $current->get_id(),
+	'step_name'                   => (string) $current->get_name(),
+	'operator_id'                 => (int) $operator->ID,
+	'frontend_inbox_url'          => get_permalink( (int) $page_id ),
+	'excluded_frontend_inbox_url' => get_permalink( (int) $excluded_page_id ),
+	'gravity_forms_url'           => get_permalink( (int) $form_page_id ),
+	'admin_inbox_url'             => admin_url( 'admin.php?page=gravityflow-inbox' ),
+	'admin_entry_url'             => admin_url( 'admin.php?page=gravityflow-inbox&view=entry&id=' . $form_id . '&lid=' . $primary_entry_id ),
+	'exclude_selector'            => '.vf-flow-excluded',
+	'gravityflow_version'         => GRAVITY_FLOW_VERSION,
 );
 
 update_option( 'vazir_flow_evidence_fixture_manifest', $manifest, false );
