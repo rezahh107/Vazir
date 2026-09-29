@@ -14,7 +14,7 @@ This document defines repository-specific contribution rules for human contribut
 - **Class prefix:** `VazirFont_`
 - **Autoloader:** bounded SPL autoloader in `vazir-font-wp.php`
 - **Persisted option:** `vazir_font_options`
-- **Optional integration:** Gravity Forms
+- **Optional integrations:** Gravity Forms; Gravity Flow `3.1.0` typography compatibility
 
 When changing version metadata, update the plugin header and `VAZIR_FONT_VERSION` in `vazir-font-wp.php` together.
 
@@ -25,7 +25,8 @@ The plugin owns typography only. Preserve these boundaries:
 - WordPress frontend, wp-admin, login, Block Editor, and Site Editor typography is handled by `VazirFont_Loader`.
 - Editor content uses the current `enqueue_block_assets` path.
 - Gravity Forms compatibility is handled by `VazirFont_GravityForms_Integration` through WordPress/Gravity Forms style hooks and registered handles.
-- Gravity Flow and GravityView evidence profiles characterize coexistence only; they do not create dedicated production integration layers.
+- Gravity Flow `3.1.0` typography compatibility is handled by `VazirFont_GravityFlow_Integration` through `gravityflow_enqueue_admin_scripts` / `gravityflow_enqueue_frontend_scripts` and host stylesheet dependencies. Gravity Flow continues to own Inbox data/query, assignment, authorization, workflow state, search, pagination, filtering, navigation, AG Grid lifecycle, and icon rendering.
+- GravityView remains an evidence profile, not a dedicated production integration layer.
 - Do not introduce a second settings authority, JavaScript DOM typography engine, or Gravity Forms/Flow/View cache/file ownership.
 - Do not flush third-party caches, delete generated files/transients, or add periodic third-party cleanup jobs.
 
@@ -42,6 +43,7 @@ Required behavior:
 - use the truthful canonical `Vazirmatn` CSS family for the bundled upstream font;
 - retain the public `vazir_font_family` filter as the compatibility API for overriding the complete stack;
 - do not create a hidden legacy `Vazir` alias for Vazirmatn bytes;
+- compatibility adapters must not duplicate Loader-owned `@font-face` delivery when the context Loader already provides it;
 - keep exact upstream `assets/fonts/OFL.txt` and `assets/fonts/AUTHORS.txt` with the bundled files;
 - keep `assets/fonts/Vazirmatn-PROVENANCE.md` synchronized with the pinned release archive and bundled SHA-256 digests.
 
@@ -53,9 +55,11 @@ Element-level exclusions are negative applicability boundaries: Vazirmatn `font-
 
 Pseudo-element exclusions must not be forced into relational element guards. Dedicated icon-family protections remain responsible for Dashicons and equivalent icon contexts.
 
-The Gravity Forms adapter must consume the same `vazir_font_options['exclude_selectors']` authority. Do not introduce a second selector model or a PHP/DOM imitation of arbitrary CSS selector matching.
+Gravity compatibility adapters must consume the same `vazir_font_options['exclude_selectors']` authority. Do not introduce a second incompatible selector model or a PHP/DOM imitation of arbitrary CSS selector matching. Inheritable Gravity Flow rules must fail closed when an exclusion cannot be represented safely.
 
-## 5. Gravity Forms Compatibility
+## 5. Gravity Compatibility
+
+### Gravity Forms
 
 Preserve the registered-style-handle architecture around:
 
@@ -65,7 +69,19 @@ Preserve the registered-style-handle architecture around:
 
 `gform_field_content`, `gform_field_css_class`, and scoped Gravity Forms `!important` compatibility rules remain provisional compatibility mechanisms until licensed real-Gravity-Forms browser characterization proves they can be narrowed or removed safely.
 
-Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms runtime proof. If licensed characterization is unavailable, report it as unavailable rather than PASS.
+### Gravity Flow
+
+The dedicated adapter is deliberately bounded to the exact qualified Gravity Flow `3.1.0` runtime. Preserve these invariants:
+
+- initialize only when the real supported Gravity Flow runtime is loaded;
+- use the product's supported admin/frontend enqueue actions after its own styles are enqueued;
+- depend on `gravityflow_admin_css` / `gravityflow_theme_css` rather than editing host assets;
+- repair only material text surfaces that explicitly defeat normal inheritance: the AG Grid theme root, AG text/date inputs, and the Flow-bound Flatpickr popup;
+- do not add JS or DOM mutation for typography;
+- do not overwrite `agGridAlpine`, `gflow-icons-common`, Dashicons, Gravity Forms icon families, or other host glyph families;
+- gate Flow repair through the existing Gravity compatibility option plus the corresponding frontend/admin context option; do not introduce a new stored settings schema for Flow alone.
+
+Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms/Flow runtime proof. If licensed characterization is unavailable, report it as unavailable rather than PASS.
 
 ## 6. Directory Expectations
 
@@ -75,10 +91,12 @@ Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms ru
 | `includes/class-vazirfont-loader.php` | WordPress typography loading and generated CSS |
 | `includes/class-vazirfont-admin-settings.php` | Admin settings and validation |
 | `includes/class-vazirfont-gravityforms-integration.php` | Optional Gravity Forms compatibility adapter |
+| `includes/class-vazirfont-gravityflow-integration.php` | Version-bounded Gravity Flow typography adapter |
 | `assets/fonts/` | Pinned Vazirmatn WOFF2 binaries, upstream license/authors, and provenance |
 | `assets/css/` | Shared/static CSS assets |
 | `assets/js/` | Admin-side JavaScript |
 | `languages/` | Translation template/resources |
+| `tests/gravityflow-runtime-contract.php` | Deterministic Gravity Flow adapter contract |
 | `tests/gravityforms-evidence-lab/` | Deep Gravity Forms profile retained from the first PR #12 batch |
 | `tests/product-evidence-lab/` | Shared licensed package/runtime core plus Gravity Flow, GravityView, and combined-stack profiles |
 | `docs/CHARACTERIZATION.md` | Evidence boundaries and characterization status |
@@ -100,7 +118,7 @@ composer lint
 composer compat
 ```
 
-`composer test` runs the standalone runtime contract and PHPUnit repository contracts. `composer lint` uses the repository PHPCS ruleset. `composer compat` checks the production PHP surfaces against the configured PHP compatibility range.
+`composer test` runs the standalone core/Gravity Forms contract, the Gravity Flow adapter contract, and PHPUnit repository contracts. `composer lint` uses the repository PHPCS ruleset. `composer compat` checks the production PHP surfaces against the configured PHP compatibility range.
 
 ## 8. Coding Standards
 
@@ -119,7 +137,7 @@ GitHub Actions runs on both `push` and `pull_request`.
 
 Current CI coverage includes:
 
-- PHP `7.4`, `8.3`, `8.4`, and `8.5`: syntax checks, `tests/runtime-contract.php`, PHPUnit;
+- PHP `7.4`, `8.3`, `8.4`, and `8.5`: syntax checks, standalone contracts, PHPUnit;
 - standards: `composer lint` and `composer compat`;
 - WordPress smoke: `6.7/PHP 7.4`, `7.1/PHP 8.3`, `7.1/PHP 8.5`;
 - Chromium computed-style characterization on WordPress `7.1` with Twenty Twenty-One and Twenty Twenty-Five;
@@ -137,7 +155,8 @@ A PASS belongs only to the profile and scenarios that executed. Gravity Forms PA
 - CSS/typography changes that depend on cascade or computed style require browser characterization, not source inspection alone.
 - Changes to Gravity Forms compatibility should preserve Preview/No Conflict registered handles and include deterministic repository/runtime contracts.
 - Any claim about real Orbital/Theme Framework, Legacy Markup, Preview, Form Editor, AJAX, multi-page, validation rerender, conditional logic, or Gravity Forms icons requires the licensed `gravityforms` profile.
-- Claims about Gravity Flow or GravityView surfaces require their respective licensed profile; fixture-created state proves behavior after that state exists, not production reachability of every setup path.
+- Gravity Flow typography claims require the licensed `gravityflow` profile to measure the actual rendered inner AG Grid/Flatpickr component, not only `.gflow-inbox`. Wrapper PASS must not be promoted to proof of inner AG Grid typography.
+- Claims about GravityView surfaces require the licensed `gravityview` profile; fixture-created state proves behavior after that state exists, not production reachability of every setup path.
 - Keep exact-Head CI evidence bound to the commit and profile being evaluated.
 
 ## 11. Internationalization, Security, and Accessibility
@@ -159,7 +178,7 @@ At minimum:
 - verify packaged font URLs/assets;
 - run WordPress computed-style characterization;
 - run the relevant licensed product profile for any Gravity Forms/Flow/View compatibility claim made by the release;
-- do not promote unavailable, stub-only, or different-profile evidence to PASS;
+- do not promote unavailable, stub-only, wrapper-only, or different-profile evidence to PASS;
 - build the production artifact without development-only tooling unless explicitly required;
 - publish only with Owner authorization.
 
