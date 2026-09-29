@@ -26,6 +26,17 @@ $assert( $perk instanceof GP_Perk, 'Fixture did not instantiate through the real
 $assert( 'GP_Vazir_Evidence' === get_class( $perk ), 'Unexpected fixture Perk class.' );
 $assert( (string) $manifest['perk_basename'] === (string) $manifest['fixture_plugin'], 'Perk basename does not match the real plugin file.' );
 
+$documentation_method = new ReflectionMethod( $perk, 'documentation' );
+$assert( 'GP_Vazir_Evidence' === $documentation_method->getDeclaringClass()->getName(), 'Fixture documentation() override is not the active runtime implementation.' );
+$raw_documentation = $perk->get_documentation();
+$assert( is_string( $raw_documentation ), 'Fixture get_documentation() did not return a string.' );
+$assert( false !== strpos( $raw_documentation, 'Vazir Perk documentation paragraph' ), 'Fixture get_documentation() lost the expected marker.' );
+ob_start();
+$perk->display_documentation();
+$rendered_documentation = ob_get_clean();
+$assert( is_string( $rendered_documentation ), 'Fixture display_documentation() did not produce capturable output.' );
+$assert( false !== strpos( $rendered_documentation, 'Vazir Perk documentation paragraph' ), 'Fixture display_documentation() did not render the expected marker.' );
+
 $route_expectations = array(
 	'documentation_url' => 'documentation',
 	'settings_url' => 'perk_settings',
@@ -85,6 +96,11 @@ $evidence = array(
 		'plugin' => $manifest['fixture_plugin'],
 		'class' => get_class( $perk ),
 		'perk_header' => $manifest['fixture_perk_header'],
+		'documentation_declaring_class' => $documentation_method->getDeclaringClass()->getName(),
+		'raw_documentation_marker_present' => false !== strpos( $raw_documentation, 'Vazir Perk documentation paragraph' ),
+		'rendered_documentation_marker_present' => false !== strpos( $rendered_documentation, 'Vazir Perk documentation paragraph' ),
+		'raw_documentation_length' => strlen( $raw_documentation ),
+		'rendered_documentation_length' => strlen( $rendered_documentation ),
 		'documentation_url' => $manifest['documentation_url'],
 		'settings_url' => $manifest['settings_url'],
 		'shipped_in_production' => false,
