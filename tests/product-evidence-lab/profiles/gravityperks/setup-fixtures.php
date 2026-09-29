@@ -36,11 +36,10 @@ class GP_Vazir_Evidence extends GWPerk {
 		return <<<'DOC'
 ## Vazir Perk Documentation Heading
 
-<p id="vazir-gp-doc-paragraph">Vazir Perk documentation paragraph متن آزمایشی.</p>
+Vazir Perk documentation paragraph متن آزمایشی.
 
-<ul id="vazir-gp-doc-list"><li>Evidence item <span class="description" id="vazir-gp-doc-description">Vazir Perk description متن توضیح</span></li></ul>
-
-<div class="vazir-gp-evidence-excluded" id="vazir-gp-doc-excluded" style="font-family: monospace;">Excluded standalone document evidence</div>
+- Evidence item
+- Vazir Perk description متن توضیح
 DOC;
 	}
 
