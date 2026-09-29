@@ -66,6 +66,24 @@ async function characterizeRequiredGrid(prefix) {
   });
 }
 
+async function openDateFilter(targetPage = page) {
+  const header = targetPage.locator('.ag-header-cell[col-id="date_created"]').first();
+  if (!(await header.count())) return null;
+  await header.hover();
+  const menuButton = header.locator('.ag-header-cell-menu-button').first();
+  if (!(await menuButton.count())) return null;
+  await menuButton.click({ force: true });
+  const filterTab = targetPage.locator('.ag-menu .ag-tab[ref="eFilterTab"]').first();
+  if (await filterTab.count()) await filterTab.click({ force: true });
+  const input = targetPage.locator('.ag-menu .ag-input-wrapper.custom-date-filter input, .ag-filter .ag-input-wrapper.custom-date-filter input').first();
+  try {
+    await input.waitFor({ state: 'visible', timeout: 5000 });
+  } catch {
+    return null;
+  }
+  return input;
+}
+
 await login(page, baseUrl, user, password);
 
 await recorder.record('admin_current_inbox_reachable', async () => {
@@ -151,20 +169,8 @@ await recorder.record('admin_wordpress_icon_family', async () => {
 });
 
 await recorder.record('admin_date_filter_input', async () => {
-  const header = page.locator('.ag-header-cell[col-id="date_created"]').first();
-  if (!(await header.count())) {
-    notProven('admin_date_filter_input', 'date_created header is not rendered in the current Inbox configuration');
-    return { status: 'NOT_PROVEN' };
-  }
-  await header.hover();
-  const menuButton = header.locator('.ag-header-cell-menu-button').first();
-  await menuButton.click({ force: true });
-  const filterTab = page.locator('.ag-menu .ag-tab[ref="eFilterTab"]').first();
-  if (await filterTab.count()) await filterTab.click({ force: true });
-  const input = page.locator('.ag-menu .ag-input-wrapper.custom-date-filter input, .ag-filter .ag-input-wrapper.custom-date-filter input').first();
-  try {
-    await input.waitFor({ state: 'visible', timeout: 5000 });
-  } catch {
+  const input = await openDateFilter();
+  if (!input) {
     notProven('admin_date_filter_input', 'AG Grid date filter UI was not deterministically reachable from the rendered date_created header');
     await page.keyboard.press('Escape').catch(() => {});
     return { status: 'NOT_PROVEN' };
@@ -211,6 +217,31 @@ await recorder.record('frontend_excluded_inbox_boundary', async () => {
   const cell = await firstTextCell();
   const cellFamily = await expectNotVazirmatn(cell, 'excluded Gravity Flow AG Grid row/cell');
   return { root_font_family: rootFamily, cell_font_family: cellFamily };
+});
+
+await recorder.record('frontend_excluded_date_picker_portal', async () => {
+  const input = await openDateFilter();
+  if (!input) {
+    notProven('frontend_excluded_date_picker_portal', 'excluded frontend Inbox did not expose a deterministically reachable date filter');
+    await page.keyboard.press('Escape').catch(() => {});
+    return { status: 'NOT_PROVEN' };
+  }
+  const toggle = page.locator('.ag-menu .ag-grid__date-toggle, .ag-filter .ag-grid__date-toggle').first();
+  if (!(await toggle.count())) {
+    notProven('frontend_excluded_date_picker_portal', 'excluded date filter did not expose the Gravity Flow date-picker toggle');
+    return { status: 'NOT_PROVEN' };
+  }
+  await toggle.click({ force: true });
+  const calendar = page.locator('.flatpickr-calendar.ag-custom-component-popup.open, .flatpickr-calendar.ag-custom-component-popup').filter({ visible: true }).first();
+  try {
+    await calendar.waitFor({ state: 'visible', timeout: 5000 });
+  } catch {
+    notProven('frontend_excluded_date_picker_portal', 'excluded Flow date-filter calendar did not become visible');
+    return { status: 'NOT_PROVEN' };
+  }
+  const calendarFamily = await expectNotVazirmatn(calendar, 'excluded Gravity Flow date-picker portal');
+  await page.keyboard.press('Escape').catch(() => {});
+  return { computed_font_family: calendarFamily };
 });
 
 await recorder.record('frontend_font_delivery_is_not_duplicated', async () => {
