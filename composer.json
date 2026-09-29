@@ -18,6 +18,7 @@
     "compat": "phpcs -p --standard=PHPCompatibilityWP --runtime-set testVersion 7.4-8.3 --extensions=php vazir-font-wp.php includes",
     "test": [
       "@php tests/runtime-contract.php",
+      "@php tests/gravityflow-runtime-contract.php",
       "phpunit"
     ]
   },
