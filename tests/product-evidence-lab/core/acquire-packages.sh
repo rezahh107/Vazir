@@ -13,6 +13,7 @@ case "$profile" in
   gravityforms) packages=(gf) ;;
   gravityflow) packages=(gf flow) ;;
   gravityview) packages=(gf view) ;;
+  gravityperks) packages=(gf perks) ;;
   gravity-stack) packages=(gf flow view) ;;
   *) echo "Unsupported licensed evidence profile: $profile" >&2; exit 64 ;;
 esac
@@ -22,6 +23,7 @@ for package in "${packages[@]}"; do
     gf) label="$VAZIR_LAB_GF_LABEL"; drive_id="$VAZIR_LAB_GF_DRIVE_ID"; filename="$VAZIR_LAB_GF_FILENAME"; size="$VAZIR_LAB_GF_SIZE"; sha="$VAZIR_LAB_GF_SHA256"; entrypoint="$VAZIR_LAB_GF_ENTRYPOINT"; plugin_name="$VAZIR_LAB_GF_PLUGIN_NAME"; version="$VAZIR_LAB_GF_VERSION" ;;
     flow) label="$VAZIR_LAB_FLOW_LABEL"; drive_id="$VAZIR_LAB_FLOW_DRIVE_ID"; filename="$VAZIR_LAB_FLOW_FILENAME"; size="$VAZIR_LAB_FLOW_SIZE"; sha="$VAZIR_LAB_FLOW_SHA256"; entrypoint="$VAZIR_LAB_FLOW_ENTRYPOINT"; plugin_name="$VAZIR_LAB_FLOW_PLUGIN_NAME"; version="$VAZIR_LAB_FLOW_VERSION" ;;
     view) label="$VAZIR_LAB_VIEW_LABEL"; drive_id="$VAZIR_LAB_VIEW_DRIVE_ID"; filename="$VAZIR_LAB_VIEW_FILENAME"; size="$VAZIR_LAB_VIEW_SIZE"; sha="$VAZIR_LAB_VIEW_SHA256"; entrypoint="$VAZIR_LAB_VIEW_ENTRYPOINT"; plugin_name="$VAZIR_LAB_VIEW_PLUGIN_NAME"; version="$VAZIR_LAB_VIEW_VERSION" ;;
+    perks) label="$VAZIR_LAB_PERKS_LABEL"; drive_id="$VAZIR_LAB_PERKS_DRIVE_ID"; filename="$VAZIR_LAB_PERKS_FILENAME"; size="$VAZIR_LAB_PERKS_SIZE"; sha="$VAZIR_LAB_PERKS_SHA256"; entrypoint="$VAZIR_LAB_PERKS_ENTRYPOINT"; plugin_name="$VAZIR_LAB_PERKS_PLUGIN_NAME"; version="$VAZIR_LAB_PERKS_VERSION" ;;
   esac
   zip_path="$package_dir/$filename"
   curl -L --fail --retry 4 --retry-all-errors -o "$zip_path" "https://drive.usercontent.google.com/download?id=${drive_id}&export=download&confirm=t"
