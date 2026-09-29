@@ -59,7 +59,7 @@ $integration = VazirFont_GravityFlow_Integration::get_instance();
 $reflection = new ReflectionClass( $integration );
 $available = $reflection->getProperty( 'flow_available' );
 $available->setAccessible( true );
-vf_flow_assert( true === $available->getValue( $integration ), 'Loaded Gravity Flow runtime is detected.' );
+vf_flow_assert( true === $available->getValue( $integration ), 'Exact Gravity Flow 3.1.0 runtime is admitted.' );
 
 $integration->enqueue_admin_assets();
 $admin_handle = 'vazir-font-gravity-flow-admin';
@@ -69,7 +69,9 @@ vf_flow_assert( true === $GLOBALS['vf_flow_styles'][ $admin_handle ]['enqueued']
 $css = implode( "\n", $GLOBALS['vf_flow_inline'][ $admin_handle ] ?? array() );
 vf_flow_assert( false !== strpos( $css, '.gflow-grid .ag-theme-alpine' ), 'AG Grid theme root correction is present.' );
 vf_flow_assert( false !== strpos( $css, '.ag-input-wrapper.custom-date-filter input' ), 'AG Grid date-filter input correction is present.' );
+vf_flow_assert( false !== strpos( $css, 'input[class^="ag-"]' ), 'AG Grid text-input correction is present.' );
 vf_flow_assert( false !== strpos( $css, '.flatpickr-calendar.ag-custom-component-popup' ), 'Flow-bound Flatpickr correction is present.' );
+vf_flow_assert( false === strpos( $css, '@font-face' ), 'Gravity Flow adapter does not duplicate font-face delivery.' );
 vf_flow_assert( false === strpos( $css, "* {\n\tfont-family:" ), 'No blanket descendant font override is emitted.' );
 vf_flow_assert( false === strpos( $css, 'font-family: "agGridAlpine"' ), 'Adapter does not replace AG Grid icon-family ownership.' );
 vf_flow_assert( false === strpos( $css, 'font-family: "gflow-icons-common"' ), 'Adapter does not replace Gravity Flow icon-family ownership.' );
@@ -84,7 +86,12 @@ $guard = ':not(:where(.ag-paging-panel, .ag-paging-panel *)):not(:has(:where(.ag
 vf_flow_assert( false !== strpos( $excluded_css, '.gflow-grid .ag-theme-alpine' . $guard ), 'Inheritable AG Grid rule fails closed across an excluded descendant subtree.' );
 vf_flow_assert( false === strpos( $excluded_css, '[data-icon]:before' . $guard ), 'Pseudo-element exclusions are not forced into relational element guards.' );
 
-VazirFontPlugin::update_options( array( 'enable_gravity_forms' => false ) );
+VazirFontPlugin::update_options( array( 'enable_admin' => false, 'enable_gravity_forms' => true ) );
+vf_flow_reset_adapter( $integration );
+$integration->enqueue_admin_assets();
+vf_flow_assert( array() === $GLOBALS['vf_flow_styles'], 'Existing admin typography toggle disables admin Gravity Flow repair.' );
+
+VazirFontPlugin::update_options( array( 'enable_admin' => true, 'enable_frontend' => true, 'enable_gravity_forms' => false ) );
 vf_flow_reset_adapter( $integration );
 $integration->enqueue_frontend_assets();
 vf_flow_assert( array() === $GLOBALS['vf_flow_styles'], 'Existing Gravity compatibility toggle disables the Gravity Flow adapter.' );
