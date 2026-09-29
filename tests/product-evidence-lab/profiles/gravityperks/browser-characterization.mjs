@@ -15,67 +15,60 @@ if (dispatch.documentation_route_reachable !== false || dispatch.view_requests_d
   throw new Error('Exact Gravity Perks dispatch contract changed; browser qualification model must be revisited.');
 }
 
+const expectedWeights = (manifest.configured_font_weights || []).map(String).sort();
+const vazirRequestRe = /\/assets\/fonts\/vazirmatn-(\d+)\.woff2(?:\?|$)/i;
 const results = {
   status: 'PASS',
   product_status: 'QUALIFICATION_EXECUTED',
   profile: 'gravityperks',
   gravity_perks_version: manifest.gravity_perks_version,
   gravity_forms_version: manifest.gravity_forms_version,
+  exact_version_evidence_only: true,
   dispatch_contract: dispatch,
   scenarios: {},
   browser: {},
 };
 
-const vazirRequestRe = /\/assets\/fonts\/vazirmatn-\d+\.woff2(?:\?|$)/i;
-const classifyFamily = family => /Vazirmatn/i.test(family || '') ? 'PASS' : 'FAIL';
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
 
-async function inspectNode(page, selector, label, { required = true, state = 'visible' } = {}) {
+function isVazirmatn(family) {
+  return /Vazirmatn/i.test(family || '');
+}
+
+async function inspectNode(page, selector, label, { required = true } = {}) {
   const locator = page.locator(selector).first();
   if (await locator.count() === 0) {
     if (required) throw new Error(`${label} selector did not render: ${selector}`);
-    return { status: 'NOT_PROVEN', rendered: false, selector, reason: `${label} selector did not render.` };
+    return { status: 'NOT_PROVEN', rendered: false, selector, reason: `${label} did not render.` };
   }
-  try {
-    await locator.waitFor({ state, timeout: 15000 });
-  } catch {
-    if (required) throw new Error(`${label} did not reach ${state}: ${selector}`);
-    return { status: 'NOT_PROVEN', rendered: false, selector, reason: `${label} did not reach ${state}.` };
-  }
+  await locator.waitFor({ state: 'visible', timeout: 15000 });
   const detail = await locator.evaluate(el => {
     const style = getComputedStyle(el);
-    const rect = el.getBoundingClientRect();
     return {
       tag: el.tagName,
       id: el.id || '',
       className: typeof el.className === 'string' ? el.className : '',
-      text: (el.textContent || el.getAttribute('value') || el.getAttribute('aria-label') || '').trim().replace(/\s+/g, ' ').slice(0, 240),
+      text: (el.textContent || el.getAttribute('value') || '').trim().replace(/\s+/g, ' ').slice(0, 240),
       computed_family: style.fontFamily,
-      display: style.display,
-      visibility: style.visibility,
-      width: rect.width,
-      height: rect.height,
     };
   });
-  return { status: classifyFamily(detail.computed_family), rendered: true, selector, ...detail };
+  return { status: isVazirmatn(detail.computed_family) ? 'PASS' : 'FAIL', rendered: true, selector, ...detail };
 }
 
-async function inspectControl(page, selector, label, required = true) {
-  const evidence = await inspectNode(page, selector, label, { required });
-  if (!evidence.rendered) return evidence;
-  evidence.control = await page.locator(selector).first().evaluate(el => ({
-    type: el.getAttribute('type') || el.tagName.toLowerCase(),
-    name: el.getAttribute('name') || '',
-    value: 'value' in el ? String(el.value) : '',
-    checked: 'checked' in el ? Boolean(el.checked) : null,
-  }));
-  return evidence;
+async function waitForFonts(page) {
+  await page.waitForTimeout(1200);
+  await page.evaluate(async () => {
+    if (document.fonts?.ready) await Promise.race([document.fonts.ready, new Promise(resolve => setTimeout(resolve, 1800))]);
+  }).catch(() => {});
 }
 
 async function scanProtectedFamilies(page) {
   return page.evaluate(() => {
     const matches = [];
     const seen = new Set();
-    for (const el of Array.from(document.querySelectorAll('*')).slice(0, 2500)) {
+    for (const el of Array.from(document.querySelectorAll('*')).slice(0, 3000)) {
       for (const pseudo of [null, '::before', '::after']) {
         let family = '';
         try { family = getComputedStyle(el, pseudo).fontFamily || ''; } catch { continue; }
@@ -90,7 +83,7 @@ async function scanProtectedFamilies(page) {
   });
 }
 
-async function captureRoute(context, url, bodyCheck) {
+async function captureRoute(context, url, ready) {
   const page = await context.newPage();
   const requests = [];
   const responses = [];
@@ -98,52 +91,26 @@ async function captureRoute(context, url, bodyCheck) {
   page.on('request', request => requests.push(request.url()));
   page.on('response', response => responses.push({ url: response.url(), status: response.status() }));
   page.on('requestfailed', request => failures.push({ url: request.url(), error: request.failure()?.errorText || 'unknown' }));
-  const navigation = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await bodyCheck(page);
-  await page.waitForTimeout(2500);
-  try {
-    await page.evaluate(async () => {
-      if (document.fonts?.ready) await Promise.race([document.fonts.ready, new Promise(resolve => setTimeout(resolve, 1500))]);
-    });
-  } catch {}
-  const resources = await page.evaluate(() => ({
-    stylesheets: Array.from(document.querySelectorAll('link[rel~="stylesheet"]')).map(link => ({
-      id: link.id || '',
-      href: link.href || '',
-      media: link.media || '',
-      style_loader_probe: link.getAttribute('data-vazir-gp-style-loader-probe'),
-    })),
-    inline_styles: Array.from(document.querySelectorAll('style')).map(style => ({ id: style.id || '', text: (style.textContent || '').slice(0, 1000) })),
-    body_class: document.body?.className || '',
-    document_title: document.title || '',
-    root_inline_seam_probe: getComputedStyle(document.documentElement).getPropertyValue('--vazir-gravityperks-gwp-admin-seam-probe').trim(),
-    root_exclusion_count: getComputedStyle(document.documentElement).getPropertyValue('--vazir-gravityperks-exclusion-count').trim(),
-  }));
-  const network = {
-    googleapis_requests: requests.filter(url => /fonts\.googleapis\.com/i.test(url)),
-    gstatic_requests: requests.filter(url => /fonts\.gstatic\.com/i.test(url)),
-    vazirmatn_requests: requests.filter(url => vazirRequestRe.test(url)),
-    google_responses: responses.filter(item => /fonts\.(?:googleapis|gstatic)\.com/i.test(item.url)),
-    google_failures: failures.filter(item => /fonts\.(?:googleapis|gstatic)\.com/i.test(item.url)),
-  };
-  return { page, resources, network, navigation: { final_url: page.url(), status: navigation ? navigation.status() : null } };
-}
-
-function renderedTypographyPass(nodes, ignored = []) {
-  return Object.entries(nodes)
-    .filter(([key, item]) => !ignored.includes(key) && item.rendered)
-    .every(([, item]) => item.status === 'PASS');
-}
-
-function resourceSummary(resources) {
+  const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await ready(page);
+  await waitForFonts(page);
   return {
-    gwp_admin_printed: resources.stylesheets.some(item => item.id === 'gwp-admin-css' || /gravityperks.*admin/i.test(item.href)),
-    gwp_admin_style_loader_filter_observed: resources.stylesheets.some(item => item.style_loader_probe === 'gwp-admin'),
-    gwp_admin_inline_css_seam_observed: resources.root_inline_seam_probe === '1',
-    existing_exclusion_authority_visible_at_seam: resources.root_exclusion_count === '1',
-    vazir_stylesheets_present: resources.stylesheets.filter(item => /vazir-font/i.test(`${item.id} ${item.href}`)),
-    vazir_inline_styles_present: resources.inline_styles.filter(item => /vazir-font/i.test(item.id)).map(item => item.id),
+    page,
+    requests,
+    navigation: { final_url: page.url(), status: response ? response.status() : null },
+    network: {
+      vazirmatn_requests: requests.filter(url => vazirRequestRe.test(url)),
+      googleapis_requests: requests.filter(url => /fonts\.googleapis\.com/i.test(url)),
+      gstatic_requests: requests.filter(url => /fonts\.gstatic\.com/i.test(url)),
+      google_responses: responses.filter(item => /fonts\.(?:googleapis|gstatic)\.com/i.test(item.url)),
+      google_failures: failures.filter(item => /fonts\.(?:googleapis|gstatic)\.com/i.test(item.url)),
+    },
   };
+}
+
+function assertNoGoogle(network, label) {
+  assert(network.googleapis_requests.length === 0, `${label} attempted fonts.googleapis.com.`);
+  assert(network.gstatic_requests.length === 0, `${label} attempted fonts.gstatic.com.`);
 }
 
 const browser = await chromium.launch();
@@ -154,90 +121,124 @@ await login(authPage, baseUrl, adminUser, adminPassword);
 await authPage.close();
 
 try {
-  // Supported ordinary wp-admin surface.
+  // Ordinary wp-admin was already healthy before this repair. Prove it stays
+  // healthy and does not receive the standalone Settings correction.
   {
     const captured = await captureRoute(context, manifest.normal_admin_url, async page => {
       await page.locator('body.wp-admin').waitFor({ state: 'visible', timeout: 15000 });
       await page.locator('text=GP Vazir Evidence').first().waitFor({ state: 'visible', timeout: 15000 });
     });
-    const { page, resources, network, navigation } = captured;
+    const { page, network, navigation } = captured;
     const nodes = {
-      body: await inspectNode(page, 'body.wp-admin', 'Gravity Perks normal wp-admin body'),
-      heading: await inspectNode(page, '.wrap h1, .wrap h2, h1.wp-heading-inline', 'Gravity Perks normal admin heading', { required: false }),
-      perk_listing: await inspectNode(page, 'text=GP Vazir Evidence', 'real test Perk listing text'),
-      action_link: await inspectNode(page, 'a:has-text("Settings"), .actions a, .button', 'Gravity Perks normal admin action link', { required: false }),
+      body: await inspectNode(page, 'body.wp-admin', 'normal admin body'),
+      heading: await inspectNode(page, '.wrap h1, .wrap h2, h1.wp-heading-inline', 'normal admin heading', { required: false }),
+      perk_listing: await inspectNode(page, 'text=GP Vazir Evidence', 'real Perk listing'),
+      action_link: await inspectNode(page, 'a:has-text("Settings"), .actions a, .button', 'normal admin action link', { required: false }),
     };
+    for (const [name, node] of Object.entries(nodes)) {
+      if (node.rendered) assert(node.status === 'PASS', `Normal admin ${name} lost Vazirmatn.`);
+    }
+    const standaloneRepairStyles = await page.locator('style').evaluateAll(styles => styles
+      .filter(style => /body\.perk-iframe\s+\.perk-settings/.test(style.textContent || ''))
+      .map(style => style.id || '(no-id)'));
+    assert(standaloneRepairStyles.length === 0, 'Standalone Gravity Perks repair CSS leaked into ordinary wp-admin.');
+    assertNoGoogle(network, 'Normal Gravity Perks admin');
     results.scenarios.normal_admin = {
-      execution_status: 'PASS', context: 'ordinary_wp_admin', navigation, nodes, resources, network,
-      protected_families: await scanProtectedFamilies(page), ...resourceSummary(resources),
-      disposition: renderedTypographyPass(nodes) ? 'PASS' : 'FAIL',
+      disposition: 'PASS', navigation, nodes, network,
+      standalone_repair_styles: standaloneRepairStyles,
+      protected_families: await scanProtectedFamilies(page),
     };
     await page.close();
   }
 
-  // Exact 2.3.16 still generates a legacy Documentation URL, but exact source
-  // dispatch sends any non-empty Perks `view` request to load_perk_settings().
-  // Browser evidence must therefore prove the alias, not mislabel it as docs.
+  // Exact 2.3.16 legacy Documentation URL remains an alias to Settings.
   {
     const captured = await captureRoute(context, manifest.documentation_url, async page => {
       await page.locator('body.perk-iframe.wp-core-ui').waitFor({ state: 'visible', timeout: 15000 });
-      const title = page.locator('.page-title').first();
-      await title.waitFor({ state: 'visible', timeout: 15000 });
-      const titleText = (await title.textContent() || '').trim();
-      if (!/GP Vazir Evidence Settings/i.test(titleText)) {
-        throw new Error(`Legacy Documentation URL did not dispatch to the exact-source-predicted Settings document. page-title=${JSON.stringify(titleText)}`);
-      }
-      await page.locator('label:has-text("Vazir Evidence Text")').waitFor({ state: 'visible', timeout: 15000 });
+      await page.locator('.page-title').first().waitFor({ state: 'visible', timeout: 15000 });
     });
-    const { page, resources, network, navigation } = captured;
-    const nodes = {
-      page_title: await inspectNode(page, '.page-title', 'aliased Settings page title'),
-      text_label: await inspectNode(page, 'label:has-text("Vazir Evidence Text")', 'aliased Settings text label'),
-      text_control: await inspectControl(page, 'input[type="text"]', 'aliased Settings text control'),
-    };
+    const { page, network, navigation } = captured;
+    const title = ((await page.locator('.page-title').first().textContent()) || '').trim();
+    assert(/GP Vazir Evidence Settings/i.test(title), `Documentation URL no longer aliases to Settings: ${JSON.stringify(title)}`);
+    assert(await page.locator('label:has-text("Vazir Evidence Text")').count() > 0, 'Documentation alias did not render Settings controls.');
+    assertNoGoogle(network, 'Documentation alias');
     results.scenarios.documentation = {
       execution_status: 'PASS',
-      context: 'legacy_documentation_url_dispatch',
       requested_view: 'documentation',
-      source_expected_handler: dispatch.view_requests_dispatch_to,
       observed_document: 'standalone_settings',
       documentation_availability: 'NOT_REACHABLE_AS_DOCUMENTATION',
       disposition: 'NOT_PROVEN',
-      navigation, nodes, resources, network,
-      protected_families: await scanProtectedFamilies(page), ...resourceSummary(resources),
       typography_not_attributed_to_documentation: true,
+      navigation, network,
     };
     await page.screenshot({ path: path.join(artifactDir, 'gravityperks-documentation-route-alias.png'), fullPage: true });
     await page.close();
   }
 
-  // Supported standalone Settings document.
+  // Authentic standalone Settings document: typography, exclusion, resource
+  // delivery, host ownership, protected glyphs, and real save interaction.
   {
     const captured = await captureRoute(context, manifest.settings_url, async page => {
       await page.locator('body.perk-iframe.wp-core-ui').waitFor({ state: 'visible', timeout: 15000 });
-      const title = page.locator('.page-title').first();
-      await title.waitFor({ state: 'visible', timeout: 15000 });
-      const titleText = (await title.textContent() || '').trim();
-      if (!/GP Vazir Evidence Settings/i.test(titleText)) throw new Error(`Expected Settings document title; got ${JSON.stringify(titleText)}`);
+      await page.locator('.page-title').first().waitFor({ state: 'visible', timeout: 15000 });
       await page.locator('label:has-text("Vazir Evidence Text")').waitFor({ state: 'visible', timeout: 15000 });
     });
-    const { page, resources, network, navigation } = captured;
+    const { page, requests, network, navigation } = captured;
     const nodes = {
       page_title: await inspectNode(page, '.page-title', 'Settings page title'),
-      text_label: await inspectNode(page, 'label:has-text("Vazir Evidence Text")', 'Settings text label'),
-      text_description: await inspectNode(page, 'text=Vazir evidence text description', 'Settings text description'),
-      text_control: await inspectControl(page, 'input[type="text"]', 'Settings text control'),
-      select_control: await inspectControl(page, 'select', 'Settings select control'),
-      checkbox_control: await inspectControl(page, 'input[type="checkbox"]', 'Settings checkbox control'),
-      save_button: await inspectControl(page, '#gwp_save_settings', 'Settings save button'),
+      text_label: await inspectNode(page, 'label:has-text("Vazir Evidence Text")', 'Settings label'),
+      text_description: await inspectNode(page, 'p.description:has-text("Vazir evidence text description")', 'Settings description'),
+      text_control: await inspectNode(page, 'input[type="text"]', 'Settings text input'),
+      select_control: await inspectNode(page, 'select', 'Settings select'),
+      save_button: await inspectNode(page, '#gwp_save_settings', 'Settings save button'),
+      textarea: await inspectNode(page, 'textarea', 'Settings textarea', { required: false }),
+      checkbox: await inspectNode(page, 'input[type="checkbox"]', 'Settings checkbox', { required: false }),
     };
-
-    await page.locator('input[type="text"]').first().fill('Saved by Vazir evidence');
-    const select = page.locator('select').first();
-    if (await select.count()) {
-      const optionCount = await select.locator('option').count();
-      if (optionCount > 0) await select.selectOption({ index: Math.min(1, optionCount - 1) });
+    for (const requiredName of ['page_title', 'text_label', 'text_description', 'text_control', 'select_control', 'save_button']) {
+      assert(nodes[requiredName].status === 'PASS', `Standalone Settings ${requiredName} did not resolve to Vazirmatn.`);
     }
+    if (nodes.textarea.rendered) assert(nodes.textarea.status === 'PASS', 'Rendered Settings textarea did not resolve to Vazirmatn.');
+
+    const excluded = await inspectNode(page, '.vazir-gp-evidence-excluded', 'excluded evidence description');
+    assert(!isVazirmatn(excluded.computed_family), 'Configured exclusion still received the Perks Vazirmatn correction.');
+    assert(nodes.text_description.status === 'PASS', 'Non-excluded sibling did not retain Vazirmatn beside exclusion.');
+
+    const resources = await page.evaluate(() => ({
+      host_stylesheet: Boolean(document.querySelector('#gwp-admin-css')),
+      host_stylesheet_href: document.querySelector('#gwp-admin-css')?.href || '',
+      host_inline_css: document.querySelector('#gwp-admin-inline-css')?.textContent || '',
+      style_loader_probe: document.querySelector('#gwp-admin-css')?.getAttribute('data-vazir-gp-style-loader-probe') || '',
+      extra_vazir_links: Array.from(document.querySelectorAll('link[rel~="stylesheet"]')).filter(link => /vazir-font/i.test(`${link.id} ${link.href}`)).map(link => ({ id: link.id, href: link.href })),
+      seam_probe: getComputedStyle(document.documentElement).getPropertyValue('--vazir-gravityperks-print-styles-array-probe').trim(),
+      todo_probe: getComputedStyle(document.documentElement).getPropertyValue('--vazir-gravityperks-gwp-admin-in-todo').trim(),
+      registered_probe: getComputedStyle(document.documentElement).getPropertyValue('--vazir-gravityperks-gwp-admin-registered').trim(),
+    }));
+    assert(resources.host_stylesheet, 'gwp-admin-css is no longer the printed host stylesheet.');
+    assert(resources.style_loader_probe === 'gwp-admin', 'gwp-admin did not traverse the supported WordPress style-loader pipeline.');
+    assert(resources.seam_probe === '1' && resources.todo_probe === '1' && resources.registered_probe === '1', 'print_styles_array seam sentinel did not prove selected+registered gwp-admin capability.');
+    assert(/body\.perk-iframe\s+\.perk-settings/.test(resources.host_inline_css), 'Production repair CSS was not attached to gwp-admin-inline-css.');
+    assert(resources.extra_vazir_links.length === 0, 'Standalone Settings introduced an unnecessary standalone Vazir stylesheet link.');
+
+    const cssWeights = Array.from(resources.host_inline_css.matchAll(/font-weight:\s*(300|400|500|700|900)\s*;/g), match => match[1]).sort();
+    assert(JSON.stringify(cssWeights) === JSON.stringify(expectedWeights), `@font-face weights ${JSON.stringify(cssWeights)} do not match configured Loader weights ${JSON.stringify(expectedWeights)}.`);
+
+    const vazirRequests = requests.filter(url => vazirRequestRe.test(url));
+    const uniqueVazirRequests = [...new Set(vazirRequests)];
+    assert(vazirRequests.length > 0, 'No bundled Vazirmatn WOFF2 request occurred inside standalone Settings.');
+    assert(vazirRequests.length === uniqueVazirRequests.length, `Duplicate Vazirmatn font URL delivery observed: ${JSON.stringify(vazirRequests)}`);
+    assertNoGoogle(network, 'Standalone Settings');
+
+    const protectedFamilies = await scanProtectedFamilies(page);
+    const protectedEvidence = protectedFamilies.length > 0
+      ? { disposition: 'PASS', rendered: true, families: protectedFamilies }
+      : { disposition: 'NOT_EXERCISED', rendered: false, reason: 'Exact fixture rendered no Dashicons/GFFontAwesome/FontAwesome computed family.' };
+
+    const textInput = page.locator('input[type="text"]').first();
+    await textInput.fill('Saved by Vazir repair evidence');
+    const select = page.locator('select').first();
+    const optionCount = await select.locator('option').count();
+    if (optionCount > 1) await select.selectOption({ index: 1 });
+    const selectedValue = await select.inputValue();
     const checkbox = page.locator('input[type="checkbox"]').first();
     if (await checkbox.count()) await checkbox.check();
     await Promise.all([
@@ -245,40 +246,49 @@ try {
       page.locator('#gwp_save_settings').click(),
     ]);
     await page.locator('body.perk-iframe.wp-core-ui').waitFor({ state: 'visible', timeout: 15000 });
-    const notice = await inspectNode(page, '.updated, .notice, .error', 'Settings save notice', { required: false });
+    const savedText = await page.locator('input[type="text"]').first().inputValue();
+    const savedSelect = await page.locator('select').first().inputValue();
+    const savedCheckbox = await page.locator('input[type="checkbox"]').first().isChecked();
+    const noticeLocator = page.locator('.updated, .notice, .error').first();
+    const noticeRendered = await noticeLocator.count() > 0;
+    const noticeText = noticeRendered ? ((await noticeLocator.textContent()) || '').trim().replace(/\s+/g, ' ') : '';
+    assert(savedText === 'Saved by Vazir repair evidence', 'Text value did not persist through real Gravity Perks Settings save.');
+    assert(savedSelect === selectedValue, 'Select value did not persist through real Gravity Perks Settings save.');
+    assert(savedCheckbox, 'Checkbox state did not persist through real Gravity Perks Settings save.');
+    assert(noticeRendered, 'Gravity Perks Settings save did not produce its resulting notice/page lifecycle.');
 
     results.scenarios.settings = {
-      execution_status: 'PASS', context: 'standalone_settings', navigation, nodes, save_notice: notice, resources, network,
-      protected_families: await scanProtectedFamilies(page), ...resourceSummary(resources),
-      disposition: renderedTypographyPass(nodes, ['checkbox_control']) ? 'PASS' : 'FAIL',
+      disposition: 'PASS', navigation, nodes, excluded,
+      resources,
+      configured_font_weights: expectedWeights,
+      css_font_face_weights: cssWeights,
+      network: { ...network, unique_vazirmatn_requests: uniqueVazirRequests },
+      protected_icon_glyph_evidence: protectedEvidence,
+      save_interaction: {
+        disposition: 'PASS',
+        text_value_persisted: true,
+        select_value_persisted: true,
+        checkbox_state_persisted: true,
+        notice_rendered: noticeRendered,
+        notice_text: noticeText,
+      },
     };
     await page.screenshot({ path: path.join(artifactDir, 'gravityperks-settings.png'), fullPage: true });
     await page.close();
   }
 
-  const normal = results.scenarios.normal_admin;
-  const docs = results.scenarios.documentation;
-  const settings = results.scenarios.settings;
   results.repair_seam_evidence = {
-    documentation_boundary_reachable: false,
-    documentation_route_runtime_alias_confirmed: docs.observed_document === 'standalone_settings',
-    documentation_source_only_google_fonts_risk: true,
-    documentation_runtime_google_fonts_claim: 'NOT_PROVEN',
-    documentation_runtime_vazirmatn_claim: 'NOT_PROVEN',
-    settings_gwp_admin_style_loader_pipeline_observed: settings.gwp_admin_style_loader_filter_observed,
-    settings_gwp_admin_inline_css_survives_boundary: settings.gwp_admin_inline_css_seam_observed,
-    settings_existing_exclusion_option_visible_at_seam: settings.existing_exclusion_authority_visible_at_seam,
-    settings_vazirmatn_request_observed: settings.network.vazirmatn_requests.length > 0,
-    settings_googleapis_request_attempted: settings.network.googleapis_requests.length > 0,
-    settings_gstatic_request_attempted: settings.network.gstatic_requests.length > 0,
-    normal_admin_vazirmatn_request_observed: normal.network.vazirmatn_requests.length > 0,
+    filter: 'print_styles_array',
+    exact_settings_seam_runtime_proven: true,
+    gwp_admin_selected_and_registered: true,
+    inline_css_attached_to_host_handle: true,
+    handle_list_mutation: false,
+    extra_stylesheet_link: false,
   };
-
-  const supportedGap = [normal, settings].some(scenario => scenario.disposition === 'FAIL');
-  results.product_status = supportedGap ? 'QUALIFIED_GAP / NO_REPAIR_YET' : 'QUALIFIED_NO_GAP / NO_REPAIR_NEEDED';
+  results.product_status = 'ADMITTED_VERIFIED / REPAIR_PASS';
 } catch (error) {
   results.status = 'FAIL';
-  results.product_status = 'QUALIFICATION_INCOMPLETE';
+  results.product_status = 'REPAIR_NOT_VERIFIED';
   results.error = error instanceof Error ? error.stack || error.message : String(error);
 } finally {
   fs.writeFileSync(path.join(artifactDir, 'browser-results.json'), `${JSON.stringify(results, null, 2)}\n`);
