@@ -25,10 +25,23 @@ $perk = GP_Perk::get_perk( (string) $manifest['fixture_plugin'] );
 $assert( $perk instanceof GP_Perk, 'Fixture did not instantiate through the real GP_Perk API.' );
 $assert( 'GP_Vazir_Evidence' === get_class( $perk ), 'Unexpected fixture Perk class.' );
 $assert( (string) $manifest['perk_basename'] === (string) $manifest['fixture_plugin'], 'Perk basename does not match the real plugin file.' );
-$assert( false !== strpos( (string) $manifest['documentation_url'], 'page=gwp_perks' ), 'Documentation URL is not owned by the Gravity Perks admin route.' );
-$assert( false !== strpos( (string) $manifest['documentation_url'], 'view=documentation' ), 'Documentation URL is not the real standalone Documentation view.' );
-$assert( false !== strpos( (string) $manifest['settings_url'], 'page=gwp_perks' ), 'Settings URL is not owned by the Gravity Perks admin route.' );
-$assert( false !== strpos( (string) $manifest['settings_url'], 'view=perk_settings' ), 'Settings URL is not the real standalone Settings view.' );
+
+$route_expectations = array(
+	'documentation_url' => 'documentation',
+	'settings_url' => 'perk_settings',
+);
+foreach ( $route_expectations as $manifest_key => $expected_view ) {
+	$url = (string) ( $manifest[ $manifest_key ] ?? '' );
+	$assert( '' !== $url, $manifest_key . ' is empty.' );
+	$assert( false === strpos( $url, '&amp;' ) && false === strpos( $url, '&#' ), $manifest_key . ' must be a raw machine-navigable URL, not an HTML-escaped href.' );
+	$query = wp_parse_url( $url, PHP_URL_QUERY );
+	$assert( is_string( $query ) && '' !== $query, $manifest_key . ' has no query string.' );
+	$params = array();
+	parse_str( $query, $params );
+	$assert( 'gwp_perks' === (string) ( $params['page'] ?? '' ), $manifest_key . ' is not owned by the Gravity Perks admin route.' );
+	$assert( $expected_view === (string) ( $params['view'] ?? '' ), $manifest_key . ' does not target the expected standalone view.' );
+	$assert( (string) $manifest['fixture_plugin'] === (string) ( $params['slug'] ?? '' ), $manifest_key . ' does not target the real test Perk basename.' );
+}
 $assert( array( '.vazir-gp-evidence-excluded' ) === $manifest['exclude_selectors'], 'Existing exclusion authority was not preserved in the fixture.' );
 
 $manage_file = WP_PLUGIN_DIR . '/gravityperks/admin/manage_perks.php';
