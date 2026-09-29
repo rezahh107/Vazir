@@ -120,6 +120,59 @@ final class RepositoryContractTest extends TestCase {
 		$this->assertStringNotContainsString( 'DOMDocument', $source );
 	}
 
+	public function test_gravity_forms_direct_font_selectors_are_bound_to_independent_admission_evidence(): void {
+		$source = file_get_contents( VAZIR_TEST_ROOT . '/includes/class-vazirfont-gravityforms-integration.php' );
+		$manifest_json = file_get_contents( VAZIR_TEST_ROOT . '/tests/gravityforms-evidence-lab/admitted-selector-evidence.json' );
+		$this->assertIsString( $source );
+		$this->assertIsString( $manifest_json );
+
+		$manifest = json_decode( $manifest_json, true );
+		$this->assertIsArray( $manifest );
+		$this->assertSame( '3.1.1.1', $manifest['gravity_forms_version'] ?? null );
+		$this->assertSame( '555a956849139cac48c646894bef83dd44191a2c', $manifest['evidence_only_head'] ?? null );
+		$this->assertSame( 36588232341, $manifest['workflow_run_id'] ?? null );
+
+		$expected_admitted = [
+			'.gform_legacy_markup_wrapper .gf_step_number',
+			'.gform_legacy_markup_wrapper .gf_progressbar_percentage',
+			'.gform-admin .gform-dropdown',
+			'.gform-admin .gform-dropdown__control-text',
+			'.gform-admin .gform-button',
+			'#preview_hdr',
+			'#preview_note',
+		];
+		$this->assertSame( $expected_admitted, $manifest['admitted_selectors'] ?? null );
+
+		$derived_admitted = [];
+		$dispositions = [];
+		foreach ( $manifest['pre_repair'] ?? [] as $selector => $record ) {
+			$disposition = $record['disposition'] ?? null;
+			if ( is_string( $disposition ) ) {
+				$dispositions[] = $disposition;
+			}
+			if ( 'REPRODUCED' === $disposition ) {
+				$derived_admitted[] = $selector;
+			}
+		}
+		$this->assertSame( $expected_admitted, $derived_admitted );
+		$this->assertSame( 7, count( array_filter( $dispositions, static fn ( string $value ): bool => 'REPRODUCED' === $value ) ) );
+		$this->assertSame( 2, count( array_filter( $dispositions, static fn ( string $value ): bool => 'ALREADY_VAZIRMATN' === $value ) ) );
+		$this->assertSame( 1, count( array_filter( $dispositions, static fn ( string $value ): bool => 'NOT_PROVEN' === $value ) ) );
+
+		foreach ( $expected_admitted as $selector ) {
+			$this->assertStringContainsString( "'{$selector}'", $source );
+		}
+
+		$not_admitted = [
+			'.gform_legacy_markup_wrapper .gf_step_label',
+			'.gform_legacy_markup_wrapper .gf_progressbar_title',
+			'.gform-admin .gform-dropdown__group-text',
+		];
+		foreach ( $not_admitted as $selector ) {
+			$this->assertStringNotContainsString( "'{$selector}'", $source );
+		}
+	}
+
 	public function test_compatibility_hooks_are_still_present_pending_visual_characterization(): void {
 		$source = file_get_contents( VAZIR_TEST_ROOT . '/includes/class-vazirfont-gravityforms-integration.php' );
 		$this->assertIsString( $source );

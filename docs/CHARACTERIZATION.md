@@ -92,23 +92,36 @@ The merge commit `cb35e57f7ad62824e642e14576e1df9f8fb8e0f9` contains the same fi
 
 The Gravity Forms closure batch starts from merged `main@02bd37231be036a2468107608ce3765d58cd0c81`. Before changing production typography CSS, the licensed profile was strengthened on evidence-only Head `c50ab6261a5d632e76e3c1b28ce54785f435ba4a` and executed against the exact approved Gravity Forms `3.1.1.1` package (`5,300,290` bytes, SHA-256 `542f56ae0747f3661d1474996527298027db3fb8ed3e6469a6391aaabf61069b`). Package verification, fresh runtime provisioning, fixture creation, and native host assertions all passed before Chromium reached the new computed-style assertions.
 
-Source declarations in `admin-components.min.css`, `preview.css`, and Legacy `formsmain.css` were treated only as risk signals. The strengthened browser profile renders real Gravity Forms routes and fixtures and classifies the actual nodes rather than manufacturing matching markup.
+Source declarations in `admin-components.min.css`, `preview.css`, and Legacy `formsmain.css` are risk signals only. Production admission requires exact rendered-node computed-style evidence on the qualified runtime.
 
-The evidence-only run reproduced these runtime failures:
+The strengthened product profile originally reproduced the following families: Legacy step/progress text, real admin dropdown/control/button text, and Preview `#preview_hdr` / `#preview_note`. A later independent selector-admission run then measured each of the ten proposed production selectors separately on exact evidence-only Head `555a956849139cac48c646894bef83dd44191a2c`, workflow run `36588232341`, Chromium `140.0.7339.16`. The machine-readable result is committed as `tests/gravityforms-evidence-lab/admitted-selector-evidence.json`.
 
-- Legacy multipage step number resolved to `arial, sans-serif` instead of Vazirmatn;
-- Legacy percentage progress text resolved to `helvetica, arial, sans-serif`;
-- real entries-list/form-editor `gform-dropdown` and `gform-dropdown__control-text` nodes resolved to Gravity Forms' Inter/system stack;
-- real admin Preview-link `gform-button` nodes in the component inventory also resolved to the Inter/system stack;
-- real Preview `#preview_hdr` resolved to `Open Sans` and `#preview_note` to the Lucida stack.
+Selector-level pre-repair dispositions were:
 
-The same baseline already passed Orbital/Theme Framework including `--gf-font-family-base`, normal labels/descriptions/inputs/selects/buttons, conditional logic, iframe AJAX validation/rerender, forward/back multipage behavior, the existing basic Legacy fixture, the excluded monospace subtree, Preview form content, Form Editor, No Conflict handles, duplicate-free font requests, and representative `gform-icons-orbital`, `gform-icons-admin`, and Dashicons families. A real admin table/status-family component backed by `admin-components.min.css` also already computed to Vazirmatn and therefore receives no speculative repair.
+| Selector | Pre-repair result | Production admission |
+| --- | --- | --- |
+| `.gform_legacy_markup_wrapper .gf_step_number` | `REPRODUCED` — `arial, sans-serif` | admitted |
+| `.gform_legacy_markup_wrapper .gf_step_label` | `ALREADY_VAZIRMATN` | not admitted |
+| `.gform_legacy_markup_wrapper .gf_progressbar_percentage` | `REPRODUCED` — `helvetica, arial, sans-serif` | admitted |
+| `.gform_legacy_markup_wrapper .gf_progressbar_title` | `ALREADY_VAZIRMATN` | not admitted |
+| `.gform-admin .gform-dropdown` | `REPRODUCED` — Inter/system stack | admitted |
+| `.gform-admin .gform-dropdown__control-text` | `REPRODUCED` — Inter/system stack | admitted |
+| `.gform-admin .gform-dropdown__group-text` | `NOT_PROVEN` — no deterministic visible text-bearing node | not admitted |
+| `.gform-admin .gform-button` | `REPRODUCED` — Inter/system stack | admitted |
+| `#preview_hdr` | `REPRODUCED` — Open Sans | admitted |
+| `#preview_note` | `REPRODUCED` — Lucida stack | admitted |
 
-Some source-risk families were still not deterministically rendered by the strengthened baseline: an `admin-components.min.css` heading rule, an overlay/dialog/tooltip family, and visible Preview helper/toggle chrome. They remain `NOT_PROVEN`; absence of a rendered node is not converted into either PASS or a production selector.
+The Preview targets are measured only after authentication because the qualified Preview URL is an authenticated Gravity Forms route. An earlier harness attempt that visited Preview before login was rejected as invalid reachability evidence and was not used for selector admission.
 
-The bounded production correction remains inside `VazirFont_GravityForms_Integration` and uses the existing registered style handle and existing exclusion-boundary machinery. It is limited to the actual failed mechanisms: Legacy step/progress text, the proven admin dropdown/control/group/button component families, and `#preview_hdr` / `#preview_note`. It must not become `.gform-admin *`, a Preview-body override, a blanket Legacy descendant rule, JavaScript DOM mutation, vendor-asset editing, a new option, or a second selector/exclusion language.
+The bounded production correction remains inside `VazirFont_GravityForms_Integration`, uses the existing registered style handle, and reuses the existing exclusion-boundary machinery. It is limited to exactly seven independently reproduced selectors: two Legacy multipage selectors, three admin-component selectors, and two Preview chrome selectors. The two already-correct Legacy selectors and the unrendered admin group-text selector are deliberately absent from production repair.
 
-Any final compatibility claim for this repair requires a later exact-Head licensed browser run proving those repaired nodes while keeping the existing dynamic/frontend/exclusion/icon/No Conflict behaviors green. The evidence-only baseline failure itself proves the defect, not the repair.
+The repair must not become `.gform-admin *`, a Preview-body override, a blanket Legacy descendant rule, JavaScript DOM mutation, vendor-asset editing, a new option, or a second selector/exclusion language. Source-only risk or family-level similarity is not sufficient authority to widen the production selector list.
+
+The same strengthened baseline already passed Orbital/Theme Framework including `--gf-font-family-base`, normal labels/descriptions/inputs/selects/buttons, conditional logic, iframe AJAX validation/rerender, forward/back multipage behavior, the existing basic Legacy fixture, the excluded monospace subtree, Preview form content, Form Editor, No Conflict handles, duplicate-free font requests, and representative `gform-icons-orbital`, `gform-icons-admin`, and Dashicons families. A real admin table/status-family component backed by `admin-components.min.css` also already computed to Vazirmatn and therefore receives no speculative repair.
+
+Some source-risk families remain outside the admitted repair because they were not deterministically rendered: an `admin-components.min.css` heading rule, an overlay/dialog/tooltip family, visible Preview helper/toggle chrome, and `.gform-admin .gform-dropdown__group-text`. They remain `NOT_PROVEN`; absence of a rendered node is not converted into PASS or production CSS.
+
+A final compatibility claim for the seven admitted selectors requires a later exact-Head licensed browser run proving those repaired nodes resolve to Vazirmatn while existing dynamic/frontend/exclusion/icon/No Conflict behavior remains green. The pre-repair admission run proves the defect boundary, not the final repair.
 
 ## Gravity Flow capability admission and 3.1.0 qualification baseline
 
