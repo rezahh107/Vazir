@@ -6,7 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Gravity Flow typography compatibility adapter.
+ * Gravity Flow 3.1.0 typography compatibility adapter.
  *
  * Gravity Flow remains authoritative for Inbox behavior and AG Grid lifecycle.
  * This adapter only restores Vazirmatn on the bounded text surfaces whose host
@@ -14,9 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  * enqueue hooks after its own styles have been registered/enqueued.
  */
 final class VazirFont_GravityFlow_Integration {
-	private const STYLE_HANDLE = 'vazir-font-gravity-flow';
-	private const ADMIN_DEPENDENCY = 'gravityflow_admin_css';
-	private const FRONTEND_DEPENDENCY = 'gravityflow_theme_css';
+	private const SUPPORTED_VERSION    = '3.1.0';
+	private const STYLE_HANDLE         = 'vazir-font-gravity-flow';
+	private const ADMIN_DEPENDENCY     = 'gravityflow_admin_css';
+	private const FRONTEND_DEPENDENCY  = 'gravityflow_theme_css';
 
 	private static ?self $instance = null;
 	private bool $flow_available = false;
@@ -24,7 +25,7 @@ final class VazirFont_GravityFlow_Integration {
 	private array $inline_handles = array();
 
 	private function __construct() {
-		$this->flow_available = $this->is_gravity_flow_active();
+		$this->flow_available = $this->is_supported_gravity_flow_runtime();
 		if ( $this->flow_available ) {
 			$this->init_hooks();
 		}
@@ -43,8 +44,10 @@ final class VazirFont_GravityFlow_Integration {
 		return self::$instance;
 	}
 
-	private function is_gravity_flow_active(): bool {
-		return class_exists( 'Gravity_Flow' ) && defined( 'GRAVITY_FLOW_VERSION' );
+	private function is_supported_gravity_flow_runtime(): bool {
+		return class_exists( 'Gravity_Flow' )
+			&& defined( 'GRAVITY_FLOW_VERSION' )
+			&& self::SUPPORTED_VERSION === (string) GRAVITY_FLOW_VERSION;
 	}
 
 	private function init_hooks(): void {
@@ -53,19 +56,19 @@ final class VazirFont_GravityFlow_Integration {
 	}
 
 	public function enqueue_admin_assets(): void {
-		$this->enqueue_style( self::ADMIN_DEPENDENCY );
+		$this->enqueue_style( 'admin', self::ADMIN_DEPENDENCY );
 	}
 
 	public function enqueue_frontend_assets(): void {
-		$this->enqueue_style( self::FRONTEND_DEPENDENCY );
+		$this->enqueue_style( 'frontend', self::FRONTEND_DEPENDENCY );
 	}
 
-	private function enqueue_style( string $dependency ): void {
-		if ( ! $this->is_enabled() ) {
+	private function enqueue_style( string $context, string $dependency ): void {
+		if ( ! $this->is_enabled( $context ) ) {
 			return;
 		}
 
-		$handle = self::STYLE_HANDLE . '-' . ( self::ADMIN_DEPENDENCY === $dependency ? 'admin' : 'frontend' );
+		$handle = self::STYLE_HANDLE . '-' . $context;
 		wp_register_style( $handle, false, array( $dependency ), VAZIR_FONT_VERSION );
 		wp_enqueue_style( $handle );
 
@@ -73,13 +76,28 @@ final class VazirFont_GravityFlow_Integration {
 			return;
 		}
 
-		wp_add_inline_style( $handle, $this->get_gravityflow_css() );
+		$css = $this->get_gravityflow_css();
+		if ( '' !== trim( $css ) ) {
+			wp_add_inline_style( $handle, $css );
+		}
 		$this->inline_handles[ $handle ] = true;
 	}
 
-	private function is_enabled(): bool {
+	private function is_enabled( string $context ): bool {
 		$options = VazirFontPlugin::get_options();
-		return ! empty( $options['enable_gravity_forms'] );
+		if ( empty( $options['enable_gravity_forms'] ) ) {
+			return false;
+		}
+
+		if ( 'admin' === $context ) {
+			return ! empty( $options['enable_admin'] );
+		}
+
+		if ( 'frontend' === $context ) {
+			return ! empty( $options['enable_frontend'] );
+		}
+
+		return false;
 	}
 
 	private function get_gravityflow_css(): string {
@@ -87,17 +105,12 @@ final class VazirFont_GravityFlow_Integration {
 			return $this->cached_css;
 		}
 
-		if ( ! $this->is_enabled() ) {
-			$this->cached_css = '';
-			return '';
-		}
-
 		$family = apply_filters(
 			'vazir_font_family',
 			"'Vazirmatn', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif"
 		);
 		$negative_exclusions = $this->get_negative_scope_selectors();
-		$css                 = VazirFont_Loader::get_instance()->get_font_face_css();
+		$css                 = '';
 
 		// Gravity Flow 3.1.0 declares a system stack directly on this AG Grid
 		// theme root. Guard the inheritable correction against any excluded
@@ -108,7 +121,7 @@ final class VazirFont_GravityFlow_Integration {
 			true
 		);
 		if ( '' !== $grid_root ) {
-			$css .= "\n{$grid_root} {\n\tfont-family: {$family};\n}\n";
+			$css .= "{$grid_root} {\n\tfont-family: {$family};\n}\n";
 		}
 
 		// Gravity Flow also declares the system stack directly on material AG
@@ -117,19 +130,13 @@ final class VazirFont_GravityFlow_Integration {
 		$control_selectors = $this->build_enforcement_selector_list(
 			array(
 				'.gflow-grid .ag-theme-alpine .ag-input-wrapper.custom-date-filter input',
-				'.gflow-grid .ag-theme-alpine input[class^="ag-"]:not([type])',
-				'.gflow-grid .ag-theme-alpine input[class^="ag-"][type="text"]',
-				'.gflow-grid .ag-theme-alpine input[class^="ag-"][type="number"]',
-				'.gflow-grid .ag-theme-alpine input[class^="ag-"][type="tel"]',
-				'.gflow-grid .ag-theme-alpine input[class^="ag-"][type="date"]',
-				'.gflow-grid .ag-theme-alpine input[class^="ag-"][type="datetime-local"]',
+				'.gflow-grid .ag-theme-alpine input[class^="ag-"]',
 				'.gflow-grid .ag-theme-alpine textarea[class^="ag-"]',
 			),
-			$negative_exclusions,
-			true
+			$negative_exclusions
 		);
 		if ( '' !== $control_selectors ) {
-			$css .= $control_selectors . " {\n\tfont-family: {$family};\n}\n";
+			$css .= "\n{$control_selectors} {\n\tfont-family: {$family} !important;\n}\n";
 		}
 
 		// The custom AG date component tags its Flatpickr popup with
@@ -141,7 +148,7 @@ final class VazirFont_GravityFlow_Integration {
 			true
 		);
 		if ( '' !== $date_picker ) {
-			$css .= $date_picker . " {\n\tfont-family: {$family};\n}\n";
+			$css .= "\n{$date_picker} {\n\tfont-family: {$family};\n}\n";
 		}
 
 		$this->cached_css = $css;
@@ -220,10 +227,10 @@ final class VazirFont_GravityFlow_Integration {
 	 * @param string[] $selectors Internal Gravity Flow enforcement selectors.
 	 * @param string[] $exclude_selectors Valid element-level exclusions.
 	 */
-	private function build_enforcement_selector_list( array $selectors, array $exclude_selectors, bool $protect_descendants = false ): string {
+	private function build_enforcement_selector_list( array $selectors, array $exclude_selectors ): string {
 		$guarded = array();
 		foreach ( $selectors as $selector ) {
-			$candidate = $this->apply_exclusion_boundary( $selector, $exclude_selectors, $protect_descendants );
+			$candidate = $this->apply_exclusion_boundary( $selector, $exclude_selectors );
 			if ( '' !== $candidate ) {
 				$guarded[] = $candidate;
 			}
