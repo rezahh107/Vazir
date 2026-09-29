@@ -106,6 +106,7 @@ const collectAdminComponentCandidates = async routeLabel => page.evaluate(label 
           if (el.tagName === 'LABEL' || /label|description|help|text/.test(lowerClass)) kinds.push('label');
           if (el.tagName === 'SELECT' || lowerRole === 'combobox' || /dropdown|select/.test(lowerClass)) kinds.push('dropdown');
           if (el.closest('table') || /table|pagination|paging|pager|list/.test(lowerClass)) kinds.push('table');
+          if (el.tagName === 'BUTTON' || (el.tagName === 'A' && /gform-button/.test(lowerClass)) || /button/.test(lowerClass)) kinds.push('button');
           if (['dialog', 'tooltip'].includes(lowerRole) || /tooltip|dialog|flyout|calendar|popover|modal/.test(lowerClass)) kinds.push('overlay');
           rows.push({
             route: label,
@@ -315,10 +316,25 @@ for (const [routeLabel, url] of [
 }
 fs.writeFileSync(path.join(artifactDir, 'admin-components-inventory.json'), `${JSON.stringify(adminInventory, null, 2)}\n`);
 
+await record('gravity_forms_admin_page_heading', async () => {
+  await page.goto(manifest.forms_admin_url, { waitUntil: 'domcontentloaded' });
+  const heading = page.locator('.gform-admin h1:visible, h1.wp-heading-inline:visible, .wrap h1:visible').first();
+  if (await heading.count() === 0) throw new NotProvenError('No visible Gravity Forms admin page heading was deterministically rendered.');
+  return {
+    text: (await heading.innerText()).trim(),
+    font_family: await expectVazirmatn(heading, 'Gravity Forms admin page heading'),
+  };
+});
 await record('gravity_forms_admin_heading_component', async () => ({ candidate: assertAdminCandidate(adminInventory, 'heading', 'Gravity Forms admin heading/title component') }));
 await record('gravity_forms_admin_label_component', async () => ({ candidate: assertAdminCandidate(adminInventory, 'label', 'Gravity Forms admin label/text component') }));
 await record('gravity_forms_admin_dropdown_component', async () => ({ candidate: assertAdminCandidate(adminInventory, 'dropdown', 'Gravity Forms admin dropdown/select component') }));
 await record('gravity_forms_admin_table_or_pagination_component', async () => ({ candidate: assertAdminCandidate(adminInventory, 'table', 'Gravity Forms admin table/list/pagination component') }));
+await record('gravity_forms_admin_button_component', async () => {
+  const candidate = adminInventory.find(item => item.selector === '.gform-admin .gform-button' && item.tag === 'A');
+  if (!candidate) throw new NotProvenError('A real text-bearing Gravity Forms gform-button link was not deterministically reachable.');
+  assert.match(candidate.computedFamily, /Vazirmatn/i, `Gravity Forms admin gform-button link should resolve to Vazirmatn; got ${candidate.computedFamily}; route=${candidate.route}`);
+  return { candidate };
+});
 await record('gravity_forms_admin_overlay_component', async () => ({ candidate: assertAdminCandidate(adminInventory, 'overlay', 'Gravity Forms admin overlay component') }));
 
 await record('gravity_forms_preview_form_content', async () => {
