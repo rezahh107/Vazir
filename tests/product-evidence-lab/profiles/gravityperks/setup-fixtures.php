@@ -49,6 +49,7 @@ DOC;
 			'label' => 'Vazir Evidence Text',
 			'description' => 'Vazir evidence text description',
 		) );
+		echo '<p class="description vazir-gp-evidence-excluded">Vazir excluded evidence description</p>';
 		echo self::generate_select( $this, array(
 			'id' => 'evidence_select',
 			'label' => 'Vazir Evidence Select',
@@ -123,6 +124,8 @@ $options['enable_admin'] = true;
 $options['enable_gravity_forms'] = true;
 $options['exclude_selectors'] = array( '.vazir-gp-evidence-excluded' );
 update_option( 'vazir_font_options', $options, false );
+VazirFontPlugin::clear_cache();
+$configured_weights = VazirFont_Loader::get_instance()->get_selected_weights();
 
 $manifest = array(
 	'gravity_perks_version' => (string) ( get_plugin_data( WP_PLUGIN_DIR . '/gravityperks/gravityperks.php', false, false )['Version'] ?? '' ),
@@ -137,6 +140,7 @@ $manifest = array(
 	'perk_slug' => $perk->get_property( 'slug' ),
 	'perk_basename' => $perk->get_property( 'basename' ),
 	'exclude_selectors' => $options['exclude_selectors'],
+	'configured_font_weights' => $configured_weights,
 	'fixture_shipped_in_production' => false,
 );
 file_put_contents( $artifact_dir . '/fixture-manifest.json', wp_json_encode( $manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n" );
