@@ -47,6 +47,12 @@ async function firstTextCell(targetPage = page) {
   return cell;
 }
 
+async function firstEntryIdCell(targetPage = page) {
+  const cell = targetPage.locator('.ag-center-cols-container .ag-row .ag-cell[col-id="id"]').filter({ hasText: /\S/ }).first();
+  await cell.waitFor({ state: 'visible', timeout: 30000 });
+  return cell;
+}
+
 async function characterizeRequiredGrid(prefix) {
   await recorder.record(`${prefix}_ag_theme_root`, async () => {
     const family = await expectVazirmatn(page.locator('.gflow-grid .ag-theme-alpine').first(), `${prefix} AG Grid theme root`);
@@ -108,31 +114,29 @@ await recorder.record('admin_pagination_text_and_dynamic_rerender', async () => 
   await panel.waitFor({ state: 'visible', timeout: 30000 });
   const pageSummary = panel.locator('.ag-paging-page-summary-panel').first();
   const family = await expectVazirmatn(pageSummary, 'AG Grid pagination text');
-  const before = (await pageSummary.innerText()).trim();
+  const beforeCell = await firstEntryIdCell();
+  const before = (await beforeCell.innerText()).trim();
   const next = panel.locator('.ag-paging-button[ref="btNext"]').first();
   await next.waitFor({ state: 'visible', timeout: 30000 });
   assert.equal(await next.isDisabled(), false, 'Fixture must make the next pagination control available.');
   await next.click();
   await page.waitForFunction(
-    beforeText => {
-      const summary = document.querySelector('.ag-paging-page-summary-panel');
-      return summary && summary.textContent?.trim() !== beforeText;
-    },
+    beforeId => document.querySelector('.ag-center-cols-container .ag-row .ag-cell[col-id="id"]')?.textContent?.trim() !== beforeId,
     before,
     { timeout: 5000 },
   );
-  const after = (await pageSummary.innerText()).trim();
-  assert.notEqual(after, before, 'Native AG Grid pagination state should advance to another page.');
-  const afterCell = await firstTextCell();
+  const afterCell = await firstEntryIdCell();
+  const after = (await afterCell.innerText()).trim();
+  assert.notEqual(after, before, 'Native AG Grid pagination must rerender a different entry ID.');
   const rerenderFamily = await expectVazirmatn(afterCell, 'AG Grid rerendered row/cell text after pagination');
   const previous = panel.locator('.ag-paging-button[ref="btPrevious"]').first();
   await previous.click();
   await page.waitForFunction(
-    beforeText => document.querySelector('.ag-paging-page-summary-panel')?.textContent?.trim() === beforeText,
+    beforeId => document.querySelector('.ag-center-cols-container .ag-row .ag-cell[col-id="id"]')?.textContent?.trim() === beforeId,
     before,
     { timeout: 5000 },
   );
-  return { computed_font_family: family, rerendered_font_family: rerenderFamily, before, after };
+  return { computed_font_family: family, rerendered_font_family: rerenderFamily, before_entry_id: before, after_entry_id: after };
 });
 
 await recorder.record('admin_aggrid_icon_family', async () => {
