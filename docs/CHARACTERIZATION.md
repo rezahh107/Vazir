@@ -69,7 +69,7 @@ The approved GravityView bytes are not described as a vanilla upstream archive. 
 ### Profile claim ceilings
 
 - `wordpress`: existing WordPress smoke/browser characterization only.
-- `gravityforms`: deep real Gravity Forms typography/dynamic/admin characterization; it proves only the scenarios that execute in that profile.
+- `gravityforms`: deep real Gravity Forms typography/dynamic/admin characterization; it proves only the scenarios that execute in that profile. A form-content PASS does not prove Preview chrome, generic wp-admin body typography does not prove direct `.gform-admin` component declarations, and a basic Legacy form does not prove multipage progress/step typography.
 - `gravityflow`: exact GF + Flow + Vazir activation, a real `Gravity_Flow_API` approval step/entries, admin and frontend Inbox reachability, computed `font-family` on the actual AG Grid theme root/header/cell/pagination/filter/date-picker surfaces that render, dynamic pagination rerender, prerequisite GF rendering, exclusions, and protected AG Grid/Gravity Flow/WordPress icon-family checks. Fixture-created workflow state does not prove every production setup path; secondary surfaces that cannot be rendered remain `NOT_PROVEN`.
 - `gravityview`: exact GF + GravityView + Vazir activation, a real `gravityview` post bound to a synthetic GF form using inspected 3.3.4 View metadata, front-end View/search/result state, admin editor, exclusions, pagination/icon checks when rendered. AJAX remains `NOT_PROVEN` unless an observable runtime path is actually exercised.
 - `gravity-stack`: representative coexistence/regression checks with all three Gravity products and Vazir active. It is not exhaustive compatibility evidence for any individual product.
@@ -82,9 +82,33 @@ The initial PR #12 attempts that failed to receive runners were later superseded
 
 On that exact Head, normal CI run #160 passed all 10 jobs, and Product-Wide Reproducible Evidence Lab run #30 passed all four licensed profiles: `gravityforms`, `gravityflow`, `gravityview`, and `gravity-stack`. The Gravity Forms profile included the Theme Framework/Orbital, supported Legacy Markup, Preview, Form Editor, No Conflict, iframe AJAX validation/rerender, multipage forward/back behavior, protected icon families, exclusions, and duplicate-free bundled font request characterization described in PR #12.
 
-The historical Gravity Flow PASS on PR #12 must be interpreted only at the surfaces its then-current test measured. That browser characterization asserted `.gflow-inbox` plus selected controls/icon families and did **not** measure the actual `.gflow-grid .ag-theme-alpine` root, representative AG Grid header/cell/pager text, or Flow-bound Flatpickr calendar. It therefore was not evidence that all inner Inbox text resolved to Vazirmatn.
+That historical Gravity Forms PASS must be interpreted at the nodes the then-current profile actually measured. It did not independently measure direct Preview chrome typography, representative `admin-components.min.css` descendants, or Legacy multipage step/progress text. Those surfaces therefore remained unqualified by that historical PASS even though the surrounding routes rendered successfully.
+
+The historical Gravity Flow PASS on PR #12 must likewise be interpreted only at the surfaces its then-current test measured. That browser characterization asserted `.gflow-inbox` plus selected controls/icon families and did **not** measure the actual `.gflow-grid .ag-theme-alpine` root, representative AG Grid header/cell/pager text, or Flow-bound Flatpickr calendar. It therefore was not evidence that all inner Inbox text resolved to Vazirmatn.
 
 The merge commit `cb35e57f7ad62824e642e14576e1df9f8fb8e0f9` contains the same file tree as that successfully characterized PR Head, but the PR-head run must not be represented as an exact-SHA run of the later merge commit. These results are the legacy-Vazir baseline; they do not by themselves prove a later Vazirmatn candidate.
+
+## Gravity Forms 3.1.1.1 strengthened gap-closure baseline
+
+The Gravity Forms closure batch starts from merged `main@02bd37231be036a2468107608ce3765d58cd0c81`. Before changing production typography CSS, the licensed profile was strengthened on evidence-only Head `c50ab6261a5d632e76e3c1b28ce54785f435ba4a` and executed against the exact approved Gravity Forms `3.1.1.1` package (`5,300,290` bytes, SHA-256 `542f56ae0747f3661d1474996527298027db3fb8ed3e6469a6391aaabf61069b`). Package verification, fresh runtime provisioning, fixture creation, and native host assertions all passed before Chromium reached the new computed-style assertions.
+
+Source declarations in `admin-components.min.css`, `preview.css`, and Legacy `formsmain.css` were treated only as risk signals. The strengthened browser profile renders real Gravity Forms routes and fixtures and classifies the actual nodes rather than manufacturing matching markup.
+
+The evidence-only run reproduced these runtime failures:
+
+- Legacy multipage step number resolved to `arial, sans-serif` instead of Vazirmatn;
+- Legacy percentage progress text resolved to `helvetica, arial, sans-serif`;
+- real entries-list/form-editor `gform-dropdown` and `gform-dropdown__control-text` nodes resolved to Gravity Forms' Inter/system stack;
+- real admin Preview-link `gform-button` nodes in the component inventory also resolved to the Inter/system stack;
+- real Preview `#preview_hdr` resolved to `Open Sans` and `#preview_note` to the Lucida stack.
+
+The same baseline already passed Orbital/Theme Framework including `--gf-font-family-base`, normal labels/descriptions/inputs/selects/buttons, conditional logic, iframe AJAX validation/rerender, forward/back multipage behavior, the existing basic Legacy fixture, the excluded monospace subtree, Preview form content, Form Editor, No Conflict handles, duplicate-free font requests, and representative `gform-icons-orbital`, `gform-icons-admin`, and Dashicons families. A real admin table/status-family component backed by `admin-components.min.css` also already computed to Vazirmatn and therefore receives no speculative repair.
+
+Some source-risk families were still not deterministically rendered by the strengthened baseline: an `admin-components.min.css` heading rule, an overlay/dialog/tooltip family, and visible Preview helper/toggle chrome. They remain `NOT_PROVEN`; absence of a rendered node is not converted into either PASS or a production selector.
+
+The bounded production correction remains inside `VazirFont_GravityForms_Integration` and uses the existing registered style handle and existing exclusion-boundary machinery. It is limited to the actual failed mechanisms: Legacy step/progress text, the proven admin dropdown/control/group/button component families, and `#preview_hdr` / `#preview_note`. It must not become `.gform-admin *`, a Preview-body override, a blanket Legacy descendant rule, JavaScript DOM mutation, vendor-asset editing, a new option, or a second selector/exclusion language.
+
+Any final compatibility claim for this repair requires a later exact-Head licensed browser run proving those repaired nodes while keeping the existing dynamic/frontend/exclusion/icon/No Conflict behaviors green. The evidence-only baseline failure itself proves the defect, not the repair.
 
 ## Gravity Flow capability admission and 3.1.0 qualification baseline
 
@@ -108,7 +132,7 @@ A future compatibility claim still requires an exact-Head licensed `gravityflow`
 
 Pseudo-element exclusions are not forced into relational `:where()`/`:not()` guards. Generic Vazir enforcement does not directly target pseudo-elements, and existing dedicated icon-family protections remain responsible for Dashicons and equivalent icon contexts.
 
-The Gravity Forms adapter consumes the same `vazir_font_options['exclude_selectors']` authority. Its Theme Framework custom-property rule and legacy/current `font-family` compatibility rules use the same root/descendant negative applicability semantics, with an additional `:has(:where(...))` guard on inheritable rules so a rule on an ancestor cannot leak Vazir into an excluded descendant subtree.
+The Gravity Forms adapter consumes the same `vazir_font_options['exclude_selectors']` authority. Its Theme Framework custom-property rule and legacy/current `font-family` compatibility rules use the same root/descendant negative applicability semantics, with an additional `:has(:where(...))` guard on inheritable rules so a rule on an ancestor cannot leak Vazir into an excluded descendant subtree. The bounded Legacy multipage, admin component, and Preview chrome corrections use this same selector-building path rather than bypassing it.
 
 If an accepted exclusion itself contains `:has()`, the adapter omits the affected inheritable Gravity Forms rule rather than nesting `:has()` into invalid CSS or approximating selector matching in PHP.
 
@@ -127,7 +151,6 @@ If an accepted exclusion itself contains `:has()`, the adapter omits the affecte
 ## Evidence discipline for future changes
 
 Distinguish source/repository contracts, real WordPress smoke, computed-style browser evidence, package identity, and each licensed product profile. Package identity PASS proves only exact package identity/archive safety. `ENVIRONMENT_UNAVAILABLE`, `NOT_EXECUTED`, and `NOT_PROVEN` remain evidence gaps, not PASS and not reproduced product defects.
-
 
 ## Vazirmatn migration contract
 
