@@ -240,6 +240,53 @@ final class VazirFont_GravityForms_Integration {
 			$css .= $selectors . " {\n\tfont-family: {$family} !important;\n}\n";
 		}
 
+		// Exact selector-level Gravity Forms 3.1.1.1 browser evidence reproduced
+		// non-Vazirmatn computed style only on these Legacy multipage nodes.
+		// The sibling step label and progress title already resolved to Vazirmatn
+		// pre-repair and therefore are deliberately not production selectors.
+		$legacy_pagination_selectors = $this->build_enforcement_selector_list(
+			[
+				'.gform_legacy_markup_wrapper .gf_step_number',
+				'.gform_legacy_markup_wrapper .gf_progressbar_percentage',
+			],
+			$negative_exclusions,
+			true
+		);
+		if ( '' !== $legacy_pagination_selectors ) {
+			$css .= $legacy_pagination_selectors . " {\n\tfont-family: {$family} !important;\n}\n";
+		}
+
+		// Exact selector-level evidence on real Gravity Forms admin routes
+		// reproduced the Inter/system stack only for these rendered targets.
+		// gform-dropdown__group-text was not deterministically rendered and remains
+		// NOT_PROVEN rather than inheriting authority from its component family.
+		$admin_component_selectors = $this->build_enforcement_selector_list(
+			[
+				'.gform-admin .gform-dropdown',
+				'.gform-admin .gform-dropdown__control-text',
+				'.gform-admin .gform-button',
+			],
+			$negative_exclusions,
+			true
+		);
+		if ( '' !== $admin_component_selectors ) {
+			$css .= $admin_component_selectors . " {\n\tfont-family: {$family} !important;\n}\n";
+		}
+
+		// The authenticated Preview route independently reproduced direct host
+		// font declarations on these two exact text-bearing chrome nodes.
+		$preview_chrome_selectors = $this->build_enforcement_selector_list(
+			[
+				'#preview_hdr',
+				'#preview_note',
+			],
+			$negative_exclusions,
+			true
+		);
+		if ( '' !== $preview_chrome_selectors ) {
+			$css .= $preview_chrome_selectors . " {\n\tfont-family: {$family} !important;\n}\n";
+		}
+
 		$this->cached_css = $css;
 		return $css;
 	}
