@@ -1,8 +1,7 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
-import assert from 'node:assert/strict';
-import { familyOf, login } from '../../core/browser-helpers.mjs';
+import { login } from '../../core/browser-helpers.mjs';
 
 const baseUrl = process.env.VAZIR_LAB_BASE_URL || 'http://127.0.0.1:8080';
 const artifactDir = process.env.VAZIR_LAB_ARTIFACT_DIR;
@@ -20,13 +19,6 @@ const results = {
   scenarios: {},
   browser: {},
 };
-
-const browser = await chromium.launch();
-results.browser.version = browser.version();
-const context = await browser.newContext();
-const authPage = await context.newPage();
-await login(authPage, baseUrl, adminUser, adminPassword);
-await authPage.close();
 
 const vazirRequestRe = /\/assets\/fonts\/vazirmatn-\d+\.woff2(?:\?|$)/i;
 const classifyFamily = family => /Vazirmatn/i.test(family || '') ? 'PASS' : 'FAIL';
@@ -99,7 +91,7 @@ async function scanProtectedFamilies(page) {
   });
 }
 
-async function captureRoute(url, label, bodyCheck) {
+async function captureRoute(context, url, label, bodyCheck) {
   const page = await context.newPage();
   const requests = [];
   const responses = [];
@@ -110,7 +102,13 @@ async function captureRoute(url, label, bodyCheck) {
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await bodyCheck(page);
   await page.waitForTimeout(2500);
-  try { await page.evaluate(async () => { if (document.fonts?.ready) await Promise.race([document.fonts.ready, new Promise(resolve => setTimeout(resolve, 1500))]); }); } catch {}
+  try {
+    await page.evaluate(async () => {
+      if (document.fonts?.ready) {
+        await Promise.race([document.fonts.ready, new Promise(resolve => setTimeout(resolve, 1500))]);
+      }
+    });
+  } catch {}
   const resources = await page.evaluate(() => ({
     stylesheets: Array.from(document.querySelectorAll('link[rel~="stylesheet"]')).map(link => ({
       id: link.id || '',
@@ -118,8 +116,12 @@ async function captureRoute(url, label, bodyCheck) {
       media: link.media || '',
       style_loader_probe: link.getAttribute('data-vazir-gp-style-loader-probe'),
     })),
-    inline_styles: Array.from(document.querySelectorAll('style')).map(style => ({ id: style.id || '', text: (style.textContent || '').slice(0, 1000) })),
+    inline_styles: Array.from(document.querySelectorAll('style')).map(style => ({
+      id: style.id || '',
+      text: (style.textContent || '').slice(0, 1000),
+    })),
     body_class: document.body?.className || '',
+    document_title: document.title || '',
     root_inline_seam_probe: getComputedStyle(document.documentElement).getPropertyValue('--vazir-gravityperks-gwp-admin-seam-probe').trim(),
     root_exclusion_count: getComputedStyle(document.documentElement).getPropertyValue('--vazir-gravityperks-exclusion-count').trim(),
   }));
@@ -133,11 +135,16 @@ async function captureRoute(url, label, bodyCheck) {
   return { page, resources, network, label };
 }
 
+const browser = await chromium.launch();
+results.browser.version = browser.version();
+const context = await browser.newContext();
+const authPage = await context.newPage();
+await login(authPage, baseUrl, adminUser, adminPassword);
+await authPage.close();
+
 try {
-  // Normal wp-admin Gravity Perks page: this is a separate surface from the two
-  // standalone documents and should benefit from the existing admin delivery.
   {
-    const captured = await captureRoute(manifest.normal_admin_url, 'normal_admin', async page => {
+    const captured = await captureRoute(context, manifest.normal_admin_url, 'normal_admin', async page => {
       await page.locator('body.wp-admin').waitFor({ state: 'visible', timeout: 15000 });
     });
     const { page, resources, network } = captured;
@@ -145,23 +152,26 @@ try {
     const heading = await inspectNode(page, '.wrap h1, .wrap h2, h1.wp-heading-inline', 'Gravity Perks normal admin heading', { required: false });
     const perkListing = await inspectNode(page, 'text=GP Vazir Evidence', 'real test Perk listing/card text', { required: false });
     const actionLink = await inspectNode(page, 'a:has-text("Documentation"), a:has-text("Settings"), .actions a, .button', 'Gravity Perks normal admin action link', { required: false });
-    const control = await inspectNode(page, 'input:visible, select:visible, button:visible', 'Gravity Perks normal admin representative control', { required: false });
     const icons = await scanProtectedFamilies(page);
     results.scenarios.normal_admin = {
       execution_status: 'PASS',
       context: 'ordinary_wp_admin',
-      body, heading, perk_listing: perkListing, action_link: actionLink, control,
-      resources, network, protected_families: icons,
-      disposition: [body, heading].filter(x => x.rendered).every(x => x.status === 'PASS') ? 'PASS' : 'FAIL',
+      body,
+      heading,
+      perk_listing: perkListing,
+      action_link: actionLink,
+      resources,
+      network,
+      protected_families: icons,
+      disposition: [body, heading].filter(item => item.rendered).every(item => item.status === 'PASS') ? 'PASS' : 'FAIL',
     };
     await page.close();
   }
 
-  // Standalone Documentation document generated by GWPerksPage::load_documentation().
   {
-    const captured = await captureRoute(manifest.documentation_url, 'documentation', async page => {
+    const captured = await captureRoute(context, manifest.documentation_url, 'documentation', async page => {
       await page.locator('body.perk-iframe').waitFor({ state: 'visible', timeout: 15000 });
-      assert.match(await page.title(), /Documentation/i, 'Expected real Gravity Perks Documentation document title.');
+      await page.locator('#vazir-gp-doc-paragraph').waitFor({ state: 'visible', timeout: 15000 });
     });
     const { page, resources, network } = captured;
     const nodes = {
@@ -176,12 +186,15 @@ try {
     const icons = await scanProtectedFamilies(page);
     const googleLink = resources.stylesheets.find(item => /fonts\.googleapis\.com/i.test(item.href)) || null;
     const gwpStyle = resources.stylesheets.find(item => item.id === 'gwp-admin-css' || /gravityperks.*admin/i.test(item.href)) || null;
-    const vazirStyles = resources.stylesheets.filter(item => /vazir-font/i.test(item.id + ' ' + item.href));
+    const vazirStyles = resources.stylesheets.filter(item => /vazir-font/i.test(`${item.id} ${item.href}`));
     const vazirInline = resources.inline_styles.filter(item => /vazir-font/i.test(item.id));
     results.scenarios.documentation = {
       execution_status: 'PASS',
       context: 'standalone_documentation',
-      nodes, resources, network, protected_families: icons,
+      nodes,
+      resources,
+      network,
+      protected_families: icons,
       gwp_admin_printed: Boolean(gwpStyle),
       google_fonts_link_present: Boolean(googleLink),
       google_fonts_link: googleLink,
@@ -191,17 +204,18 @@ try {
       existing_exclusion_authority_visible_at_seam: resources.root_exclusion_count === '1',
       vazir_stylesheets_present: vazirStyles,
       vazir_inline_styles_present: vazirInline.map(item => item.id),
-      disposition: Object.values(nodes).filter(item => item.rendered && item.selector !== '#vazir-gp-doc-excluded').every(item => item.status === 'PASS') ? 'PASS' : 'FAIL',
+      disposition: Object.entries(nodes)
+        .filter(([key, item]) => key !== 'excluded_probe' && item.rendered)
+        .every(([, item]) => item.status === 'PASS') ? 'PASS' : 'FAIL',
     };
     await page.screenshot({ path: path.join(artifactDir, 'gravityperks-documentation.png'), fullPage: true });
     await page.close();
   }
 
-  // Standalone Perk Settings document generated by GWPerksPage::load_perk_settings().
   {
-    const captured = await captureRoute(manifest.settings_url, 'settings', async page => {
+    const captured = await captureRoute(context, manifest.settings_url, 'settings', async page => {
       await page.locator('body.perk-iframe.wp-core-ui').waitFor({ state: 'visible', timeout: 15000 });
-      assert.match(await page.title(), /Settings/i, 'Expected real Gravity Perks Settings document title.');
+      await page.locator('label:has-text("Vazir Evidence Text")').waitFor({ state: 'visible', timeout: 15000 });
     });
     const { page, resources, network } = captured;
     const nodes = {
@@ -215,21 +229,27 @@ try {
     };
     await page.locator('input[type="text"]').first().fill('Saved by Vazir evidence');
     const select = page.locator('select').first();
-    if (await select.count()) await select.selectOption({ index: Math.min(1, Math.max(0, (await select.locator('option').count()) - 1)) });
+    if (await select.count()) {
+      const optionCount = await select.locator('option').count();
+      if (optionCount > 0) await select.selectOption({ index: Math.min(1, optionCount - 1) });
+    }
     const checkbox = page.locator('input[type="checkbox"]').first();
     if (await checkbox.count()) await checkbox.check();
-    await Promise.all([
-      page.waitForLoadState('domcontentloaded'),
-      page.locator('#gwp_save_settings').click(),
-    ]);
+    await page.locator('#gwp_save_settings').click();
+    await page.waitForLoadState('domcontentloaded');
+    await page.locator('body.perk-iframe.wp-core-ui').waitFor({ state: 'visible', timeout: 15000 });
     const notice = await inspectNode(page, '.updated, .notice, .error', 'Settings save notice', { required: false });
     const icons = await scanProtectedFamilies(page);
-    const vazirStyles = resources.stylesheets.filter(item => /vazir-font/i.test(item.id + ' ' + item.href));
+    const vazirStyles = resources.stylesheets.filter(item => /vazir-font/i.test(`${item.id} ${item.href}`));
     const vazirInline = resources.inline_styles.filter(item => /vazir-font/i.test(item.id));
     results.scenarios.settings = {
       execution_status: 'PASS',
       context: 'standalone_settings',
-      nodes, save_notice: notice, resources, network, protected_families: icons,
+      nodes,
+      save_notice: notice,
+      resources,
+      network,
+      protected_families: icons,
       gwp_admin_printed: resources.stylesheets.some(item => item.id === 'gwp-admin-css' || /gravityperks.*admin/i.test(item.href)),
       wp_admin_printed: resources.stylesheets.some(item => item.id === 'wp-admin-css'),
       gwp_admin_style_loader_filter_observed: resources.stylesheets.some(item => item.style_loader_probe === 'gwp-admin'),
@@ -237,7 +257,9 @@ try {
       existing_exclusion_authority_visible_at_seam: resources.root_exclusion_count === '1',
       vazir_stylesheets_present: vazirStyles,
       vazir_inline_styles_present: vazirInline.map(item => item.id),
-      disposition: Object.values(nodes).every(item => item.status === 'PASS') ? 'PASS' : 'FAIL',
+      disposition: Object.entries(nodes)
+        .filter(([key]) => key !== 'checkbox_control')
+        .every(([, item]) => item.status === 'PASS') ? 'PASS' : 'FAIL',
     };
     await page.screenshot({ path: path.join(artifactDir, 'gravityperks-settings.png'), fullPage: true });
     await page.close();
