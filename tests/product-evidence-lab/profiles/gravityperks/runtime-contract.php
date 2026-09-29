@@ -2,6 +2,7 @@
 /** Native exact-runtime assertions for Gravity Perks qualification. */
 declare(strict_types=1);
 if ( ! defined( 'ABSPATH' ) ) { exit( 1 ); }
+
 $artifact_dir = getenv( 'VAZIR_LAB_ARTIFACT_DIR' );
 if ( ! is_string( $artifact_dir ) || '' === $artifact_dir ) { throw new RuntimeException( 'VAZIR_LAB_ARTIFACT_DIR is required.' ); }
 $manifest_path = $artifact_dir . '/fixture-manifest.json';
@@ -15,12 +16,13 @@ $assert( is_plugin_active( 'gravityforms/gravityforms.php' ), 'Gravity Forms pre
 $assert( is_plugin_active( 'gravityperks/gravityperks.php' ), 'Gravity Perks is not active.' );
 $assert( is_plugin_active( 'vazir-font-wp/vazir-font-wp.php' ), 'Vazir under test is not active.' );
 $assert( is_plugin_active( (string) $manifest['fixture_plugin'] ), 'Real test-only Perk fixture is not active.' );
-$assert( class_exists( 'GP_Perk' ) && class_exists( 'GWPerk' ), 'Gravity Perks Perk API is unavailable.' );
+$assert( class_exists( 'GP_Perk' ) && class_exists( 'GWPerk' ) && class_exists( 'GravityPerks' ), 'Gravity Perks runtime API is unavailable.' );
 $assert( '3.1.1.1' === (string) GFForms::$version, 'Unexpected Gravity Forms runtime version.' );
 $gp_data = get_plugin_data( WP_PLUGIN_DIR . '/gravityperks/gravityperks.php', false, false );
 $assert( '2.3.16' === (string) ( $gp_data['Version'] ?? '' ), 'Unexpected Gravity Perks runtime version.' );
 $assert( true === (bool) $manifest['fixture_is_perk'], 'Fixture is not recognized by Gravity Perks as a Perk.' );
 $assert( 'True' === (string) $manifest['fixture_perk_header'], 'Fixture Perk header is not exact.' );
+
 $perk = GP_Perk::get_perk( (string) $manifest['fixture_plugin'] );
 $assert( $perk instanceof GP_Perk, 'Fixture did not instantiate through the real GP_Perk API.' );
 $assert( 'GP_Vazir_Evidence' === get_class( $perk ), 'Unexpected fixture Perk class.' );
@@ -56,16 +58,16 @@ foreach ( $route_expectations as $manifest_key => $expected_view ) {
 $assert( array( '.vazir-gp-evidence-excluded' ) === $manifest['exclude_selectors'], 'Existing exclusion authority was not preserved in the fixture.' );
 
 $manage_file = WP_PLUGIN_DIR . '/gravityperks/admin/manage_perks.php';
-$source = file_get_contents( $manage_file );
-$assert( is_string( $source ), 'Exact Gravity Perks manage_perks.php is unreadable.' );
+$manage_source = file_get_contents( $manage_file );
+$assert( is_string( $manage_source ), 'Exact Gravity Perks manage_perks.php is unreadable.' );
 $source_checks = array(
-	'load_documentation' => false !== strpos( $source, 'function load_documentation' ),
-	'load_perk_settings' => false !== strpos( $source, 'function load_perk_settings' ),
-	'literal_google_fonts' => false !== strpos( $source, 'fonts.googleapis.com' ),
-	'remove_wp_print_styles' => false !== strpos( $source, "remove_all_actions( 'wp_print_styles' )" ),
-	'remove_wp_print_scripts' => false !== strpos( $source, "remove_all_actions( 'wp_print_scripts' )" ),
-	'prints_gwp_admin' => false !== strpos( $source, 'gwp-admin' ),
-	'perk_iframe' => false !== strpos( $source, 'perk-iframe' ),
+	'load_documentation' => false !== strpos( $manage_source, 'function load_documentation' ),
+	'load_perk_settings' => false !== strpos( $manage_source, 'function load_perk_settings' ),
+	'literal_google_fonts' => false !== strpos( $manage_source, 'fonts.googleapis.com' ),
+	'remove_wp_print_styles' => false !== strpos( $manage_source, "remove_all_actions( 'wp_print_styles' )" ),
+	'remove_wp_print_scripts' => false !== strpos( $manage_source, "remove_all_actions( 'wp_print_scripts' )" ),
+	'prints_gwp_admin' => false !== strpos( $manage_source, 'gwp-admin' ),
+	'perk_iframe' => false !== strpos( $manage_source, 'perk-iframe' ),
 );
 foreach ( $source_checks as $name => $value ) { $assert( $value, 'Expected exact-source capability missing: ' . $name ); }
 
@@ -87,6 +89,28 @@ foreach ( array( 'load_documentation', 'load_perk_settings' ) as $method_name ) 
 		'remove_wp_print_styles' => false !== strpos( $body, "remove_all_actions( 'wp_print_styles' )" ),
 	);
 }
+
+$init_method = new ReflectionMethod( 'GravityPerks', 'init' );
+$init_lines = file( $init_method->getFileName() );
+$init_body = is_array( $init_lines ) ? implode( '', array_slice( $init_lines, $init_method->getStartLine() - 1, $init_method->getEndLine() - $init_method->getStartLine() + 1 ) ) : '';
+$dispatch_contract = array(
+	'file' => 'gravityperks.php',
+	'start_line' => $init_method->getStartLine(),
+	'end_line' => $init_method->getEndLine(),
+	'reads_view_guard' => 1 === preg_match( '/r(?:g|gw)get\(\s*[\'\"]view[\'\"]\s*\)/', $init_body ),
+	'calls_load_perk_settings' => false !== strpos( $init_body, 'GWPerksPage::load_perk_settings' ),
+	'calls_load_documentation' => false !== strpos( $init_body, 'GWPerksPage::load_documentation' ),
+	'documentation_url_view' => 'documentation',
+	'settings_url_view' => 'perk_settings',
+);
+$assert( true === $dispatch_contract['reads_view_guard'], 'Exact Gravity Perks init() no longer exposes the expected view guard.' );
+$assert( true === $dispatch_contract['calls_load_perk_settings'], 'Exact Gravity Perks init() no longer dispatches view requests to load_perk_settings().' );
+$assert( false === $dispatch_contract['calls_load_documentation'], 'Exact Gravity Perks init() unexpectedly dispatches to load_documentation(); qualification model must be revisited.' );
+$dispatch_contract['documentation_route_reachable'] = false;
+$dispatch_contract['documentation_route_disposition'] = 'NOT_REACHABLE_AS_DOCUMENTATION';
+$dispatch_contract['view_requests_dispatch_to'] = 'GWPerksPage::load_perk_settings';
+file_put_contents( $artifact_dir . '/dispatch-contract.json', wp_json_encode( $dispatch_contract, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n" );
+
 $evidence = array(
 	'status' => 'PASS',
 	'profile' => 'gravityperks',
@@ -107,6 +131,7 @@ $evidence = array(
 	),
 	'exact_source_checks' => $source_checks,
 	'method_evidence' => $method_evidence,
+	'dispatch_contract' => $dispatch_contract,
 );
 file_put_contents( $artifact_dir . '/runtime-contract.json', wp_json_encode( $evidence, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n" );
 echo wp_json_encode( $evidence, JSON_UNESCAPED_SLASHES ) . "\n";
