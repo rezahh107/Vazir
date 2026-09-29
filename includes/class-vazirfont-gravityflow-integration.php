@@ -14,10 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  * enqueue hooks after its own styles have been registered/enqueued.
  */
 final class VazirFont_GravityFlow_Integration {
-	private const SUPPORTED_VERSION    = '3.1.0';
-	private const STYLE_HANDLE         = 'vazir-font-gravity-flow';
-	private const ADMIN_DEPENDENCY     = 'gravityflow_admin_css';
-	private const FRONTEND_DEPENDENCY  = 'gravityflow_theme_css';
+	private const SUPPORTED_VERSION   = '3.1.0';
+	private const STYLE_HANDLE        = 'vazir-font-gravity-flow';
+	private const ADMIN_DEPENDENCY    = 'gravityflow_admin_css';
+	private const FRONTEND_DEPENDENCY = 'gravityflow_theme_css';
 
 	private static ?self $instance = null;
 	private bool $flow_available = false;
@@ -139,13 +139,14 @@ final class VazirFont_GravityFlow_Integration {
 			$css .= "\n{$control_selectors} {\n\tfont-family: {$family} !important;\n}\n";
 		}
 
-		// The custom AG date component tags its Flatpickr popup with
-		// ag-custom-component-popup. This keeps the correction Flow-specific even
-		// when Flatpickr appends the calendar outside the AG theme element.
-		$date_picker = $this->apply_exclusion_boundary(
+		// Gravity Flow's custom date component appends the Flatpickr popup under
+		// body. The portal therefore needs both its own exclusion boundary and a
+		// source-input guard; otherwise an Inbox excluded by an ancestor could
+		// still leak Vazirmatn into the detached calendar.
+		$date_picker = $this->apply_portal_exclusion_boundary(
 			'.flatpickr-calendar.ag-custom-component-popup',
-			$negative_exclusions,
-			true
+			'.gflow-grid .ag-theme-alpine .ag-input-wrapper.custom-date-filter input',
+			$negative_exclusions
 		);
 		if ( '' !== $date_picker ) {
 			$css .= "\n{$date_picker} {\n\tfont-family: {$family};\n}\n";
@@ -203,24 +204,68 @@ final class VazirFont_GravityFlow_Integration {
 			return $selector;
 		}
 
+		$blocked_selectors = $this->build_blocked_selector_list( $exclude_selectors );
+		$guarded           = $selector . ':not(:where(' . implode( ', ', $blocked_selectors ) . '))';
+		if ( ! $protect_descendants ) {
+			return $guarded;
+		}
+
+		if ( $this->contains_relational_exclusion( $exclude_selectors ) ) {
+			return '';
+		}
+
+		return $guarded . ':not(:has(:where(' . implode( ', ', $exclude_selectors ) . ')))';
+	}
+
+	/**
+	 * Apply exclusion semantics to a host-owned portal that is detached from
+	 * the Flow subtree. If its source input is inside an excluded root, suppress
+	 * the calendar correction for the whole document rather than leak typography
+	 * across the configured boundary. Multiple grids are intentionally handled
+	 * conservatively: one excluded date-filter source makes the portal rule fail
+	 * closed for that document.
+	 *
+	 * @param string[] $exclude_selectors Valid element-level exclusions.
+	 */
+	private function apply_portal_exclusion_boundary( string $selector, string $source_selector, array $exclude_selectors ): string {
+		$guarded = $this->apply_exclusion_boundary( $selector, $exclude_selectors, true );
+		if ( '' === $guarded || array() === $exclude_selectors ) {
+			return $guarded;
+		}
+
+		if ( $this->contains_relational_exclusion( $exclude_selectors ) ) {
+			return '';
+		}
+
+		$blocked_selectors = $this->build_blocked_selector_list( $exclude_selectors );
+		$source_guard      = 'body:not(:has(' . $source_selector . ':where(' . implode( ', ', $blocked_selectors ) . ')))';
+
+		return $source_guard . ' ' . $guarded;
+	}
+
+	/**
+	 * @param string[] $exclude_selectors Valid element-level exclusions.
+	 * @return string[]
+	 */
+	private function build_blocked_selector_list( array $exclude_selectors ): array {
 		$blocked_selectors = array();
 		foreach ( $exclude_selectors as $exclude_selector ) {
 			$blocked_selectors[] = $exclude_selector;
 			$blocked_selectors[] = $exclude_selector . ' *';
 		}
+		return $blocked_selectors;
+	}
 
-		$guarded = $selector . ':not(:where(' . implode( ', ', $blocked_selectors ) . '))';
-		if ( ! $protect_descendants ) {
-			return $guarded;
-		}
-
+	/**
+	 * @param string[] $exclude_selectors Valid element-level exclusions.
+	 */
+	private function contains_relational_exclusion( array $exclude_selectors ): bool {
 		foreach ( $exclude_selectors as $exclude_selector ) {
 			if ( false !== stripos( $exclude_selector, ':has(' ) ) {
-				return '';
+				return true;
 			}
 		}
-
-		return $guarded . ':not(:has(:where(' . implode( ', ', $exclude_selectors ) . ')))';
+		return false;
 	}
 
 	/**
