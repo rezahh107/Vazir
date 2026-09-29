@@ -8,6 +8,7 @@ on:
       - 'tests/product-evidence-lab/**'
       - 'tests/gravityforms-evidence-lab/**'
       - 'includes/class-vazirfont-gravityforms-integration.php'
+      - 'includes/class-vazirfont-gravityflow-integration.php'
       - 'includes/class-vazirfont-loader.php'
       - 'vazir-font-wp.php'
       - 'assets/fonts/**'
