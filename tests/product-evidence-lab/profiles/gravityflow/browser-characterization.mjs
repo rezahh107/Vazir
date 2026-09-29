@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  analyzeVazirmatnFontRequests,
   expectVazirmatn,
   expectNotVazirmatn,
   familyOf,
@@ -29,19 +30,19 @@ function notProven(name, reason) {
   results.claim_ceiling[name] = `NOT_PROVEN: ${reason}`;
 }
 
-async function waitForInbox(url) {
-  await page.goto(url, { waitUntil: 'domcontentloaded' });
-  const inbox = page.locator('.gflow-inbox').first();
+async function waitForInbox(url, targetPage = page) {
+  await targetPage.goto(url, { waitUntil: 'domcontentloaded' });
+  const inbox = targetPage.locator('.gflow-inbox').first();
   await inbox.waitFor({ state: 'visible', timeout: 30000 });
-  const theme = page.locator('.gflow-grid .ag-theme-alpine').first();
+  const theme = targetPage.locator('.gflow-grid .ag-theme-alpine').first();
   await theme.waitFor({ state: 'visible', timeout: 30000 });
-  await page.locator('.ag-root-wrapper').first().waitFor({ state: 'visible', timeout: 30000 });
-  await page.locator('.ag-center-cols-container .ag-row').first().waitFor({ state: 'visible', timeout: 30000 });
+  await targetPage.locator('.ag-root-wrapper').first().waitFor({ state: 'visible', timeout: 30000 });
+  await targetPage.locator('.ag-center-cols-container .ag-row').first().waitFor({ state: 'visible', timeout: 30000 });
   return { inbox, theme };
 }
 
-async function firstTextCell() {
-  const cell = page.locator('.ag-center-cols-container .ag-row .ag-cell').filter({ hasText: /\S/ }).first();
+async function firstTextCell(targetPage = page) {
+  const cell = targetPage.locator('.ag-center-cols-container .ag-row .ag-cell').filter({ hasText: /\S/ }).first();
   await cell.waitFor({ state: 'visible', timeout: 30000 });
   return cell;
 }
@@ -87,20 +88,32 @@ await recorder.record('admin_search_control', async () => {
 await recorder.record('admin_pagination_text_and_dynamic_rerender', async () => {
   const panel = page.locator('.ag-paging-panel').first();
   await panel.waitFor({ state: 'visible', timeout: 30000 });
-  const summary = panel.locator('.ag-paging-row-summary-panel, .ag-paging-page-summary-panel').filter({ hasText: /\S/ }).first();
-  const family = await expectVazirmatn(summary, 'AG Grid pagination text');
-  const before = (await (await firstTextCell()).innerText()).trim();
+  const pageSummary = panel.locator('.ag-paging-page-summary-panel').first();
+  const family = await expectVazirmatn(pageSummary, 'AG Grid pagination text');
+  const before = (await pageSummary.innerText()).trim();
   const next = panel.locator('.ag-paging-button[ref="btNext"]').first();
   await next.waitFor({ state: 'visible', timeout: 30000 });
   assert.equal(await next.isDisabled(), false, 'Fixture must make the next pagination control available.');
   await next.click();
-  await page.waitForTimeout(150);
+  await page.waitForFunction(
+    beforeText => {
+      const summary = document.querySelector('.ag-paging-page-summary-panel');
+      return summary && summary.textContent?.trim() !== beforeText;
+    },
+    before,
+    { timeout: 5000 },
+  );
+  const after = (await pageSummary.innerText()).trim();
+  assert.notEqual(after, before, 'Native AG Grid pagination state should advance to another page.');
   const afterCell = await firstTextCell();
-  const after = (await afterCell.innerText()).trim();
-  assert.notEqual(after, before, 'Pagination should rerender a different representative row.');
   const rerenderFamily = await expectVazirmatn(afterCell, 'AG Grid rerendered row/cell text after pagination');
   const previous = panel.locator('.ag-paging-button[ref="btPrevious"]').first();
   await previous.click();
+  await page.waitForFunction(
+    beforeText => document.querySelector('.ag-paging-page-summary-panel')?.textContent?.trim() === beforeText,
+    before,
+    { timeout: 5000 },
+  );
   return { computed_font_family: family, rerendered_font_family: rerenderFamily, before, after };
 });
 
@@ -191,6 +204,32 @@ await recorder.record('frontend_inbox_reachable_and_exclusion', async () => {
   return { wrapper_font_family: family, excluded_font_family: excluded };
 });
 await characterizeRequiredGrid('frontend');
+
+await recorder.record('frontend_excluded_inbox_boundary', async () => {
+  const { theme } = await waitForInbox(manifest.excluded_frontend_inbox_url);
+  const rootFamily = await expectNotVazirmatn(theme, 'excluded Gravity Flow AG Grid root');
+  const cell = await firstTextCell();
+  const cellFamily = await expectNotVazirmatn(cell, 'excluded Gravity Flow AG Grid row/cell');
+  return { root_font_family: rootFamily, cell_font_family: cellFamily };
+});
+
+await recorder.record('frontend_font_delivery_is_not_duplicated', async () => {
+  const measurementContext = await browser.newContext();
+  const measurementPage = await measurementContext.newPage();
+  try {
+    await login(measurementPage, baseUrl, user, password);
+    const requests = [];
+    measurementPage.on('request', request => requests.push(request.url()));
+    await waitForInbox(manifest.frontend_inbox_url, measurementPage);
+    await measurementPage.evaluate(async () => {
+      if (document.fonts?.ready) await document.fonts.ready;
+    });
+    await measurementPage.waitForLoadState('networkidle');
+    return analyzeVazirmatnFontRequests(requests, 'Gravity Flow frontend font delivery');
+  } finally {
+    await measurementContext.close();
+  }
+});
 
 await recorder.record('gravity_forms_prerequisite_still_operational', async () => {
   await page.goto(manifest.gravity_forms_url, { waitUntil: 'networkidle' });
