@@ -1,6 +1,6 @@
 {
   "name": "rezahh107/vazir-font-wp",
-  "description": "Self-hosted Persian typography for WordPress and Gravity Forms",
+  "description": "Self-hosted Persian typography for WordPress and Gravity integrations",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
   "require": {
@@ -20,6 +20,7 @@
       "@php tests/runtime-contract.php",
       "@php tests/gravityflow-runtime-contract.php 3.1.0 qualified-identity",
       "@php tests/gravityflow-runtime-contract.php 9.9.9-synthetic synthetic-alternate-identity",
+      "@php tests/gravityperks-runtime-contract.php",
       "phpunit"
     ]
   },
