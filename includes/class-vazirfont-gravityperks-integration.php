@@ -331,10 +331,10 @@ final class VazirFont_GravityPerks_Integration {
 	 * blocked, and a target containing an excluded subtree is also blocked so the
 	 * descendant cannot inherit Vazirmatn from that ancestor.
 	 *
-	 * A configured element selector containing :has() cannot safely be nested in
-	 * the required descendant-protection :has(). Fail closed instead of emitting
-	 * invalid/approximate CSS. Pseudo-element exclusions have already been removed
-	 * from this element-level guard set.
+	 * Descendant containment only embeds selector components whose document
+	 * context can be represented safely relative to the current Settings target.
+	 * Pseudo-element exclusions have already been removed from this element-level
+	 * guard set; unrepresentable complex selectors fail the bounded repair closed.
 	 *
 	 * @param string[] $exclude_selectors Valid element-level exclusions.
 	 */
@@ -350,12 +350,16 @@ final class VazirFont_GravityPerks_Integration {
 		}
 		$guarded = $selector . ':not(:where(' . implode( ', ', $blocked ) . '))';
 
-		foreach ( $exclude_selectors as $exclude_selector ) {
-			if ( false !== stripos( $exclude_selector, ':has(' ) ) {
-				return '';
-			}
+		$descendant_exclusions = VazirFont_Selector_Boundary::for_descendant_containment(
+			$selector,
+			$exclude_selectors,
+			'.perk-settings',
+			'body.perk-iframe .perk-settings'
+		);
+		if ( null === $descendant_exclusions ) {
+			return '';
 		}
 
-		return $guarded . ':not(:has(:where(' . implode( ', ', $exclude_selectors ) . ')))';
+		return $guarded . ':not(:has(:where(' . implode( ', ', $descendant_exclusions ) . ')))';
 	}
 }
