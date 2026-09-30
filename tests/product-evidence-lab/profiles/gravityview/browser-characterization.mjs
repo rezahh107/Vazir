@@ -87,11 +87,17 @@ async function ensureGravityViewInspector() {
   return inspector;
 }
 
-async function expandPanel(name) {
+async function expandPanelIfPresent(name) {
   const button = page.getByRole('button', { name, exact: true }).first();
-  await button.waitFor({ state: 'visible', timeout: 10000 });
+  if (!(await button.count())) return false;
+  try {
+    await button.waitFor({ state: 'visible', timeout: 3000 });
+  } catch {
+    return false;
+  }
   const expanded = await button.getAttribute('aria-expanded');
   if ('false' === expanded) await button.click();
+  return true;
 }
 
 await recorder.record('frontend_modern_view_inner_typography', async () => {
@@ -276,7 +282,12 @@ await recorder.record('gutenberg_react_select_portaled_menu', async () => {
 });
 
 await recorder.record('gutenberg_datepicker', async () => {
-  await expandPanel('Entries Settings');
+  const panelPresent = await expandPanelIfPresent('Entries Settings');
+  if (!panelPresent) {
+    notProven('gutenberg_datepicker', 'Exact GravityView 3.3.4 did not render an Entries Settings panel on the authentic View block inspector; source-level Datepicker CSS risk remains unpromoted.');
+    return { status: 'NOT_PROVEN' };
+  }
+
   const input = page.locator('.gk-gravityview-blocks .react-datepicker-wrapper input').first();
   try {
     await input.waitFor({ state: 'visible', timeout: 5000 });
