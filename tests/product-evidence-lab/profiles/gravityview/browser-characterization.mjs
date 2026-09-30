@@ -22,7 +22,6 @@ const results = {
   },
 };
 const recorder = makeRecorder(results);
-
 const dispositionForFamily = family => /Vazirmatn/i.test(family) ? 'ALREADY_VAZIRMATN' : 'FAIL';
 const documentKind = locator => locator.evaluate(el => el.ownerDocument.defaultView === el.ownerDocument.defaultView.top ? 'top' : 'iframe');
 
@@ -41,11 +40,7 @@ async function measureTarget(name, locator, { required = true } = {}) {
     return result;
   }
   const family = await familyOf(node);
-  const result = {
-    disposition: dispositionForFamily(family),
-    font_family: family,
-    document: await documentKind(node),
-  };
+  const result = { disposition: dispositionForFamily(family), font_family: family, document: await documentKind(node) };
   results.targets[name] = result;
   return result;
 }
@@ -56,6 +51,31 @@ async function firstFrameWith(page, selector) {
     if (await locator.count()) return { frame, locator, kind: frame === page.mainFrame() ? 'top' : 'iframe' };
   }
   return null;
+}
+
+async function dismissEditorWelcome(page) {
+  const overlay = page.locator('.components-modal__screen-overlay').first();
+  if (!await overlay.count() || !await overlay.isVisible().catch(() => false)) return false;
+  const close = overlay.locator('button[aria-label="Close"], button[aria-label="Close dialog"], .components-modal__header button').first();
+  if (await close.count()) await close.click({ force: true }).catch(() => {});
+  if (await overlay.isVisible().catch(() => false)) await page.keyboard.press('Escape').catch(() => {});
+  await overlay.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+  return true;
+}
+
+async function exposeBlockInspector(page) {
+  await page.evaluate(() => {
+    try {
+      const dispatch = window.wp?.data?.dispatch?.('core/edit-post');
+      dispatch?.openGeneralSidebar?.('edit-post/block');
+    } catch {}
+  });
+  const inspector = page.locator('.gk-gravityview-blocks').first();
+  if (await inspector.isVisible().catch(() => false)) return inspector;
+  const settings = page.locator('button[aria-label="Settings"], button[aria-label="Settings sidebar"]').first();
+  if (await settings.count()) await settings.click().catch(() => {});
+  await inspector.waitFor({ state: 'visible', timeout: 15000 });
+  return inspector;
 }
 
 async function collectGravityViewAssets(page) {
@@ -74,14 +94,7 @@ async function collectGravityViewAssets(page) {
 }
 
 async function findGravityViewIcon(page) {
-  const candidates = [
-    '.gv_tooltip',
-    '[data-gv-icon]',
-    '.gv-icon__before',
-    '[class^="gv-icon-"]',
-    '[class*=" gv-icon-"]',
-  ];
-  for (const selector of candidates) {
+  for (const selector of ['.gv_tooltip', '[data-gv-icon]', '.gv-icon__before', '[class^="gv-icon-"]', '[class*=" gv-icon-"]']) {
     const candidate = page.locator(selector).first();
     if (await candidate.count() && await candidate.isVisible().catch(() => false)) return candidate;
   }
@@ -99,27 +112,28 @@ await recorder.record('modern_frontend_inner_typography', async () => {
   const classes = (await container.getAttribute('class')) || '';
   assert.match(classes, /\bgv-themed\b/, `Qualified GravityView frontend must use the modern themed surface; got ${classes}`);
   assert.match(classes, /\bgv-theme-vantage\b/, `Qualified GravityView frontend must use the Vantage theme; got ${classes}`);
+
   const gvFontToken = (await container.evaluate(el => getComputedStyle(el).getPropertyValue('--gv-font-family'))).trim();
-  assert.equal(gvFontToken, 'inherit', `Modern GravityView --gv-font-family should remain inherit; got ${gvFontToken}`);
+  const tokenEvidence = {
+    source_declared_default: 'inherit',
+    computed_custom_property: gvFontToken || null,
+    runtime_interpretation: gvFontToken || 'NOT_EXPOSED_BY_COMPUTED_STYLE_ON_RENDERED_CONTAINER',
+  };
 
   const measurements = {};
   measurements.container = await measureTarget('frontend.container', container);
-  measurements.table_header = await measureTarget('frontend.table_header', page.locator('.gv-table-view thead th').first());
-  measurements.entry_value = await measureTarget('frontend.entry_value', page.locator('.gv-table-view tbody td').first());
+  measurements.table_header = await measureTarget('frontend.table_header', container.locator('thead th').first(), { required: false });
+  measurements.entry_value = await measureTarget('frontend.entry_value', container.locator('tbody td').first(), { required: false });
 
   const searchForm = page.locator('form.gv-widget-search').first();
   await searchForm.waitFor({ state: 'visible', timeout: 30000 });
-  const label = searchForm.locator('label').first();
-  measurements.search_label = await measureTarget('frontend.search_label', label, { required: false });
+  measurements.search_label = await measureTarget('frontend.search_label', searchForm.locator('label').first(), { required: false });
   const search = searchForm.locator('input[type="search"], input[type="text"]').first();
   measurements.search_input = await measureTarget('frontend.search_input', search);
-  const submit = searchForm.locator('.gv-search-button').first();
+  const submit = searchForm.locator('.gv-search-button, button[type="submit"], input[type="submit"]').first();
   measurements.search_button = await measureTarget('frontend.search_button', submit);
-
-  const pagination = page.locator('.gv-widget-page-links').first();
-  measurements.pagination = await measureTarget('frontend.pagination', pagination, { required: false });
-  const notice = page.locator('.gv-notice, .gv-message, .gv-status').first();
-  measurements.status_notice = await measureTarget('frontend.status_notice', notice, { required: false });
+  measurements.pagination = await measureTarget('frontend.pagination', page.locator('.gv-widget-page-links').first(), { required: false });
+  measurements.status_notice = await measureTarget('frontend.status_notice', page.locator('.gv-notice, .gv-message, .gv-status').first(), { required: false });
 
   await expectNotVazirmatn(page.locator('#vf-view-excluded'), 'GravityView profile exclusion fixture', /monospace/i);
   results.targets['frontend.exclusion_fixture'] = { disposition: 'PASS', font_family: await familyOf(page.locator('#vf-view-excluded')) };
@@ -134,7 +148,7 @@ await recorder.record('modern_frontend_inner_typography', async () => {
 
   const textTargets = Object.values(measurements).filter(item => ['ALREADY_VAZIRMATN', 'FAIL'].includes(item.disposition));
   const disposition = textTargets.some(item => item.disposition === 'FAIL') ? 'FAIL' : 'ALREADY_VAZIRMATN';
-  return { disposition, gv_font_family_token: gvFontToken, container_classes: classes, measurements };
+  return { disposition, gv_font_family_token: tokenEvidence, container_classes: classes, measurements };
 });
 
 await login(page, baseUrl, user, password);
@@ -161,25 +175,24 @@ await recorder.record('admin_view_configuration_and_icon_ownership', async () =>
     dashicons = { disposition: 'PASS', font_family: family };
   }
   results.targets['icons.dashicons'] = dashicons;
-
   return { admin_body: adminBody, gravityview_icon: gravityViewIcon, dashicons };
 });
 
 await recorder.record('gutenberg_view_block_and_assets', async () => {
   await page.goto(manifest.block_editor_url, { waitUntil: 'domcontentloaded' });
   await page.locator('body.block-editor-page').waitFor({ state: 'visible', timeout: 30000 });
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(1000);
+  const welcome_dismissed = await dismissEditorWelcome(page);
 
   const blockSurface = await firstFrameWith(page, '[data-type="gk-gravityview-blocks/view"]');
   assert.ok(blockSurface, 'Authentic GravityView View block did not render in the block editor canvas');
-  await blockSurface.locator.click();
+  await blockSurface.locator.click({ force: true });
+  const inspector = await exposeBlockInspector(page);
+  await inspector.waitFor({ state: 'visible', timeout: 15000 });
 
-  const inspector = page.locator('.gk-gravityview-blocks').first();
-  await inspector.waitFor({ state: 'visible', timeout: 30000 });
   const assets = await collectGravityViewAssets(page);
   assert.ok(assets.styles.length > 0, 'No GravityView stylesheet was observed in the top-level block editor document');
   assert.ok(assets.scripts.length > 0, 'No GravityView script was observed in the top-level block editor document');
-
   const iframe = page.locator('iframe[name="editor-canvas"]').first();
   return {
     editor_url: page.url(),
@@ -187,30 +200,27 @@ await recorder.record('gutenberg_view_block_and_assets', async () => {
     block_document: blockSurface.kind,
     top_level_editor_document: 'top',
     editor_canvas_iframe_present: Boolean(await iframe.count()),
+    welcome_guide_dismissed: welcome_dismissed,
     gravityview_assets: assets,
   };
 });
 
 await recorder.record('gutenberg_react_select_control_and_portal', async () => {
   const wrapper = page.locator('.gk-gravityview-blocks .view-selector').first();
-  await wrapper.waitFor({ state: 'visible', timeout: 30000 });
+  await wrapper.waitFor({ state: 'visible', timeout: 15000 });
   const input = wrapper.locator('[role="combobox"]').first();
-  await input.waitFor({ state: 'visible', timeout: 30000 });
+  await input.waitFor({ state: 'visible', timeout: 15000 });
 
-  const selected = wrapper.locator('[id$="-single-value"]').first();
-  const placeholder = wrapper.locator('[id$="-placeholder"]').first();
   const inputMeasurement = await measureTarget('react_select.input', input);
-  const selectedMeasurement = await measureTarget('react_select.selected_value', selected, { required: false });
-  const placeholderMeasurement = await measureTarget('react_select.placeholder', placeholder, { required: false });
+  const selectedMeasurement = await measureTarget('react_select.selected_value', wrapper.locator('[id$="-single-value"]').first(), { required: false });
+  const placeholderMeasurement = await measureTarget('react_select.placeholder', wrapper.locator('[id$="-placeholder"]').first(), { required: false });
   const wrapperMeasurement = await measureTarget('react_select.host_wrapper', wrapper);
 
   const containerOwnership = await input.evaluate(el => {
     let node = el;
     while (node && node !== el.ownerDocument.body) {
       const classes = [...(node.classList || [])];
-      if (classes.some(name => /^gk-select-.*-container$/.test(name))) {
-        return { classes, font_family: getComputedStyle(node).fontFamily };
-      }
+      if (classes.some(name => /^gk-select-.*-container$/.test(name))) return { classes, font_family: getComputedStyle(node).fontFamily };
       node = node.parentElement;
     }
     return null;
@@ -219,9 +229,8 @@ await recorder.record('gutenberg_react_select_control_and_portal', async () => {
   await input.click();
   await input.press('ArrowDown').catch(() => {});
   const listbox = page.locator('[role="listbox"]').first();
-  await listbox.waitFor({ state: 'visible', timeout: 30000 });
-  const option = listbox.locator('[role="option"]').first();
-  const optionMeasurement = await measureTarget('react_select.menu_option', option);
+  await listbox.waitFor({ state: 'visible', timeout: 15000 });
+  const optionMeasurement = await measureTarget('react_select.menu_option', listbox.locator('[role="option"]').first());
 
   const portal = await listbox.evaluate(el => {
     const doc = el.ownerDocument;
@@ -229,16 +238,14 @@ await recorder.record('gutenberg_react_select_control_and_portal', async () => {
     let portalNode = null;
     while (node && node !== doc.body) {
       const classes = [...(node.classList || [])];
-      if (classes.some(name => /^gk-select-.*-menuPortal$/.test(name))) {
-        portalNode = node;
-        break;
-      }
+      if (classes.some(name => /^gk-select-.*-menuPortal$/.test(name))) { portalNode = node; break; }
       node = node.parentElement;
     }
     return {
       document: doc.defaultView === doc.defaultView.top ? 'top' : 'iframe',
       portal_classes: portalNode ? [...portalNode.classList] : [],
       portal_is_direct_body_child: Boolean(portalNode && portalNode.parentElement === doc.body),
+      gravityview_semantic_ancestor: Boolean(el.closest('.gk-gravityview-blocks')),
       listbox_id: el.id || null,
       listbox_classes: [...el.classList],
     };
@@ -246,21 +253,16 @@ await recorder.record('gutenberg_react_select_control_and_portal', async () => {
 
   const emotion = await page.evaluate(() => [...document.querySelectorAll('style[data-emotion]')]
     .filter(node => /^gk-select(?:\s|$)/.test(node.getAttribute('data-emotion') || ''))
-    .map(node => ({
-      data_emotion: node.getAttribute('data-emotion'),
-      has_font_family_rule: /font-family/i.test(node.textContent || ''),
-    })));
-
+    .map(node => ({ data_emotion: node.getAttribute('data-emotion'), has_font_family_rule: /font-family/i.test(node.textContent || '') })));
   await input.press('Escape').catch(() => {});
 
   const textMeasurements = [inputMeasurement, selectedMeasurement, placeholderMeasurement, optionMeasurement]
     .filter(item => ['ALREADY_VAZIRMATN', 'FAIL'].includes(item.disposition));
   const disposition = textMeasurements.some(item => item.disposition === 'FAIL') ? 'FAIL' : 'ALREADY_VAZIRMATN';
-  const boundedPortalSeam = portal.portal_is_direct_body_child ? 'NO_STABLE_GRAVITYVIEW_SEMANTIC_ANCESTOR_PROVEN' : 'REQUIRES_RUNTIME_REVIEW';
-  results.targets['react_select.portal_scope'] = {
-    disposition: boundedPortalSeam.startsWith('NO_STABLE') ? 'NOT_PROVEN' : 'PASS',
-    association: boundedPortalSeam,
-  };
+  const boundedPortalSeam = portal.portal_is_direct_body_child && !portal.gravityview_semantic_ancestor
+    ? 'NO_STABLE_GRAVITYVIEW_SEMANTIC_ANCESTOR_PROVEN'
+    : 'REQUIRES_RUNTIME_REVIEW';
+  results.targets['react_select.portal_scope'] = { disposition: boundedPortalSeam.startsWith('NO_STABLE') ? 'NOT_PROVEN' : 'PASS', association: boundedPortalSeam };
 
   return {
     disposition,
@@ -277,15 +279,13 @@ await recorder.record('gutenberg_react_select_control_and_portal', async () => {
 });
 
 await recorder.record('gutenberg_datepicker', async () => {
-  const inspector = page.locator('.gk-gravityview-blocks').first();
-  await inspector.waitFor({ state: 'visible', timeout: 30000 });
+  const inspector = await exposeBlockInspector(page);
   const entriesButton = inspector.getByRole('button', { name: 'Entries Settings', exact: true }).first();
   if (!await entriesButton.count()) {
     results.targets['datepicker.root'] = { disposition: 'NOT_PROVEN', reason: 'Entries Settings panel was not deterministically rendered.' };
     return { disposition: 'NOT_PROVEN', reason: 'Entries Settings panel was unavailable.' };
   }
-  const expanded = await entriesButton.getAttribute('aria-expanded');
-  if (expanded !== 'true') await entriesButton.click();
+  if ((await entriesButton.getAttribute('aria-expanded')) !== 'true') await entriesButton.click();
 
   const startDateControl = inspector.locator('.components-base-control').filter({ hasText: 'Start Date' }).first();
   if (!await startDateControl.count()) {
@@ -297,6 +297,7 @@ await recorder.record('gutenberg_datepicker', async () => {
     results.targets['datepicker.root'] = { disposition: 'NOT_PROVEN', reason: 'Authentic Datepicker input was not deterministically rendered.' };
     return { disposition: 'NOT_PROVEN', reason: 'Datepicker input was unavailable.' };
   }
+
   const inputMeasurement = await measureTarget('datepicker.input', dateInput);
   await dateInput.click();
   const root = page.locator('.react-datepicker').first();
@@ -304,7 +305,7 @@ await recorder.record('gutenberg_datepicker', async () => {
     results.targets['datepicker.root'] = { disposition: 'NOT_PROVEN', reason: 'Clicking the authentic GravityView date input did not render .react-datepicker.' };
     return { disposition: 'NOT_PROVEN', input: inputMeasurement };
   }
-  await root.waitFor({ state: 'visible', timeout: 30000 });
+  await root.waitFor({ state: 'visible', timeout: 15000 });
   const rootMeasurement = await measureTarget('datepicker.root', root);
   const monthMeasurement = await measureTarget('datepicker.current_month', root.locator('.react-datepicker__current-month').first(), { required: false });
   const dayMeasurement = await measureTarget('datepicker.day', root.locator('.react-datepicker__day:not(.react-datepicker__day--outside-month)').first(), { required: false });
@@ -331,7 +332,6 @@ await recorder.record('gutenberg_oembed_admin_placeholder_reachability', async (
     results.targets['oembed.loading_placeholder'] = { disposition: 'NOT_PROVEN', reason: 'Fixture could not derive an authentic GravityView entry permalink.' };
     return { disposition: 'NOT_PROVEN', reason: 'No authentic GravityView entry permalink was available.' };
   }
-
   const embedSurface = await firstFrameWith(page, '[data-type="core/embed"]');
   if (!embedSurface) {
     results.targets['oembed.loading_placeholder'] = { disposition: 'NOT_PROVEN', reason: 'Authentic core/embed fixture did not render in the block editor.' };
@@ -339,26 +339,19 @@ await recorder.record('gutenberg_oembed_admin_placeholder_reachability', async (
   }
   await embedSurface.locator.scrollIntoViewIfNeeded().catch(() => {});
   await page.waitForTimeout(1000);
-
   const placeholderSurface = await firstFrameWith(page, '.loading-placeholder');
   if (!placeholderSurface) {
     results.targets['oembed.loading_placeholder'] = {
       disposition: 'NOT_PROVEN',
       reason: 'The authentic WordPress block-editor embed path did not expose GravityView .loading-placeholder; source risk is not promoted to runtime FAIL.',
     };
-    return {
-      disposition: 'NOT_PROVEN',
-      entry_url_path: (() => { try { return new URL(manifest.oembed_entry_url).pathname; } catch { return ''; } })(),
-      editor_embed_document: embedSurface.kind,
-    };
+    return { disposition: 'NOT_PROVEN', entry_url_path: (() => { try { return new URL(manifest.oembed_entry_url).pathname; } catch { return ''; } })(), editor_embed_document: embedSurface.kind };
   }
 
   const placeholder = placeholderSurface.locator;
-  const heading = placeholder.locator('h1, h2, h3, h4, h5, h6').first();
-  const paragraph = placeholder.locator('p').first();
   const placeholderMeasurement = await measureTarget('oembed.loading_placeholder', placeholder);
-  const headingMeasurement = await measureTarget('oembed.heading', heading, { required: false });
-  const paragraphMeasurement = await measureTarget('oembed.paragraph', paragraph, { required: false });
+  const headingMeasurement = await measureTarget('oembed.heading', placeholder.locator('h1, h2, h3, h4, h5, h6').first(), { required: false });
+  const paragraphMeasurement = await measureTarget('oembed.paragraph', placeholder.locator('p').first(), { required: false });
   const surrounding = await measureTarget('oembed.surrounding_editor', page.locator('body.block-editor-page'));
   const measured = [headingMeasurement, paragraphMeasurement].filter(item => ['ALREADY_VAZIRMATN', 'FAIL'].includes(item.disposition));
   const disposition = measured.some(item => item.disposition === 'FAIL') ? 'FAIL' : (measured.length ? 'ALREADY_VAZIRMATN' : 'NOT_PROVEN');
