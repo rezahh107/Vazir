@@ -3,7 +3,7 @@
  * Plugin Name:       Vazir Font for WordPress
  * Plugin URI:        https://github.com/rezahh107/Vazir
  * Description:       Self-hosted Persian typography for WordPress, editor contexts, Gravity Forms, Gravity Flow, and Gravity Perks.
- * Version:           1.3.0
+ * Version:           1.4.0
  * Requires at least: 6.7
  * Requires PHP:      7.4
  * Author:            Reza Hashemi Hosseini
@@ -17,11 +17,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-const VAZIR_FONT_VERSION          = '1.3.0';
+const VAZIR_FONT_VERSION          = '1.4.0';
 const VAZIR_FONT_PLUGIN_FILE      = __FILE__;
 const VAZIR_FONT_PLUGIN_DIR       = __DIR__ . '/';
 const VAZIR_FONT_OPTION_NAME      = 'vazir_font_options';
 const VAZIR_FONT_DB_VERSION_KEY   = 'vazir_font_db_version';
+const VAZIR_FONT_SCHEMA_VERSION   = '1.3.0';
 const VAZIR_FONT_LEGACY_CRON_HOOK = 'vazir_font_clear_cache';
 
 define( 'VAZIR_FONT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -112,7 +113,7 @@ final class VazirFontPlugin {
 			$options[ $key ] = array_key_exists( $key, $current ) ? $current[ $key ] : $default_value;
 		}
 		update_option( VAZIR_FONT_OPTION_NAME, $options );
-		update_option( VAZIR_FONT_DB_VERSION_KEY, VAZIR_FONT_VERSION );
+		update_option( VAZIR_FONT_DB_VERSION_KEY, VAZIR_FONT_SCHEMA_VERSION );
 		self::clear_legacy_cron();
 	}
 
@@ -240,10 +241,10 @@ final class VazirFontPlugin {
 
 	private function maybe_migrate_options_schema(): void {
 		$current_db_version = (string) get_option( VAZIR_FONT_DB_VERSION_KEY, '1.0.0' );
-		if ( version_compare( $current_db_version, VAZIR_FONT_VERSION, '<' ) ) {
+		if ( version_compare( $current_db_version, VAZIR_FONT_SCHEMA_VERSION, '<' ) ) {
 			self::migrate_options_schema();
 			self::clear_legacy_cron();
-			update_option( VAZIR_FONT_DB_VERSION_KEY, VAZIR_FONT_VERSION );
+			update_option( VAZIR_FONT_DB_VERSION_KEY, VAZIR_FONT_SCHEMA_VERSION );
 		}
 	}
 }
