@@ -21,6 +21,7 @@
       "@php tests/gravityflow-runtime-contract.php 3.1.0 qualified-identity",
       "@php tests/gravityflow-runtime-contract.php 9.9.9-synthetic synthetic-alternate-identity",
       "@php tests/gravityperks-runtime-contract.php",
+      "@php tests/gravity-descendant-exclusion-contract.php",
       "phpunit"
     ]
   },
