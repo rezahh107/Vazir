@@ -81,6 +81,78 @@ async function handleFamily(handle) {
   return handle.evaluate(el => getComputedStyle(el).fontFamily);
 }
 
+async function exerciseReactSelectInteraction() {
+  const attempts = [
+    {
+      name: 'combobox ArrowDown',
+      run: async root => {
+        const input = root.locator('input[role="combobox"]').first();
+        await input.waitFor({ state: 'visible', timeout: 5000 });
+        const before = await input.getAttribute('aria-expanded');
+        await input.press('ArrowDown', { timeout: 3000 });
+        return before;
+      },
+    },
+    {
+      name: 'control click',
+      run: async root => {
+        const input = root.locator('input[role="combobox"]').first();
+        const control = root.locator('[class$="-control"]').first();
+        await input.waitFor({ state: 'visible', timeout: 5000 });
+        await control.waitFor({ state: 'visible', timeout: 5000 });
+        const before = await input.getAttribute('aria-expanded');
+        await control.click({ timeout: 3000 });
+        return before;
+      },
+    },
+    {
+      name: 'combobox click + ArrowDown',
+      run: async root => {
+        const input = root.locator('input[role="combobox"]').first();
+        await input.waitFor({ state: 'visible', timeout: 5000 });
+        const before = await input.getAttribute('aria-expanded');
+        await input.click({ timeout: 3000 });
+        await input.press('ArrowDown', { timeout: 3000 });
+        return before;
+      },
+    },
+  ];
+  const failures = [];
+
+  for (const attempt of attempts) {
+    try {
+      const inspector = await ensureGravityViewInspector();
+      const root = inspector.locator('.view-selector').first();
+      const before = await attempt.run(root);
+      await page.waitForFunction(() => {
+        const candidate = document.querySelector('.gk-gravityview-blocks .view-selector input[role="combobox"]');
+        return candidate?.getAttribute('aria-expanded') === 'true';
+      }, null, { timeout: 5000 });
+      const open = await page.evaluate(() => document.querySelector('.gk-gravityview-blocks .view-selector input[role="combobox"]')?.getAttribute('aria-expanded') ?? null);
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => {
+        const candidate = document.querySelector('.gk-gravityview-blocks .view-selector input[role="combobox"]');
+        return !candidate || candidate.getAttribute('aria-expanded') !== 'true';
+      }, null, { timeout: 5000 });
+      const closed = await page.evaluate(() => document.querySelector('.gk-gravityview-blocks .view-selector input[role="combobox"]')?.getAttribute('aria-expanded') ?? null);
+      const visibleListboxesAfterEscape = await page.locator('[role="listbox"]:visible').count();
+      assert.equal(visibleListboxesAfterEscape, 0, 'React Select Escape interaction must leave no visible listbox.');
+      return {
+        method: attempt.name,
+        aria_expanded_before: before,
+        aria_expanded_open: open,
+        aria_expanded_closed: closed,
+        visible_listboxes_after_escape: visibleListboxesAfterEscape,
+      };
+    } catch (error) {
+      failures.push(`${attempt.name}: ${String(error?.message || error).split('\n')[0]}`);
+      await page.keyboard.press('Escape').catch(() => {});
+    }
+  }
+
+  throw new Error(`React Select did not complete a bounded authentic open/close interaction: ${failures.join(' | ')}`);
+}
+
 try {
   assert.equal(results.status, 'PASS', 'Qualification phase must have executed successfully before repair verification.');
   assert.equal(results.dispositions?.frontend_modern_view, 'ALREADY_VAZIRMATN', 'Modern Vantage frontend must remain already-correct.');
@@ -103,28 +175,10 @@ try {
   const valueFamily = await expectVazirmatn(value, 'repaired GravityView React Select value');
   const inputFamily = await expectVazirmatn(input, 'pre-existing GravityView React Select input');
 
-  // Functional interaction: React Select may rerender/unmount its internal input as the
-  // inspector reconciles. Drive the host control from a fresh render and treat ARIA/listbox
-  // state as the behavioral outcome rather than assuming one input node survives the cycle.
-  const interactionInspector = await ensureGravityViewInspector();
-  const interactionRoot = interactionInspector.locator('.view-selector').first();
-  const interactionControl = interactionRoot.locator('[class$="-control"]').first();
-  await interactionControl.waitFor({ state: 'visible', timeout: 10000 });
-  const ariaExpandedBefore = await interactionRoot.locator('input[role="combobox"]').first().getAttribute('aria-expanded');
-  await interactionControl.click();
-  await page.waitForFunction(() => {
-    const candidate = document.querySelector('.gk-gravityview-blocks .view-selector input[role="combobox"]');
-    return candidate?.getAttribute('aria-expanded') === 'true';
-  }, null, { timeout: 5000 });
-  const ariaExpandedOpen = await page.evaluate(() => document.querySelector('.gk-gravityview-blocks .view-selector input[role="combobox"]')?.getAttribute('aria-expanded') ?? null);
-  await page.keyboard.press('Escape');
-  await page.waitForFunction(() => {
-    const candidate = document.querySelector('.gk-gravityview-blocks .view-selector input[role="combobox"]');
-    return !candidate || candidate.getAttribute('aria-expanded') !== 'true';
-  }, null, { timeout: 5000 });
-  const ariaExpandedClosed = await page.evaluate(() => document.querySelector('.gk-gravityview-blocks .view-selector input[role="combobox"]')?.getAttribute('aria-expanded') ?? null);
-  const visibleListboxesAfterEscape = await page.locator('[role="listbox"]:visible').count();
-  assert.equal(visibleListboxesAfterEscape, 0, 'React Select Escape interaction must leave no visible listbox.');
+  // React Select may rerender/unmount internal nodes while the inspector reconciles.
+  // Retry only a bounded set of authentic user interactions, reacquiring the real control
+  // on each attempt. Do not use force clicks, DOM click(), or React internals.
+  const interaction = await exerciseReactSelectInteraction();
 
   // Exclusion proof: reacquire the real subtree after the interaction lifecycle so the
   // probe does not depend on React preserving the prior control/input nodes.
@@ -153,13 +207,7 @@ try {
     control_font_family: controlFamily,
     value_font_family: valueFamily,
     input_font_family: inputFamily,
-    functional_interaction: {
-      method: 'fresh-render control click -> aria-expanded true -> Escape',
-      aria_expanded_before: ariaExpandedBefore,
-      aria_expanded_open: ariaExpandedOpen,
-      aria_expanded_closed: ariaExpandedClosed,
-      visible_listboxes_after_escape: visibleListboxesAfterEscape,
-    },
+    functional_interaction: interaction,
     exclusion_probe: {
       selector: manifest.editor_exclusion_selector,
       excluded_control_font_family: excludedControlFamily,
