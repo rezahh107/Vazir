@@ -269,18 +269,36 @@ final class VazirFont_GravityPerks_Integration {
 	}
 
 	/**
+	 * Build the shared inheritable Settings selector list. Any selector that
+	 * cannot receive the complete exclusion boundary fails the whole bounded
+	 * repair closed rather than leaving a partially protected rule set.
+	 *
 	 * @param string[] $selectors Internal bounded Settings selectors.
 	 * @param string[] $exclude_selectors Valid element-level exclusions.
 	 */
 	private function build_enforcement_selector_list( array $selectors, array $exclude_selectors ): string {
 		$guarded = array();
 		foreach ( $selectors as $selector ) {
-			$guarded[] = $this->apply_exclusion_boundary( $selector, $exclude_selectors );
+			$candidate = $this->apply_exclusion_boundary( $selector, $exclude_selectors );
+			if ( '' === $candidate ) {
+				return '';
+			}
+			$guarded[] = $candidate;
 		}
 		return implode( ",\n", $guarded );
 	}
 
 	/**
+	 * Apply the single configured exclusion authority to inheritable font-family
+	 * enforcement. The target itself and descendants of an excluded root are
+	 * blocked, and a target containing an excluded subtree is also blocked so the
+	 * descendant cannot inherit Vazirmatn from that ancestor.
+	 *
+	 * A configured element selector containing :has() cannot safely be nested in
+	 * the required descendant-protection :has(). Fail closed instead of emitting
+	 * invalid/approximate CSS. Pseudo-element exclusions have already been removed
+	 * from this element-level guard set.
+	 *
 	 * @param string[] $exclude_selectors Valid element-level exclusions.
 	 */
 	private function apply_exclusion_boundary( string $selector, array $exclude_selectors ): string {
@@ -293,6 +311,14 @@ final class VazirFont_GravityPerks_Integration {
 			$blocked[] = $exclude_selector;
 			$blocked[] = $exclude_selector . ' *';
 		}
-		return $selector . ':not(:where(' . implode( ', ', $blocked ) . '))';
+		$guarded = $selector . ':not(:where(' . implode( ', ', $blocked ) . '))';
+
+		foreach ( $exclude_selectors as $exclude_selector ) {
+			if ( false !== stripos( $exclude_selector, ':has(' ) ) {
+				return '';
+			}
+		}
+
+		return $guarded . ':not(:has(:where(' . implode( ', ', $exclude_selectors ) . ')))';
 	}
 }

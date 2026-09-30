@@ -50,6 +50,7 @@ DOC;
 			'description' => 'Vazir evidence text description',
 		) );
 		echo '<p class="description vazir-gp-evidence-excluded">Vazir excluded evidence description</p>';
+		echo '<p class="description vazir-gp-evidence-nested-parent">Vazir nested exclusion parent <span class="vazir-gp-evidence-excluded-nested">Vazir nested excluded child</span></p>';
 		echo self::generate_select( $this, array(
 			'id' => 'evidence_select',
 			'label' => 'Vazir Evidence Select',
@@ -122,7 +123,7 @@ $options = get_option( 'vazir_font_options', array() );
 if ( ! is_array( $options ) ) { $options = array(); }
 $options['enable_admin'] = true;
 $options['enable_gravity_forms'] = true;
-$options['exclude_selectors'] = array( '.vazir-gp-evidence-excluded' );
+$options['exclude_selectors'] = array( '.vazir-gp-evidence-excluded', '.vazir-gp-evidence-excluded-nested' );
 update_option( 'vazir_font_options', $options, false );
 VazirFontPlugin::clear_cache();
 $configured_weights = VazirFont_Loader::get_instance()->get_selected_weights();

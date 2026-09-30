@@ -175,8 +175,8 @@ try {
     await page.close();
   }
 
-  // Authentic standalone Settings document: typography, exclusion, resource
-  // delivery, host ownership, protected glyphs, and real save interaction.
+  // Authentic standalone Settings document: typography, direct and nested
+  // exclusions, resource delivery, host ownership, protected glyphs, and save.
   {
     const captured = await captureRoute(context, manifest.settings_url, async page => {
       await page.locator('body.perk-iframe.wp-core-ui').waitFor({ state: 'visible', timeout: 15000 });
@@ -199,9 +199,14 @@ try {
     }
     if (nodes.textarea.rendered) assert(nodes.textarea.status === 'PASS', 'Rendered Settings textarea did not resolve to Vazirmatn.');
 
-    const excluded = await inspectNode(page, '.vazir-gp-evidence-excluded', 'excluded evidence description');
-    assert(!isVazirmatn(excluded.computed_family), 'Configured exclusion still received the Perks Vazirmatn correction.');
-    assert(nodes.text_description.status === 'PASS', 'Non-excluded sibling did not retain Vazirmatn beside exclusion.');
+    const excluded = await inspectNode(page, '.vazir-gp-evidence-excluded', 'direct excluded evidence description');
+    assert(!isVazirmatn(excluded.computed_family), 'Direct configured exclusion still received the Perks Vazirmatn correction.');
+
+    const nestedParent = await inspectNode(page, '.vazir-gp-evidence-nested-parent', 'nested exclusion parent description');
+    const nestedExcluded = await inspectNode(page, '.vazir-gp-evidence-excluded-nested', 'nested excluded evidence child');
+    assert(!isVazirmatn(nestedParent.computed_family), 'Target containing an excluded subtree still received inheritable Vazirmatn enforcement.');
+    assert(!isVazirmatn(nestedExcluded.computed_family), 'Nested configured exclusion inherited Vazirmatn from an eligible typography ancestor.');
+    assert(nodes.text_description.status === 'PASS', 'Separate non-excluded Settings description did not retain Vazirmatn beside exclusions.');
 
     const resources = await page.evaluate(() => ({
       host_stylesheet: Boolean(document.querySelector('#gwp-admin-css')),
@@ -212,11 +217,15 @@ try {
       seam_probe: getComputedStyle(document.documentElement).getPropertyValue('--vazir-gravityperks-print-styles-array-probe').trim(),
       todo_probe: getComputedStyle(document.documentElement).getPropertyValue('--vazir-gravityperks-gwp-admin-in-todo').trim(),
       registered_probe: getComputedStyle(document.documentElement).getPropertyValue('--vazir-gravityperks-gwp-admin-registered').trim(),
+      exclusion_count_probe: getComputedStyle(document.documentElement).getPropertyValue('--vazir-gravityperks-exclusion-count').trim(),
     }));
     assert(resources.host_stylesheet, 'gwp-admin-css is no longer the printed host stylesheet.');
     assert(resources.style_loader_probe === 'gwp-admin', 'gwp-admin did not traverse the supported WordPress style-loader pipeline.');
     assert(resources.seam_probe === '1' && resources.todo_probe === '1' && resources.registered_probe === '1', 'print_styles_array seam sentinel did not prove selected+registered gwp-admin capability.');
+    assert(resources.exclusion_count_probe === '2', 'Exact runtime did not observe both direct and nested configured exclusions.');
     assert(/body\.perk-iframe\s+\.perk-settings/.test(resources.host_inline_css), 'Production repair CSS was not attached to gwp-admin-inline-css.');
+    assert(resources.host_inline_css.includes(':not(:has(:where(.vazir-gp-evidence-excluded, .vazir-gp-evidence-excluded-nested)))'), 'Production repair CSS lacks descendant-containment protection for the configured element exclusions.');
+    assert(!/font-family\s*:\s*(?:inherit|initial|revert(?:-layer)?)\b/i.test(resources.host_inline_css), 'Production repair introduced a competing font-family reset rule.');
     assert(resources.extra_vazir_links.length === 0, 'Standalone Settings introduced an unnecessary standalone Vazir stylesheet link.');
 
     const cssWeights = Array.from(resources.host_inline_css.matchAll(/font-weight:\s*(300|400|500|700|900)\s*;/g), match => match[1]).sort();
@@ -259,6 +268,12 @@ try {
 
     results.scenarios.settings = {
       disposition: 'PASS', navigation, nodes, excluded,
+      nested_exclusion: {
+        disposition: 'PASS',
+        parent: nestedParent,
+        excluded_descendant: nestedExcluded,
+        non_excluded_sibling: nodes.text_description,
+      },
       resources,
       configured_font_weights: expectedWeights,
       css_font_face_weights: cssWeights,

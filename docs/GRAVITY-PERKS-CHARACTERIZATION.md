@@ -37,7 +37,9 @@ The adapter reuses `VazirFont_Loader::get_font_face_css()` and the existing `vaz
 
 Typography enforcement is limited to real standalone Settings text surfaces rooted under `body.perk-iframe .perk-settings`: page title, labels, descriptions, text-bearing inputs, selects, textareas when present, and the save button. Checkbox/radio glyphs and host icon pseudo-elements are not treated as text typography.
 
-The existing `vazir_font_options['exclude_selectors']` setting remains the sole exclusion authority. The adapter converts representable element exclusions into negative applicability boundaries that exclude the matching element and descendants. Pseudo-element exclusions remain host-owned. If an exclusion cannot be represented safely, the bounded Perks repair fails closed rather than approximating the selector.
+The existing `vazir_font_options['exclude_selectors']` setting remains the sole exclusion authority. For every inheritable Gravity Perks typography selector, representable element exclusions are applied through both root/descendant negative applicability and descendant-containment protection. This prevents an otherwise eligible title, label, description, or control ancestor from receiving Vazirmatn when it contains an excluded element subtree whose text would otherwise inherit that family. Pseudo-element exclusions remain host-owned and are not inserted into relational element guards.
+
+If an element-level configured exclusion itself contains `:has()`, the required descendant-containment guard cannot be represented safely without nesting relational selectors. In that case the entire bounded standalone Perks typography repair fails closed rather than emitting invalid CSS or approximating selector matching. The repair does not use competing `font-family: inherit`, `initial`, `revert`, or `revert-layer` reset rules.
 
 ## Evidence contract
 
@@ -47,7 +49,8 @@ The dedicated `gravityperks` Product Evidence profile is authoritative for this 
 - exact source/dispatcher semantics;
 - the generated Documentation alias;
 - standalone Settings computed families for title, label, description, text input, select, save button, and textarea when rendered;
-- a real `.vazir-gp-evidence-excluded` text surface plus a non-excluded sibling;
+- a direct excluded Settings text surface;
+- a nested excluded element inside an otherwise targeted description plus a separate non-excluded Settings text surface;
 - actual bundled Vazirmatn WOFF2 requests, configured Loader weights, and duplicate URL detection;
 - continued `gwp-admin-css` host ownership and supported WordPress style-pipeline sentinels;
 - absence of an unnecessary standalone Vazir stylesheet link;

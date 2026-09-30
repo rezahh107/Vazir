@@ -85,12 +85,17 @@ vf_gp_assert( false !== strpos( $css, 'body.perk-iframe .perk-settings input[typ
 vf_gp_assert( false !== strpos( $css, 'body.perk-iframe .perk-settings select' ), 'select controls are inside the bounded standalone Settings selector set' );
 vf_gp_assert( false !== strpos( $css, 'body.perk-iframe .perk-settings textarea' ), 'textarea controls are supported without requiring the fixture to render one' );
 vf_gp_assert( false !== strpos( $css, 'body.perk-iframe .perk-settings #gwp_save_settings' ), 'save button is inside the bounded standalone Settings selector set' );
-$guard = ':not(:where(.vazir-gp-evidence-excluded, .vazir-gp-evidence-excluded *))';
-vf_gp_assert( false !== strpos( $css, $guard ), 'existing exclusion authority blocks the excluded root and descendants' );
+$root_guard = ':not(:where(.vazir-gp-evidence-excluded, .vazir-gp-evidence-excluded *))';
+$descendant_guard = ':not(:has(:where(.vazir-gp-evidence-excluded)))';
+$root_complete_guard = $root_guard . $descendant_guard;
+$enforcement_selector_count = 13;
+vf_gp_assert( false !== strpos( $css, 'body.perk-iframe .perk-settings .description' . $root_complete_guard ), 'inheritable description enforcement blocks both excluded roots/descendants and excluded descendant subtrees' );
+vf_gp_assert( $enforcement_selector_count === substr_count( $css, $root_guard ), 'every bounded Gravity Perks typography selector receives the root/descendant exclusion guard' );
+vf_gp_assert( $enforcement_selector_count === substr_count( $css, $descendant_guard ), 'every bounded Gravity Perks typography selector receives descendant-containment protection' );
 vf_gp_assert( false === strpos( $css, '.perk-iframe *' ), 'repair does not introduce a blanket perk-iframe descendant override' );
 vf_gp_assert( false === strpos( $css, 'input[type="checkbox"]' ) && false === strpos( $css, 'input[type="radio"]' ), 'checkbox/radio glyphs are not treated as text typography' );
-vf_gp_assert( false === strpos( $css, '[data-icon]:before' . $guard ), 'pseudo-element exclusions are not converted into text enforcement targets' );
-vf_gp_assert( false === strpos( $css, 'font-family: inherit' ), 'exclusions remain negative applicability boundaries rather than competing reset rules' );
+vf_gp_assert( false === strpos( $css, '[data-icon]:before' ), 'pseudo-element exclusions are not inserted into relational text enforcement guards' );
+vf_gp_assert( 0 === preg_match( '/font-family\s*:\s*(?:inherit|initial|revert(?:-layer)?)\b/i', $css ), 'exclusions remain negative applicability boundaries rather than competing font-family resets' );
 vf_gp_assert( array( 'gwp-admin' ) === array_keys( $GLOBALS['vf_styles'] ), 'repair creates no replacement or standalone Vazir stylesheet handle' );
 
 vf_gp_reset( $integration );
@@ -117,5 +122,11 @@ vf_gp_reset( $integration );
 VazirFontPlugin::update_options( array( 'enable_admin' => true, 'enable_gravity_forms' => true, 'exclude_selectors' => array( '.safe', 'broken{selector' ) ) );
 $integration->filter_print_styles_array( $handles );
 vf_gp_assert( array() === $GLOBALS['vf_inline']['gwp-admin'], 'unrepresentable exclusion causes the bounded Perks repair to fail closed' );
+
+vf_gp_reset( $integration );
+VazirFontPlugin::update_options( array( 'enable_admin' => true, 'enable_gravity_forms' => true, 'exclude_selectors' => array( '.safe:has(.nested)' ) ) );
+$returned = $integration->filter_print_styles_array( $handles );
+vf_gp_assert( $handles === $returned, 'relational exclusion fail-closed path still leaves the host style handle list unchanged' );
+vf_gp_assert( array() === $GLOBALS['vf_inline']['gwp-admin'], 'element exclusion containing :has() fails the entire bounded Perks repair closed' );
 
 fwrite( STDOUT, "ALL GRAVITY PERKS CONTRACT CHECKS PASSED\n" );
