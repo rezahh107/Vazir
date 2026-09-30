@@ -37,9 +37,11 @@ The adapter reuses `VazirFont_Loader::get_font_face_css()` and the existing `vaz
 
 Typography enforcement is limited to real standalone Settings text surfaces rooted under `body.perk-iframe .perk-settings`: page title, labels, descriptions, text-bearing inputs, selects, textareas when present, and the save button. Checkbox/radio glyphs and host icon pseudo-elements are not treated as text typography.
 
-The existing `vazir_font_options['exclude_selectors']` setting remains the sole exclusion authority. For every inheritable Gravity Perks typography selector, representable element exclusions are applied through both root/descendant negative applicability and descendant-containment protection. This prevents an otherwise eligible title, label, description, or control ancestor from receiving Vazirmatn when it contains an excluded element subtree whose text would otherwise inherit that family. Pseudo-element exclusions remain host-owned and are not inserted into relational element guards.
+The existing `vazir_font_options['exclude_selectors']` setting remains the sole exclusion authority. For every inheritable Gravity Perks typography selector, representable element exclusions are applied through both root/descendant negative applicability and descendant-containment protection. The root/descendant guard always keeps the configured selector in its original document context.
 
-If an element-level configured exclusion itself contains `:has()`, the required descendant-containment guard cannot be represented safely without nesting relational selectors. In that case the entire bounded standalone Perks typography repair fails closed rather than emitting invalid CSS or approximating selector matching. The repair does not use competing `font-family: inherit`, `initial`, `revert`, or `revert-layer` reset rules.
+Descendant containment is different because selectors inside `:has()` are relative to the targeted Settings node. Local simple, compound, attribute, and safely bounded functional selectors can be embedded unchanged. An exclusion beginning with the exact guaranteed Settings scope, such as `.perk-settings .no-vazir`, is safely reduced to `.no-vazir` only for the descendant-containment predicate because every bounded production target is already inside `.perk-settings`; the original `.perk-settings .no-vazir` remains in the root/descendant guard. Other top-level descendant/child/sibling relationships cannot be proven equivalent after target-relative embedding and therefore fail the bounded inheritable repair closed rather than being broadened, narrowed, or reinterpreted.
+
+The qualification is lexical rather than a general CSS parser: quoted strings, attribute selectors, and functional pseudo-class parentheses are opaque while top-level combinators are classified. Combinator-looking characters or whitespace inside those bounded regions therefore do not cause false rejection. Pseudo-element exclusions remain host-owned and are not inserted into relational element guards. Element exclusions containing `:has()` remain fail-closed because the required descendant-containment boundary would otherwise nest relational selectors. The repair does not use competing `font-family: inherit`, `initial`, `revert`, or `revert-layer` reset rules.
 
 ## Evidence contract
 
@@ -50,12 +52,14 @@ The dedicated `gravityperks` Product Evidence profile is authoritative for this 
 - the generated Documentation alias;
 - standalone Settings computed families for title, label, description, text input, select, save button, and textarea when rendered;
 - a direct excluded Settings text surface;
-- a nested excluded element inside an otherwise targeted description plus a separate non-excluded Settings text surface;
+- an ancestor-qualified configured exclusion `.perk-settings .vazir-gp-evidence-excluded-nested` whose matching child is inside an otherwise targeted description, plus a separate non-excluded Settings text surface;
 - actual bundled Vazirmatn WOFF2 requests, configured Loader weights, and duplicate URL detection;
 - continued `gwp-admin-css` host ownership and supported WordPress style-pipeline sentinels;
 - absence of an unnecessary standalone Vazir stylesheet link;
 - protected Dashicons / GFFontAwesome / FontAwesome families when actually rendered, otherwise explicitly `NOT_EXERCISED`;
 - real text/select/checkbox Settings save persistence and resulting notice/page lifecycle;
 - absence of reachable Google Fonts/gstatic requests.
+
+The ancestor-qualified browser scenario requires both the targeted containing description and the matching excluded descendant to remain non-Vazirmatn while a separate non-excluded description remains Vazirmatn. That combination proves the relative descendant predicate blocks inheritance across the configured document-context exclusion without disabling ordinary Settings typography.
 
 A post-repair `PASS` means only that exact 2.3.16 and the exercised material surfaces are admitted. It does not turn the unreachable legacy Documentation implementation into supported runtime evidence and does not prove later Gravity Perks releases.
