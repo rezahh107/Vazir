@@ -4,7 +4,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   expectVazirmatn,
-  expectNotVazirmatn,
   familyOf,
   login,
 } from '../../core/browser-helpers.mjs';
@@ -78,6 +77,10 @@ function isVazirmatn(family) {
   return /Vazirmatn/i.test(family || '');
 }
 
+async function handleFamily(handle) {
+  return handle.evaluate(el => getComputedStyle(el).fontFamily);
+}
+
 try {
   assert.equal(results.status, 'PASS', 'Qualification phase must have executed successfully before repair verification.');
   assert.equal(results.dispositions?.frontend_modern_view, 'ALREADY_VAZIRMATN', 'Modern Vantage frontend must remain already-correct.');
@@ -116,15 +119,18 @@ try {
   const ariaExpandedClosed = await input.getAttribute('aria-expanded');
 
   const exclusionClass = String(manifest.editor_exclusion_selector || '.vazir-gv-evidence-excluded').replace(/^\./, '');
-  await value.evaluate((el, className) => el.classList.add(className), exclusionClass);
+  const valueHandle = await value.elementHandle();
+  assert.ok(valueHandle, 'React Select value node must remain available for exclusion mutation evidence.');
+  await valueHandle.evaluate((el, className) => el.classList.add(className), exclusionClass);
   const excludedControlFamily = await familyOf(control);
-  const excludedValueFamily = await familyOf(value);
+  const excludedValueFamily = await handleFamily(valueHandle);
   assert.ok(!isVazirmatn(excludedControlFamily), `Excluded React Select control must not receive the repair; got ${excludedControlFamily}`);
   assert.ok(!isVazirmatn(excludedValueFamily), `Excluded React Select value must not inherit the repair; got ${excludedValueFamily}`);
   const excludedInputFamily = await expectVazirmatn(input, 'non-excluded sibling React Select input while value subtree is excluded');
-  await value.evaluate((el, className) => el.classList.remove(className), exclusionClass);
+  await valueHandle.evaluate((el, className) => el.classList.remove(className), exclusionClass);
   await expectVazirmatn(control, 'React Select control after exclusion fixture removal');
-  await expectVazirmatn(value, 'React Select value after exclusion fixture removal');
+  const restoredValueFamily = await handleFamily(valueHandle);
+  assert.ok(isVazirmatn(restoredValueFamily), `React Select value must recover Vazirmatn after exclusion removal; got ${restoredValueFamily}`);
 
   results.scenarios.gutenberg_react_select_production_repair = {
     status: 'PASS',
@@ -141,6 +147,7 @@ try {
       excluded_control_font_family: excludedControlFamily,
       excluded_value_font_family: excludedValueFamily,
       non_excluded_input_font_family: excludedInputFamily,
+      restored_value_font_family: restoredValueFamily,
     },
     admitted_selector: '.gk-gravityview-blocks .view-selector [class$="-control"]',
     important_required: false,
