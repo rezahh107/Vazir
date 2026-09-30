@@ -15,7 +15,7 @@ function vazir_wp_assert( bool $condition, string $message ): void {
 }
 
 vazir_wp_assert( defined( 'VAZIR_FONT_VERSION' ), 'plugin bootstrap is active' );
-vazir_wp_assert( '1.3.0' === VAZIR_FONT_VERSION, 'runtime version is 1.3.0' );
+vazir_wp_assert( '1.4.0' === VAZIR_FONT_VERSION, 'runtime version is 1.4.0' );
 
 $options = VazirFontPlugin::get_options();
 vazir_wp_assert( ! empty( $options['enable_frontend'] ), 'frontend typography is enabled by default' );

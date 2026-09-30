@@ -6,7 +6,8 @@ This document defines repository-specific contribution rules for human contribut
 
 - **Plugin slug:** `vazir-font-wp`
 - **Primary entrypoint:** `vazir-font-wp.php`
-- **Current plugin version:** `1.3.0`
+- **Current plugin version:** `1.4.0`
+- **Persisted option schema version:** `1.3.0` via `VAZIR_FONT_SCHEMA_VERSION`
 - **Minimum WordPress:** `6.7`
 - **Minimum PHP:** `7.4`
 - **Text domain:** `vazir-font-wp`
@@ -16,7 +17,7 @@ This document defines repository-specific contribution rules for human contribut
 - **Persisted option:** `vazir_font_options`
 - **Optional integrations:** Gravity Forms; capability-admitted Gravity Flow typography compatibility; capability-admitted Gravity Perks standalone Settings typography compatibility
 
-When changing version metadata, update the plugin header and `VAZIR_FONT_VERSION` in `vazir-font-wp.php` together.
+When changing release version metadata, update the plugin header and `VAZIR_FONT_VERSION` in `vazir-font-wp.php` together. Do not change `VAZIR_FONT_SCHEMA_VERSION` unless the persisted option schema actually changes; a product release bump alone must not trigger an options migration.
 
 ## 2. Runtime Architecture
 
@@ -131,6 +132,7 @@ Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms/Fl
 | `assets/css/` | Shared/static CSS assets |
 | `assets/js/` | Admin-side JavaScript |
 | `languages/` | Translation template/resources |
+| `tests/version-schema-contract.php` | Deterministic release-version vs persisted-schema migration boundary contract |
 | `tests/gravityflow-runtime-contract.php` | Deterministic Gravity Flow admission/adapter contract |
 | `tests/gravityperks-runtime-contract.php` | Deterministic Gravity Perks standalone Settings admission/exclusion contract |
 | `tests/gravity-descendant-exclusion-contract.php` | Cross-adapter deterministic relative-safety/fail-closed exclusion contract |
@@ -157,7 +159,7 @@ composer lint
 composer compat
 ```
 
-`composer test` runs the standalone core/Gravity Forms contract, the Gravity Flow adapter contract for both the currently qualified `3.1.0` identity and a synthetic alternate version identity, the deterministic Gravity Perks standalone Settings runtime contract, the shared Gravity descendant-exclusion boundary contract, and PHPUnit repository contracts. The synthetic Flow alternate identity proves only that Flow admission is not version-gated. `composer lint` uses the repository PHPCS ruleset. `composer compat` checks the production PHP surfaces against the configured PHP compatibility range.
+`composer test` runs the standalone core/Gravity Forms contract, the release-version vs persisted-schema migration boundary contract, the Gravity Flow adapter contract for both the currently qualified `3.1.0` identity and a synthetic alternate version identity, the deterministic Gravity Perks standalone Settings runtime contract, the shared Gravity descendant-exclusion boundary contract, and PHPUnit repository contracts. The synthetic Flow alternate identity proves only that Flow admission is not version-gated. `composer lint` uses the repository PHPCS ruleset. `composer compat` checks the production PHP surfaces against the configured PHP compatibility range.
 
 ## 8. Coding Standards
 
