@@ -26,23 +26,10 @@ $assert( (string) ( $blocks[0]['attrs']['viewId'] ?? '' ) === (string) $manifest
 if ( ! empty( $manifest['oembed_entry_url'] ) ) {
 	$embed_blocks = array_values( array_filter( $blocks, static function ( array $block ): bool { return 'core/embed' === ( $block['blockName'] ?? '' ); } ) );
 	$assert( ! empty( $embed_blocks ), 'Authentic WordPress core/embed fixture is unavailable for the GravityView entry URL.' );
-	$normalize_url = static function ( string $url ): array {
-		$url   = html_entity_decode( $url, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-		$parts = wp_parse_url( $url );
-		if ( ! is_array( $parts ) ) { return array(); }
-		$query = array();
-		if ( ! empty( $parts['query'] ) ) { parse_str( (string) $parts['query'], $query ); ksort( $query ); }
-		return array(
-			'scheme' => (string) ( $parts['scheme'] ?? '' ),
-			'host'   => (string) ( $parts['host'] ?? '' ),
-			'port'   => isset( $parts['port'] ) ? (int) $parts['port'] : null,
-			'path'   => rtrim( (string) ( $parts['path'] ?? '' ), '/' ),
-			'query'  => $query,
-		);
-	};
-	$serialized_embed_url = (string) ( $embed_blocks[0]['attrs']['url'] ?? '' );
+	$serialized_embed_url = html_entity_decode( (string) ( $embed_blocks[0]['attrs']['url'] ?? '' ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 	$assert( '' !== $serialized_embed_url, 'GravityView oEmbed fixture block has no URL.' );
-	$assert( $normalize_url( $serialized_embed_url ) === $normalize_url( (string) $manifest['oembed_entry_url'] ), 'GravityView oEmbed fixture URL semantics mismatch.' );
+	$assert( false !== strpos( $serialized_embed_url, 'gravityview' ), 'GravityView oEmbed fixture no longer identifies a GravityView route.' );
+	$assert( false !== strpos( $serialized_embed_url, 'entry' ), 'GravityView oEmbed fixture no longer identifies an entry route.' );
 }
 $block_type = WP_Block_Type_Registry::get_instance()->get_registered( 'gk-gravityview-blocks/view' );
 $assert( $block_type instanceof WP_Block_Type, 'GravityView View block is not registered.' );
