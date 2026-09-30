@@ -201,8 +201,9 @@ final class VazirFont_GravityFlow_Integration {
 	/**
 	 * Apply root/descendant negative scope. Inheritable Flow rules also reject
 	 * targets containing an excluded subtree so inheritance cannot cross the
-	 * Owner-configured boundary. Nested :has() cannot be represented safely in
-	 * the required guard, so such cases fail closed by omitting the rule.
+	 * Owner-configured boundary. Descendant containment accepts only selectors
+	 * that are safely target-relative; other document-context complex selectors
+	 * fail closed rather than being reinterpreted below the target.
 	 *
 	 * @param string[] $exclude_selectors Valid element-level exclusions.
 	 */
@@ -217,11 +218,17 @@ final class VazirFont_GravityFlow_Integration {
 			return $guarded;
 		}
 
-		if ( $this->contains_relational_exclusion( $exclude_selectors ) ) {
+		$descendant_exclusions = VazirFont_Selector_Boundary::for_descendant_containment(
+			$selector,
+			$exclude_selectors,
+			'.gflow-grid',
+			'.gflow-grid'
+		);
+		if ( null === $descendant_exclusions ) {
 			return '';
 		}
 
-		return $guarded . ':not(:has(:where(' . implode( ', ', $exclude_selectors ) . ')))';
+		return $guarded . ':not(:has(:where(' . implode( ', ', $descendant_exclusions ) . ')))';
 	}
 
 	/**
