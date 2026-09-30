@@ -20,10 +20,13 @@ $entry_url = (string) ( $manifest['oembed_entry_url'] ?? '' );
 if ( '' === $entry_url ) {
 	throw new RuntimeException( 'GravityView oEmbed entry URL is unavailable.' );
 }
+if ( ! post_type_exists( 'vazir_gv_oembed' ) ) {
+	throw new RuntimeException( 'Classic-editor evidence post type is unavailable.' );
+}
 
-$existing_page_id = (int) ( $manifest['oembed_editor_page_id'] ?? 0 );
-if ( $existing_page_id > 0 && 'page' === get_post_type( $existing_page_id ) ) {
-	$manifest['oembed_editor_url'] = admin_url( 'post.php?post=' . $existing_page_id . '&action=edit' );
+$existing_post_id = (int) ( $manifest['oembed_editor_post_id'] ?? 0 );
+if ( $existing_post_id > 0 && 'vazir_gv_oembed' === get_post_type( $existing_post_id ) ) {
+	$manifest['oembed_editor_url'] = admin_url( 'post.php?post=' . $existing_post_id . '&action=edit' );
 	update_option( 'vazir_view_evidence_fixture_manifest', $manifest, false );
 	file_put_contents(
 		$artifact_dir . '/gravityview-fixture.json',
@@ -33,37 +36,25 @@ if ( $existing_page_id > 0 && 'page' === get_post_type( $existing_page_id ) ) {
 }
 
 $shortcode = '[embed]' . esc_url_raw( $entry_url ) . '[/embed]';
-$block = serialize_block(
+$oembed_editor_post_id = wp_insert_post(
 	array(
-		'blockName'    => 'core/freeform',
-		'attrs'        => array(
-			'className' => 'vazir-gv-evidence-excluded',
-		),
-		'innerBlocks'  => array(),
-		'innerHTML'    => $shortcode,
-		'innerContent' => array( $shortcode ),
-	)
-);
-
-$oembed_editor_page_id = wp_insert_post(
-	array(
-		'post_type'    => 'page',
+		'post_type'    => 'vazir_gv_oembed',
 		'post_status'  => 'draft',
 		'post_title'   => 'Vazir GravityView oEmbed Insertion Evidence',
 		'post_name'    => 'vazir-gravityview-oembed-insertion-evidence',
-		'post_content' => $block,
+		'post_content' => $shortcode,
 	),
 	true
 );
-if ( is_wp_error( $oembed_editor_page_id ) ) {
-	throw new RuntimeException( $oembed_editor_page_id->get_error_message() );
+if ( is_wp_error( $oembed_editor_post_id ) ) {
+	throw new RuntimeException( $oembed_editor_post_id->get_error_message() );
 }
 
-$oembed_editor_page_id = (int) $oembed_editor_page_id;
-$manifest['oembed_editor_page_id'] = $oembed_editor_page_id;
-$manifest['oembed_editor_url']     = admin_url( 'post.php?post=' . $oembed_editor_page_id . '&action=edit' );
-$manifest['oembed_editor_block']   = 'core/freeform';
-$manifest['oembed_editor_exclusion_class'] = 'vazir-gv-evidence-excluded';
+$oembed_editor_post_id = (int) $oembed_editor_post_id;
+$manifest['oembed_editor_post_id']   = $oembed_editor_post_id;
+$manifest['oembed_editor_url']       = admin_url( 'post.php?post=' . $oembed_editor_post_id . '&action=edit' );
+$manifest['oembed_editor_post_type'] = 'vazir_gv_oembed';
+$manifest['oembed_source_shortcode'] = $shortcode;
 
 update_option( 'vazir_view_evidence_fixture_manifest', $manifest, false );
 file_put_contents(
