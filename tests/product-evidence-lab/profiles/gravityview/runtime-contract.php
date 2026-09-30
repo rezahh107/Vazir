@@ -99,20 +99,20 @@ foreach ( $source_files as $key => $relative_path ) {
 }
 
 $token_specs = array(
-	'react_select_editor_font'          => array( 'document_aware_select', 'fontFamily: \'-apple-system, BlinkMacSystemFont' ),
-	'react_select_portal_body'          => array( 'document_aware_select', 'menuPortalTarget={ doc.body }' ),
-	'react_select_container_slot'       => array( 'document_aware_select', 'container: ( base, state ) =>' ),
-	'react_select_menu_portal_slot'     => array( 'document_aware_select', 'menuPortal: ( base, state ) =>' ),
-	'datepicker_direct_font'             => array( 'view_editor_css', 'font-family:Helvetica Neue,helvetica,arial,sans-serif' ),
-	'oembed_placeholder'                 => array( 'oembed', '<div class="loading-placeholder"' ),
-	'oembed_heading_inline_font'         => array( 'oembed', '<h3 style="margin:0; padding:0; font-family:' ),
-	'oembed_paragraph_inline_font'       => array( 'oembed', '<p style="margin:0; padding:0; font-family:' ),
-	'theme_font_inherit'                 => array( 'theme_tokens', '--gv-font-family: inherit;' ),
-	'token_registry_font_family'         => array( 'token_registry', "'css_var' => '--gv-font-family'" ),
-	'token_registry_inherit_default'     => array( 'token_registry', "'default' => 'inherit'" ),
-	'theme_overrides_filter'             => array( 'view_styles', "apply_filters( 'gk/gravityview/theme/overrides'" ),
-	'per_view_overrides_filter'          => array( 'view_styles', 'gk/gravityview/theme/view/{$view_id}/overrides' ),
-	'block_editor_enqueue'               => array( 'blocks', "add_action(\n\t\t\t\t\t'enqueue_block_editor_assets'" ),
+	'react_select_editor_font'      => array( 'document_aware_select', 'fontFamily: \'-apple-system, BlinkMacSystemFont' ),
+	'react_select_portal_body'      => array( 'document_aware_select', 'menuPortalTarget={ doc.body }' ),
+	'react_select_container_slot'   => array( 'document_aware_select', 'container: ( base, state ) =>' ),
+	'react_select_menu_portal_slot' => array( 'document_aware_select', 'menuPortal: ( base, state ) =>' ),
+	'datepicker_direct_font'         => array( 'view_editor_css', 'font-family:Helvetica Neue,helvetica,arial,sans-serif' ),
+	'oembed_placeholder'             => array( 'oembed', '<div class="loading-placeholder"' ),
+	'oembed_heading_inline_font'     => array( 'oembed', '<h3 style="margin:0; padding:0; font-family:' ),
+	'oembed_paragraph_inline_font'   => array( 'oembed', '<p style="margin:0; padding:0; font-family:' ),
+	'theme_font_inherit'             => array( 'theme_tokens', '--gv-font-family: inherit;' ),
+	'token_registry_font_family'     => array( 'token_registry', "'css_var' => '--gv-font-family'" ),
+	'token_registry_inherit_default' => array( 'token_registry', "'default' => 'inherit'" ),
+	'theme_overrides_filter'         => array( 'view_styles', "apply_filters( 'gk/gravityview/theme/overrides'" ),
+	'per_view_overrides_filter'      => array( 'view_styles', 'gk/gravityview/theme/view/{$view_id}/overrides' ),
+	'block_editor_enqueue'           => array( 'blocks', "'enqueue_block_editor_assets'" ),
 );
 foreach ( $token_specs as $key => $spec ) {
 	list( $source_key, $needle ) = $spec;
@@ -124,17 +124,27 @@ foreach ( $token_specs as $key => $spec ) {
 	);
 }
 
-foreach ( array( 'react_select_editor_font', 'react_select_portal_body', 'datepicker_direct_font', 'oembed_placeholder', 'theme_font_inherit', 'token_registry_font_family', 'theme_overrides_filter', 'per_view_overrides_filter' ) as $required_source_token ) {
+foreach ( array( 'react_select_editor_font', 'react_select_portal_body', 'datepicker_direct_font', 'oembed_placeholder', 'theme_font_inherit', 'token_registry_font_family', 'theme_overrides_filter', 'per_view_overrides_filter', 'block_editor_enqueue' ) as $required_source_token ) {
 	$assert( true === $source_evidence['tokens'][ $required_source_token ]['present'], 'Expected GravityView source token is missing: ' . $required_source_token );
 }
 
+$editor_script_handle = generate_block_asset_handle( (string) $manifest['block_name'], 'editorScript' );
+$editor_style_handle  = generate_block_asset_handle( (string) $manifest['block_name'], 'editorStyle' );
+$global_style_handle  = generate_block_asset_handle( (string) $manifest['block_name'], 'style' );
+$assert( wp_script_is( $editor_script_handle, 'registered' ), 'GravityView View editor script handle is not registered by the host.' );
+$assert( wp_style_is( $editor_style_handle, 'registered' ), 'GravityView View editor style handle is not registered by the host.' );
+$assert( wp_style_is( $global_style_handle, 'registered' ), 'GravityView View global style handle is not registered by the host.' );
+$assert( in_array( $editor_style_handle, (array) $block_type->editor_style_handles, true ), 'GravityView View block does not attach its registered editor style to block metadata.' );
+
 $block_assets = array(
-	'editor_script_handles' => array_values( (array) $block_type->editor_script_handles ),
-	'editor_style_handles'  => array_values( (array) $block_type->editor_style_handles ),
-	'style_handles'         => array_values( (array) $block_type->style_handles ),
+	'registered_editor_script_handle' => $editor_script_handle,
+	'registered_editor_style_handle'  => $editor_style_handle,
+	'registered_global_style_handle'  => $global_style_handle,
+	'block_editor_script_handles'     => array_values( (array) $block_type->editor_script_handles ),
+	'block_editor_style_handles'      => array_values( (array) $block_type->editor_style_handles ),
+	'block_style_handles'             => array_values( (array) $block_type->style_handles ),
+	'host_ownership'                  => 'GravityView registers the editor script/style directly; only editorStyle is also attached to block metadata for iframe propagation.',
 );
-$assert( ! empty( $block_assets['editor_script_handles'] ), 'GravityView View block has no registered editor script handle.' );
-$assert( ! empty( $block_assets['editor_style_handles'] ), 'GravityView View block has no registered editor style handle.' );
 
 $results = array(
 	'status'     => 'PASS',
