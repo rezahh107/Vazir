@@ -134,7 +134,6 @@ $source_probe = array(
 				'editor_asset_hook'       => 'enqueue_block_editor_assets',
 				'register_style'          => 'wp_register_style(',
 				'register_script'         => 'wp_register_script(',
-				'editor_style_bridge'     => "$block_meta['editor_style'] = $editor_style_handle",
 				'register_block_metadata' => 'register_block_type_from_metadata',
 			)
 		),
