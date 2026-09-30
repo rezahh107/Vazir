@@ -55,6 +55,12 @@ function vf_gp_reset( VazirFont_GravityPerks_Integration $integration ): void {
 	$GLOBALS['vf_inline'][ 'gwp-admin' ] = array();
 }
 
+function vf_gp_private_invoke( object $object, string $method_name, array $arguments = array() ) {
+	$method = ( new ReflectionClass( $object ) )->getMethod( $method_name );
+	$method->setAccessible( true );
+	return $method->invokeArgs( $object, $arguments );
+}
+
 require dirname( __DIR__ ) . '/vazir-font-wp.php';
 VazirFontPlugin::get_instance()->init();
 
@@ -62,12 +68,46 @@ vf_gp_assert( class_exists( 'VazirFont_GravityPerks_Integration' ), 'Gravity Per
 $integration = VazirFont_GravityPerks_Integration::get_instance();
 vf_gp_assert( isset( $GLOBALS['vf_filters']['print_styles_array'] ), 'adapter registers the supported print_styles_array seam before standalone output' );
 
+$classifier_instances = array(
+	'Loader' => VazirFont_Loader::get_instance(),
+	'Gravity Forms' => ( new ReflectionClass( 'VazirFont_GravityForms_Integration' ) )->newInstanceWithoutConstructor(),
+	'Gravity Flow' => ( new ReflectionClass( 'VazirFont_GravityFlow_Integration' ) )->newInstanceWithoutConstructor(),
+	'Gravity Perks' => $integration,
+);
+$quoted_attribute_cases = array(
+	'[data-vazir="::before"]',
+	'[data-vazir=":before"]',
+	"[data-vazir='::after']",
+);
+$real_pseudo_cases = array( '[data-icon]:before', '.dashicons::before' );
+foreach ( $classifier_instances as $label => $instance ) {
+	foreach ( $quoted_attribute_cases as $selector ) {
+		vf_gp_assert( false === vf_gp_private_invoke( $instance, 'selector_targets_pseudo_element', array( $selector ) ), $label . ' keeps pseudo-looking quoted attribute text classified as an element selector: ' . $selector );
+	}
+	foreach ( $real_pseudo_cases as $selector ) {
+		vf_gp_assert( true === vf_gp_private_invoke( $instance, 'selector_targets_pseudo_element', array( $selector ) ), $label . ' still classifies a real pseudo-element selector: ' . $selector );
+	}
+
+	if ( $instance instanceof VazirFont_Loader ) {
+		$retained = vf_gp_private_invoke( $instance, 'get_negative_scope_selectors', array( array_merge( $quoted_attribute_cases, $real_pseudo_cases ) ) );
+		$mixed = vf_gp_private_invoke( $instance, 'get_negative_scope_selectors', array( array( '[data-vazir="::before"], [data-icon]:before' ) ) );
+	} else {
+		VazirFontPlugin::update_options( array( 'exclude_selectors' => array_merge( $quoted_attribute_cases, $real_pseudo_cases ) ) );
+		$retained = vf_gp_private_invoke( $instance, 'get_negative_scope_selectors' );
+		VazirFontPlugin::update_options( array( 'exclude_selectors' => array( '[data-vazir="::before"], [data-icon]:before' ) ) );
+		$mixed = vf_gp_private_invoke( $instance, 'get_negative_scope_selectors' );
+	}
+
+	vf_gp_assert( $quoted_attribute_cases === $retained, $label . ' retains every quoted-attribute element exclusion while omitting true pseudo-elements' );
+	vf_gp_assert( array( '[data-vazir="::before"]' ) === $mixed, $label . ' mixed selector list retains only the element component' );
+}
+
 wp_register_style( 'gwp-admin', 'https://example.test/gravityperks/admin.css', array(), '2.3.16' );
 VazirFontPlugin::update_options(
 	array(
 		'enable_admin'         => true,
 		'enable_gravity_forms' => true,
-		'exclude_selectors'    => array( '.vazir-gp-evidence-excluded', '[data-icon]:before' ),
+		'exclude_selectors'    => array( '.vazir-gp-evidence-excluded', '[data-vazir="::before"]', '[data-icon]:before' ),
 	)
 );
 $_GET = array( 'page' => 'gwp_perks', 'view' => 'perk_settings', 'slug' => 'gp-vazir-evidence/gp-vazir-evidence.php' );
@@ -85,11 +125,12 @@ vf_gp_assert( false !== strpos( $css, 'body.perk-iframe .perk-settings input[typ
 vf_gp_assert( false !== strpos( $css, 'body.perk-iframe .perk-settings select' ), 'select controls are inside the bounded standalone Settings selector set' );
 vf_gp_assert( false !== strpos( $css, 'body.perk-iframe .perk-settings textarea' ), 'textarea controls are supported without requiring the fixture to render one' );
 vf_gp_assert( false !== strpos( $css, 'body.perk-iframe .perk-settings #gwp_save_settings' ), 'save button is inside the bounded standalone Settings selector set' );
-$root_guard = ':not(:where(.vazir-gp-evidence-excluded, .vazir-gp-evidence-excluded *))';
-$descendant_guard = ':not(:has(:where(.vazir-gp-evidence-excluded)))';
+$root_guard = ':not(:where(.vazir-gp-evidence-excluded, .vazir-gp-evidence-excluded *, [data-vazir="::before"], [data-vazir="::before"] *))';
+$descendant_guard = ':not(:has(:where(.vazir-gp-evidence-excluded, [data-vazir="::before"])))';
 $root_complete_guard = $root_guard . $descendant_guard;
 $enforcement_selector_count = 13;
 vf_gp_assert( false !== strpos( $css, 'body.perk-iframe .perk-settings .description' . $root_complete_guard ), 'inheritable description enforcement blocks both excluded roots/descendants and excluded descendant subtrees' );
+vf_gp_assert( false !== strpos( $css, '[data-vazir="::before"]' ), 'quoted-attribute exclusion is retained in generated Gravity Perks enforcement CSS' );
 vf_gp_assert( $enforcement_selector_count === substr_count( $css, $root_guard ), 'every bounded Gravity Perks typography selector receives the root/descendant exclusion guard' );
 vf_gp_assert( $enforcement_selector_count === substr_count( $css, $descendant_guard ), 'every bounded Gravity Perks typography selector receives descendant-containment protection' );
 vf_gp_assert( false === strpos( $css, '.perk-iframe *' ), 'repair does not introduce a blanket perk-iframe descendant override' );

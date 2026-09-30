@@ -50,6 +50,7 @@ DOC;
 			'description' => 'Vazir evidence text description',
 		) );
 		echo '<p class="description vazir-gp-evidence-excluded">Vazir excluded evidence description</p>';
+		echo '<p class="description vazir-gp-evidence-attribute" data-vazir="::before">Vazir quoted attribute exclusion description</p>';
 		echo '<p class="description vazir-gp-evidence-nested-parent">Vazir nested exclusion parent <span class="vazir-gp-evidence-excluded-nested">Vazir nested excluded child</span></p>';
 		echo self::generate_select( $this, array(
 			'id' => 'evidence_select',
@@ -68,6 +69,25 @@ DOC;
 		return array( 'evidence_text', 'evidence_select', 'evidence_checkbox' );
 	}
 }
+
+// Test-only option overlay for the quoted-attribute classifier scenario. It
+// keeps the persisted fixture authority unchanged while exercising the exact
+// same vazir_font_options['exclude_selectors'] option surface on the authentic
+// Settings request.
+add_filter( 'option_vazir_font_options', function( $options ) {
+	if ( ! isset( $_GET['vazir_attribute_exclusion_probe'] ) || '1' !== (string) $_GET['vazir_attribute_exclusion_probe'] ) {
+		return $options;
+	}
+	if ( ! is_array( $options ) ) {
+		return $options;
+	}
+	$selectors = isset( $options['exclude_selectors'] ) && is_array( $options['exclude_selectors'] ) ? $options['exclude_selectors'] : array();
+	if ( ! in_array( '[data-vazir="::before"]', $selectors, true ) ) {
+		$selectors[] = '[data-vazir="::before"]';
+	}
+	$options['exclude_selectors'] = $selectors;
+	return $options;
+} );
 
 // Evidence-only sentinels. They do not change typography. This filter proves
 // the exact early standalone Settings wp_print_styles() call reaches the

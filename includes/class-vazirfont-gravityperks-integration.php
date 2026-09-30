@@ -235,7 +235,44 @@ final class VazirFont_GravityPerks_Integration {
 	}
 
 	private function selector_targets_pseudo_element( string $selector ): bool {
-		return 1 === preg_match( '/::[a-zA-Z0-9_-]+|:(?:before|after|first-letter|first-line)\b/i', $selector );
+		$quote         = '';
+		$bracket_depth = 0;
+		$length        = strlen( $selector );
+
+		for ( $index = 0; $index < $length; $index++ ) {
+			$char = $selector[ $index ];
+
+			if ( '' !== $quote ) {
+				if ( $char === $quote ) {
+					$quote = '';
+				}
+				continue;
+			}
+
+			if ( '"' === $char || "'" === $char ) {
+				$quote = $char;
+				continue;
+			}
+
+			if ( '[' === $char ) {
+				$bracket_depth++;
+				continue;
+			}
+			if ( ']' === $char && $bracket_depth > 0 ) {
+				$bracket_depth--;
+				continue;
+			}
+
+			if ( 0 !== $bracket_depth || ':' !== $char ) {
+				continue;
+			}
+
+			if ( 1 === preg_match( '/^(?:::[a-zA-Z0-9_-]+|:(?:before|after|first-letter|first-line)\b)/i', substr( $selector, $index ) ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private function is_valid_css_selector( string $selector ): bool {

@@ -178,7 +178,9 @@ try {
   // Authentic standalone Settings document: typography, direct and nested
   // exclusions, resource delivery, host ownership, protected glyphs, and save.
   {
-    const captured = await captureRoute(context, manifest.settings_url, async page => {
+    const settingsProbeUrl = new URL(manifest.settings_url);
+    settingsProbeUrl.searchParams.set('vazir_attribute_exclusion_probe', '1');
+    const captured = await captureRoute(context, settingsProbeUrl.toString(), async page => {
       await page.locator('body.perk-iframe.wp-core-ui').waitFor({ state: 'visible', timeout: 15000 });
       await page.locator('.page-title').first().waitFor({ state: 'visible', timeout: 15000 });
       await page.locator('label:has-text("Vazir Evidence Text")').waitFor({ state: 'visible', timeout: 15000 });
@@ -202,6 +204,9 @@ try {
     const excluded = await inspectNode(page, '.vazir-gp-evidence-excluded', 'direct excluded evidence description');
     assert(!isVazirmatn(excluded.computed_family), 'Direct configured exclusion still received the Perks Vazirmatn correction.');
 
+    const attributeExcluded = await inspectNode(page, '[data-vazir="::before"]', 'quoted attribute excluded evidence description');
+    assert(!isVazirmatn(attributeExcluded.computed_family), 'Quoted attribute exclusion was misclassified and still received the Perks Vazirmatn correction.');
+
     const nestedParent = await inspectNode(page, '.vazir-gp-evidence-nested-parent', 'nested exclusion parent description');
     const nestedExcluded = await inspectNode(page, '.vazir-gp-evidence-excluded-nested', 'nested excluded evidence child');
     assert(!isVazirmatn(nestedParent.computed_family), 'Target containing an excluded subtree still received inheritable Vazirmatn enforcement.');
@@ -222,9 +227,10 @@ try {
     assert(resources.host_stylesheet, 'gwp-admin-css is no longer the printed host stylesheet.');
     assert(resources.style_loader_probe === 'gwp-admin', 'gwp-admin did not traverse the supported WordPress style-loader pipeline.');
     assert(resources.seam_probe === '1' && resources.todo_probe === '1' && resources.registered_probe === '1', 'print_styles_array seam sentinel did not prove selected+registered gwp-admin capability.');
-    assert(resources.exclusion_count_probe === '2', 'Exact runtime did not observe both direct and nested configured exclusions.');
+    assert(resources.exclusion_count_probe === '3', 'Exact runtime did not observe direct, nested, and quoted-attribute exclusions.');
     assert(/body\.perk-iframe\s+\.perk-settings/.test(resources.host_inline_css), 'Production repair CSS was not attached to gwp-admin-inline-css.');
-    assert(resources.host_inline_css.includes(':not(:has(:where(.vazir-gp-evidence-excluded, .vazir-gp-evidence-excluded-nested)))'), 'Production repair CSS lacks descendant-containment protection for the configured element exclusions.');
+    assert(resources.host_inline_css.includes('[data-vazir="::before"]'), 'Production repair CSS silently dropped the quoted-attribute element exclusion.');
+    assert(resources.host_inline_css.includes(':not(:has(:where(.vazir-gp-evidence-excluded, .vazir-gp-evidence-excluded-nested, [data-vazir="::before"])))'), 'Production repair CSS lacks descendant-containment protection for the configured element exclusions.');
     assert(!/font-family\s*:\s*(?:inherit|initial|revert(?:-layer)?)\b/i.test(resources.host_inline_css), 'Production repair introduced a competing font-family reset rule.');
     assert(resources.extra_vazir_links.length === 0, 'Standalone Settings introduced an unnecessary standalone Vazir stylesheet link.');
 
@@ -268,6 +274,12 @@ try {
 
     results.scenarios.settings = {
       disposition: 'PASS', navigation, nodes, excluded,
+      quoted_attribute_exclusion: {
+        disposition: 'PASS',
+        selector: '[data-vazir="::before"]',
+        node: attributeExcluded,
+        non_excluded_sibling: nodes.text_description,
+      },
       nested_exclusion: {
         disposition: 'PASS',
         parent: nestedParent,
