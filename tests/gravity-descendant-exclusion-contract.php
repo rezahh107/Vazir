@@ -12,6 +12,7 @@ require $selector_boundary_file;
 require dirname( __DIR__ ) . '/includes/class-vazirfont-gravityforms-integration.php';
 require dirname( __DIR__ ) . '/includes/class-vazirfont-gravityflow-integration.php';
 require dirname( __DIR__ ) . '/includes/class-vazirfont-gravityperks-integration.php';
+require dirname( __DIR__ ) . '/includes/class-vazirfont-gravityview-integration.php';
 
 function vf_descendant_assert( bool $condition, string $message ): void {
 	if ( ! $condition ) {
@@ -70,6 +71,17 @@ $adapters = array(
 		'scope_child_exclusion' => '.gflow-grid .ag-theme-alpine > .no-vazir',
 		'invoke' => static function ( $instance, string $target, array $exclusions ): string {
 			return (string) vf_descendant_private_invoke( $instance, 'apply_exclusion_boundary', array( $target, $exclusions, true ) );
+		},
+	),
+	'GravityView' => array(
+		'instance' => ( new ReflectionClass( 'VazirFont_GravityView_Integration' ) )->newInstanceWithoutConstructor(),
+		'target' => '.gk-gravityview-blocks .react-datepicker',
+		'scope' => '.gk-gravityview-blocks',
+		'scope_exclusion' => '.gk-gravityview-blocks .no-vazir',
+		'scope_nested_exclusion' => '.gk-gravityview-blocks .react-datepicker .no-vazir',
+		'scope_child_exclusion' => '.gk-gravityview-blocks .react-datepicker > .no-vazir',
+		'invoke' => static function ( $instance, string $target, array $exclusions ): string {
+			return (string) vf_descendant_private_invoke( $instance, 'apply_exclusion_boundary', array( $target, $exclusions ) );
 		},
 	),
 );
@@ -146,5 +158,9 @@ vf_descendant_assert( '' === $forms_preview, 'Gravity Forms does not pretend a g
 $flow = $adapters['Gravity Flow']['instance'];
 $flow_portal = (string) vf_descendant_private_invoke( $flow, 'apply_exclusion_boundary', array( '.flatpickr-calendar.ag-custom-component-popup', array( '.gflow-grid .no-vazir' ), true ) );
 vf_descendant_assert( '' === $flow_portal, 'Gravity Flow does not pretend the detached Flatpickr portal is inside gflow-grid.' );
+
+$gravityview = $adapters['GravityView']['instance'];
+$gravityview_portal = (string) vf_descendant_private_invoke( $gravityview, 'apply_exclusion_boundary', array( '[role="listbox"]', array( '.gk-gravityview-blocks .no-vazir' ) ) );
+vf_descendant_assert( '' === $gravityview_portal, 'GravityView does not pretend the detached React Select portal is inside its block scope.' );
 
 fwrite( STDOUT, "ALL DESCENDANT EXCLUSION CONTRACT CHECKS PASSED\n" );

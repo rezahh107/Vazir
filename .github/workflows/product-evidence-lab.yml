@@ -9,6 +9,7 @@ on:
       - 'tests/gravityforms-evidence-lab/**'
       - 'includes/class-vazirfont-gravityforms-integration.php'
       - 'includes/class-vazirfont-gravityflow-integration.php'
+      - 'includes/class-vazirfont-gravityview-integration.php'
       - 'includes/class-vazirfont-loader.php'
       - 'vazir-font-wp.php'
       - 'assets/fonts/**'
@@ -249,7 +250,10 @@ jobs:
           case "$VAZIR_LAB_PROFILE" in
             gravityforms) node tests/gravityforms-evidence-lab/browser-characterization.mjs ;;
             gravityflow) node tests/product-evidence-lab/profiles/gravityflow/browser-characterization.mjs ;;
-            gravityview) node tests/product-evidence-lab/profiles/gravityview/browser-characterization.mjs ;;
+            gravityview)
+              node tests/product-evidence-lab/profiles/gravityview/browser-characterization.mjs
+              node tests/product-evidence-lab/profiles/gravityview/production-repair-characterization.mjs
+              ;;
             gravityperks) node tests/product-evidence-lab/profiles/gravityperks/browser-characterization.mjs ;;
             gravity-stack) node tests/product-evidence-lab/profiles/gravity-stack/browser-characterization.mjs ;;
           esac

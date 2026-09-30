@@ -22,7 +22,7 @@ if ( ! is_plugin_active( 'gravityview/gravityview.php' ) ) {
 }
 
 $existing = get_option( 'vazir_view_evidence_fixture_manifest' );
-if ( is_array( $existing ) && 2 === (int) ( $existing['schema'] ?? 0 ) && ! empty( $existing['view_id'] ) ) {
+if ( is_array( $existing ) && 3 === (int) ( $existing['schema'] ?? 0 ) && ! empty( $existing['view_id'] ) ) {
 	file_put_contents(
 		$artifact_dir . '/gravityview-fixture.json',
 		wp_json_encode( $existing, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n"
@@ -32,8 +32,10 @@ if ( is_array( $existing ) && 2 === (int) ( $existing['schema'] ?? 0 ) && ! empt
 
 $options = VazirFontPlugin::get_options();
 $exclude = isset( $options['exclude_selectors'] ) && is_array( $options['exclude_selectors'] ) ? $options['exclude_selectors'] : array();
-if ( ! in_array( '.vf-view-excluded', $exclude, true ) ) {
-	$exclude[] = '.vf-view-excluded';
+foreach ( array( '.vf-view-excluded', '.vazir-gv-evidence-excluded' ) as $evidence_exclusion ) {
+	if ( ! in_array( $evidence_exclusion, $exclude, true ) ) {
+		$exclude[] = $evidence_exclusion;
+	}
 }
 VazirFontPlugin::update_options(
 	array(
@@ -205,20 +207,21 @@ if ( ! is_string( $entry_url ) || '' === $entry_url ) {
 }
 
 $manifest = array(
-	'schema'              => 2,
-	'form_id'             => $form_id,
-	'entry_ids'           => $entry_ids,
-	'view_id'             => $view_id,
-	'page_id'             => $page_id,
-	'frontend_url'        => get_permalink( $page_id ),
-	'admin_view_url'      => admin_url( 'post.php?post=' . $view_id . '&action=edit' ),
-	'editor_page_id'      => $editor_page_id,
-	'editor_url'          => admin_url( 'post.php?post=' . $editor_page_id . '&action=edit' ),
-	'block_name'          => $block_name,
-	'oembed_entry_url'    => $entry_url,
-	'admin_ajax_url'      => admin_url( 'admin-ajax.php' ),
-	'exclude_selector'    => '.vf-view-excluded',
-	'expected_view_theme' => 'vantage',
+	'schema'                     => 3,
+	'form_id'                    => $form_id,
+	'entry_ids'                  => $entry_ids,
+	'view_id'                    => $view_id,
+	'page_id'                    => $page_id,
+	'frontend_url'               => get_permalink( $page_id ),
+	'admin_view_url'             => admin_url( 'post.php?post=' . $view_id . '&action=edit' ),
+	'editor_page_id'             => $editor_page_id,
+	'editor_url'                 => admin_url( 'post.php?post=' . $editor_page_id . '&action=edit' ),
+	'block_name'                 => $block_name,
+	'oembed_entry_url'           => $entry_url,
+	'admin_ajax_url'             => admin_url( 'admin-ajax.php' ),
+	'exclude_selector'           => '.vf-view-excluded',
+	'editor_exclusion_selector'  => '.vazir-gv-evidence-excluded',
+	'expected_view_theme'        => 'vantage',
 );
 update_option( 'vazir_view_evidence_fixture_manifest', $manifest, false );
 file_put_contents(

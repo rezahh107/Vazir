@@ -1,6 +1,6 @@
 # Vazir Font for WordPress
 
-A self-hosted Persian typography plugin for WordPress with optional Gravity Forms, Gravity Flow, and Gravity Perks compatibility.
+A self-hosted Persian typography plugin for WordPress with optional Gravity Forms, Gravity Flow, Gravity Perks, and bounded GravityView editor compatibility.
 
 ## Release 1.4.0
 
@@ -13,7 +13,7 @@ A self-hosted Persian typography plugin for WordPress with optional Gravity Form
 
 The persisted option/API contract is unchanged. Product version `1.4.0` is intentionally separate from the unchanged persisted option schema version `1.3.0`, so this release bump alone does not run an options migration.
 
-GravityView targeted Gutenberg/editor/date/oEmbed closure work is **not** part of `v1.4.0`. GravityView `3.3.4` remains an existing regression/evidence profile only; new GravityView qualification or production repair belongs to a later release. Compatibility evidence is exact-version-bound even where production admission is capability-based, so this release does not claim unexecuted Gravity product versions.
+GravityView targeted Gutenberg/editor/date/oEmbed work is **not** part of the already-published `v1.4.0`. The bounded GravityView production repair described below belongs to a later release and does not modify or republish `v1.4.0`. Compatibility evidence is exact-version-bound even where production admission is capability-based, so this repository does not claim unexecuted Gravity product versions.
 
 ## Intended runtime coverage
 
@@ -26,7 +26,8 @@ The plugin is designed to cover:
 - Gravity Forms frontend, Preview, Form Editor, and No Conflict Mode through registered WordPress style handles;
 - currently supported Gravity Forms legacy/current wrapper markup;
 - Gravity Flow Inbox typography through the product's supported admin/frontend enqueue seams, including the AG Grid text root, material text/date inputs, and Flow-bound Flatpickr calendar without replacing host-owned icon families or Inbox behavior;
-- Gravity Perks standalone Perk Settings typography through WordPress' `print_styles_array` boundary while the host `gwp-admin` stylesheet is being processed.
+- Gravity Perks standalone Perk Settings typography through WordPress' `print_styles_array` boundary while the host `gwp-admin` stylesheet is being processed;
+- the two exact-runtime-admitted GravityView View-block editor surfaces: React Select control/value typography and the normal-descendant React Datepicker, through GravityView's own registered editor-style handle.
 
 Automated PHP and repository contracts verify the loading/API paths. Real-WordPress smoke lanes verify bootstrap and enqueue behavior, and Chromium computed-style lanes exercise WordPress frontend/login/admin/editor coverage on classic and block themes. Licensed Gravity product coverage is handled separately by the Product-Wide Reproducible Evidence Lab; see `docs/CHARACTERIZATION.md`.
 
@@ -52,9 +53,9 @@ Existing callbacks on `vazir_font_family` continue to run unchanged. A callback 
 
 ### Upgrade and rollback
 
-The persisted option name and schema are unchanged: existing frontend/admin/Gravity compatibility toggles, selected weights, and `exclude_selectors` remain backward compatible. `enable_gravity_forms` remains the stored Gravity-specific compatibility key and is reused by the Gravity Forms, Gravity Flow, and Gravity Perks adapters; Flow additionally respects the existing frontend/admin context toggle for the surface being rendered, while the standalone Perks Settings adapter also requires admin typography to be enabled.
+The persisted option name and schema are unchanged: existing frontend/admin/Gravity compatibility toggles, selected weights, and `exclude_selectors` remain backward compatible. `enable_gravity_forms` remains the stored Gravity-specific compatibility key and is reused by the Gravity Forms, Gravity Flow, Gravity Perks, and bounded GravityView adapters. Flow additionally respects the existing frontend/admin context toggle for the surface being rendered, while the standalone Perks Settings and GravityView editor adapters require admin typography to be enabled.
 
-The plugin now keeps the product release version and persisted schema version as separate authorities. `VAZIR_FONT_VERSION` is `1.4.0`, while the unchanged persisted schema remains `VAZIR_FONT_SCHEMA_VERSION = 1.3.0`; upgrading from `1.3.0` to `1.4.0` therefore does not rewrite options merely because the product version changed.
+The plugin keeps the product release version and persisted schema version as separate authorities. `VAZIR_FONT_VERSION` remains `1.4.0` in this post-release development branch, while the unchanged persisted schema remains `VAZIR_FONT_SCHEMA_VERSION = 1.3.0`; adding the bounded GravityView adapter does not require an option migration.
 
 For this personal plugin, rollback is intentionally simple: reinstall/restore the previous compatible plugin revision/package. Because the option schema is unchanged, the prior version can reuse the same saved settings.
 
@@ -88,9 +89,20 @@ Gravity Perks remains authoritative for routing, Settings rendering, saving, con
 
 Real browser/runtime qualification currently covers exact Gravity Perks `2.3.16`. Other versions remain `NOT_PROVEN` until separately exercised. On the exact qualified runtime, the generated Documentation URL aliases to the Settings handler and is not claimed as independent Documentation-page compatibility evidence.
 
-## GravityView boundary
+## GravityView compatibility boundary
 
-GravityView remains an evidence profile rather than a dedicated production integration layer. The existing exact `3.3.4` regression profile remains part of product-wide qualification, but the in-progress targeted Gutenberg/editor/date/oEmbed qualification and any resulting production repair are intentionally outside `v1.4.0`.
+`VazirFont_GravityView_Integration` is intentionally a small View-block **editor-only** adapter, not a general GravityView presentation layer. Production admission is capability-based: the GravityView runtime must be present, the real `gk-gravityview-blocks/view` block must be registered, its editor-style metadata must contain `gk-gravityview-blocks-view-editor-style`, and that host handle must be registered at `enqueue_block_editor_assets`. Only then does Vazir attach bounded inline CSS to that GravityView-owned handle.
+
+The admitted selectors are deliberately small:
+
+- `.gk-gravityview-blocks .view-selector [class$="-control"]` for the React Select control/value inheritance boundary. Exact GravityView `3.3.4` itself uses the semantic `-control` suffix to locate the real control; generated Emotion hash prefixes are not used as production selector authority. The combobox input already resolves to Vazirmatn and is not directly targeted.
+- `.gk-gravityview-blocks .react-datepicker` for the normal-descendant View-block Datepicker. Current-month and day text inherit from this repaired root instead of receiving broad descendant overrides.
+
+Both rules reuse the existing `enable_admin`, `enable_gravity_forms`, `vazir_font_family`, and `exclude_selectors` authorities plus `VazirFont_Selector_Boundary`. Unsafe document-context exclusions fail the bounded repair closed. No JavaScript typography mutation, vendor edit, replacement stylesheet, frontend theme-token override, or `!important` is part of this admission.
+
+The modern Vantage frontend remains already-correct and receives no new repair. The detached React Select menu portal remains `NOT_PROVEN` and is not treated as a `.view-selector` descendant. GravityView's generic oEmbed `.loading-placeholder` heading/paragraph inline-font failure remains intentionally unrepaired because no stable GravityView-specific insertion scope has been admitted. GravityView icon ownership and WordPress Dashicons remain host-owned. See `docs/GRAVITYVIEW-CHARACTERIZATION.md` for the exact evidence boundary.
+
+Production admission is capability-based, while compatibility evidence is exact-version-bound. Current licensed browser/runtime evidence targets GravityView `3.3.4` with Gravity Forms `3.1.1.1`; other GravityView versions remain `NOT_PROVEN` until separately exercised. GravityView is not generally CLOSED by these two repairs.
 
 ## Requirements and PHP policy
 
@@ -99,7 +111,7 @@ GravityView remains an evidence profile rather than a dedicated production integ
 - Gravity Forms: optional; current exact browser/runtime qualification covers `3.1.1.1`
 - Gravity Flow: optional; runtime admission is capability-based; current exact browser/runtime qualification covers `3.1.0`
 - Gravity Perks: optional; standalone Settings admission is capability-based; current exact browser/runtime qualification covers `2.3.16`
-- GravityView: no dedicated production adapter; existing regression/evidence profile is bound to `3.3.4`
+- GravityView: optional; bounded View-block editor admission is capability-based; current exact browser/runtime qualification targets `3.3.4`
 - Recommended production PHP when Gravity Forms is part of the stack: 8.3, matching current Gravity Forms guidance
 - For WordPress-only deployments, current WordPress hosting guidance recommends PHP 8.4 or later
 - Latest PHP exercised by this repository CI: 8.5
@@ -116,9 +128,9 @@ The existing option schema is preserved:
 - `font_weights`;
 - `exclude_selectors`.
 
-`enable_gravity_forms` is retained for stored-option compatibility and acts as the shared Gravity compatibility gate for the Gravity Forms, Gravity Flow, and Gravity Perks adapters. Gravity Flow also requires the corresponding `enable_frontend` or `enable_admin` context to be enabled; standalone Gravity Perks Settings additionally requires `enable_admin`.
+`enable_gravity_forms` is retained for stored-option compatibility and acts as the shared Gravity compatibility gate for the Gravity Forms, Gravity Flow, Gravity Perks, and bounded GravityView adapters. Gravity Flow also requires the corresponding `enable_frontend` or `enable_admin` context to be enabled; standalone Gravity Perks Settings and GravityView editor repair additionally require `enable_admin`.
 
-`exclude_selectors` means that Vazirmatn `font-family` enforcement must not target matching element roots or their descendants. The runtime implements this as a negative selector boundary; it does not emit competing `font-family` reset declarations for generic element exclusions. Gravity Forms, Flow, and Perks descendant-containment qualification shares `VazirFont_Selector_Boundary`, which treats quoted strings, attributes, and bounded functional selectors lexically, fails unsafe relationships and real element-level `:has()` closed, and does not depend on `ctype_*`.
+`exclude_selectors` means that Vazirmatn `font-family` enforcement must not target matching element roots or their descendants. The runtime implements this as a negative selector boundary; it does not emit competing `font-family` reset declarations for generic element exclusions. Gravity Forms, Flow, Perks, and View normal-descendant qualification share `VazirFont_Selector_Boundary`, which treats quoted strings, attributes, and bounded functional selectors lexically, fails unsafe relationships and real element-level `:has()` closed, and does not depend on `ctype_*`.
 
 ## Development
 
@@ -129,9 +141,9 @@ composer lint
 composer compat
 ```
 
-`tests/runtime-contract.php` is the standalone core/Gravity Forms contract harness. `tests/version-schema-contract.php` proves that a product release bump does not trigger an options migration when the persisted schema is already current, while older schema state still follows the real migration path. `tests/gravityflow-runtime-contract.php` verifies the dedicated Flow adapter's supported hooks, capability-based host-style dependency gate, version-neutral admission, exclusion behavior, context/settings gates, bounded selector set, and no duplicate `@font-face` delivery. `composer test` runs that contract once with the currently qualified `3.1.0` identity and once with a clearly synthetic alternate version identity; the latter is admission-regression coverage only. `tests/wordpress-smoke.php` is executed by CI against real WordPress installations. `tests/browser-characterization.mjs` verifies computed typography and icon behavior for current WordPress fixtures.
+`tests/runtime-contract.php` is the standalone core/Gravity Forms contract harness. `tests/version-schema-contract.php` proves that a product release bump does not trigger an options migration when the persisted schema is already current, while older schema state still follows the real migration path. `tests/gravityflow-runtime-contract.php`, `tests/gravityperks-runtime-contract.php`, and `tests/gravityview-runtime-contract.php` verify their respective capability/admission, settings, exclusion, ownership, and fail-closed boundaries. `tests/gravity-descendant-exclusion-contract.php` exercises the shared target-relative exclusion rules across admitted Gravity adapters. `tests/wordpress-smoke.php` is executed by CI against real WordPress installations. `tests/browser-characterization.mjs` verifies computed typography and icon behavior for current WordPress fixtures.
 
-The Product-Wide Reproducible Evidence Lab adds separately diagnosable licensed profiles for Gravity Forms, Gravity Flow, GravityView, Gravity Perks, and the combined Gravity stack. The existing WordPress lanes remain the `wordpress` profile authority. A PASS is scoped to the exact profile/scenarios that ran; package verification or another profile is not a substitute for licensed runtime evidence.
+The Product-Wide Reproducible Evidence Lab adds separately diagnosable licensed profiles for Gravity Forms, Gravity Flow, GravityView, Gravity Perks, and the combined Gravity stack. The GravityView profile preserves its qualification phase for frontend/portal/oEmbed/icon truth while a second repair-verification phase proves the two admitted editor surfaces, their real interactions, and exclusion behavior. The existing WordPress lanes remain the `wordpress` profile authority. A PASS is scoped to the exact profile/scenarios that ran; package verification or another profile is not a substitute for licensed runtime evidence.
 
 ## Licensing
 
