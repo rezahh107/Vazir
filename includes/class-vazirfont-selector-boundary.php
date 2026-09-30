@@ -17,8 +17,9 @@ final class VazirFont_Selector_Boundary {
 	 *
 	 * Local selectors are already relative-safe. An ancestor-qualified selector
 	 * is relativized only when its first top-level relationship is a descendant
-	 * combinator from the adapter's guaranteed host scope. Other top-level
-	 * complex relationships remain document-context-dependent and fail closed.
+	 * combinator from the adapter's guaranteed host scope and the remaining
+	 * selector is local. Other top-level complex relationships remain
+	 * document-context-dependent and fail closed.
 	 *
 	 * @param string[] $exclude_selectors Valid element-level exclusions.
 	 * @return string[]|null
@@ -46,7 +47,7 @@ final class VazirFont_Selector_Boundary {
 			}
 			$relative[] = $candidate;
 		}
-		return $relative;
+		return array_values( array_unique( $relative ) );
 	}
 
 	private static function relative_descendant_selector(
@@ -70,7 +71,11 @@ final class VazirFont_Selector_Boundary {
 		}
 
 		$relative = trim( substr( $exclude_selector, $combinator['index'] + $combinator['length'] ) );
-		return '' === $relative ? null : $relative;
+		if ( '' === $relative || null !== self::first_top_level_combinator( $relative ) ) {
+			return null;
+		}
+
+		return $relative;
 	}
 
 	/**
