@@ -24,37 +24,36 @@ $gutenberg_content = get_post_field( 'post_content', (int) ( $manifest['gutenber
 $parsed_blocks = is_string( $gutenberg_content ) ? parse_blocks( $gutenberg_content ) : array();
 $gravityview_blocks = array_values( array_filter( $parsed_blocks, static function ( array $block ): bool { return 'gk-gravityview-blocks/view' === (string) ( $block['blockName'] ?? '' ); } ) );
 $assert( count( $gravityview_blocks ) >= 2, 'GravityView Gutenberg fixture must contain configured and unconfigured real View blocks.' );
+$block_name = 'gk-gravityview-blocks/view';
 $registry = WP_Block_Type_Registry::get_instance();
-$block_type = $registry->get_registered( 'gk-gravityview-blocks/view' );
+$block_type = $registry->get_registered( $block_name );
 $assert( $block_type instanceof WP_Block_Type, 'GravityView View block is not registered.' );
-$editor_script_handles = isset( $block_type->editor_script_handles ) && is_array( $block_type->editor_script_handles ) ? $block_type->editor_script_handles : array();
-$editor_style_handles  = isset( $block_type->editor_style_handles ) && is_array( $block_type->editor_style_handles ) ? $block_type->editor_style_handles : array();
-$style_handles         = isset( $block_type->style_handles ) && is_array( $block_type->style_handles ) ? $block_type->style_handles : array();
-$assert( ! empty( $editor_script_handles ), 'GravityView View block editor script handle is unavailable.' );
-$assert( ! empty( $editor_style_handles ), 'GravityView View block editor style handle is unavailable.' );
+$assert( function_exists( 'generate_block_asset_handle' ), 'WordPress block asset handle API is unavailable.' );
+$editor_script_handle = generate_block_asset_handle( $block_name, 'editorScript' );
+$editor_style_handle  = generate_block_asset_handle( $block_name, 'editorStyle' );
+$global_style_handle  = generate_block_asset_handle( $block_name, 'style' );
+$assert( wp_script_is( $editor_script_handle, 'registered' ), 'GravityView View block editor script is not registered on the exact runtime.' );
+$assert( wp_style_is( $editor_style_handle, 'registered' ), 'GravityView View block editor style is not registered on the exact runtime.' );
 $wp_scripts = wp_scripts();
 $wp_styles  = wp_styles();
-$describe_handles = static function ( array $handles, $registry_object ): array {
-	$described = array();
-	foreach ( $handles as $handle ) {
-		$handle = (string) $handle;
-		$registered = isset( $registry_object->registered[ $handle ] ) ? $registry_object->registered[ $handle ] : null;
-		$described[] = array(
-			'handle'     => $handle,
-			'registered' => null !== $registered,
-			'src'        => null !== $registered ? (string) $registered->src : null,
-		);
-	}
-	return $described;
+$describe_asset = static function ( string $handle, $registry_object ): array {
+	$registered = isset( $registry_object->registered[ $handle ] ) ? $registry_object->registered[ $handle ] : null;
+	return array(
+		'handle'       => $handle,
+		'registered'   => null !== $registered,
+		'src'          => null !== $registered ? (string) $registered->src : null,
+		'dependencies' => null !== $registered && is_array( $registered->deps ) ? array_values( $registered->deps ) : array(),
+		'version'      => null !== $registered ? $registered->ver : null,
+	);
 };
 $block_assets = array(
-	'editor_scripts' => $describe_handles( $editor_script_handles, $wp_scripts ),
-	'editor_styles'  => $describe_handles( $editor_style_handles, $wp_styles ),
-	'styles'         => $describe_handles( $style_handles, $wp_styles ),
+	'editor_script' => $describe_asset( $editor_script_handle, $wp_scripts ),
+	'editor_style'  => $describe_asset( $editor_style_handle, $wp_styles ),
+	'global_style'  => $describe_asset( $global_style_handle, $wp_styles ),
+	'block_type_exposes_editor_script_handles' => isset( $block_type->editor_script_handles ) ? array_values( (array) $block_type->editor_script_handles ) : array(),
+	'block_type_exposes_editor_style_handles'  => isset( $block_type->editor_style_handles ) ? array_values( (array) $block_type->editor_style_handles ) : array(),
+	'lifecycle_note' => 'GravityView registers the View editor script/style directly and enqueues them on enqueue_block_editor_assets; the editor style is additionally bridged into block registration for the editor iframe.',
 );
-foreach ( array_merge( $block_assets['editor_scripts'], $block_assets['editor_styles'] ) as $asset ) {
-	$assert( true === $asset['registered'], 'A GravityView View block editor asset handle is not registered.' );
-}
 $plugin_root = WP_PLUGIN_DIR . '/gravityview';
 $line_of = static function ( string $source, string $needle ): ?int {
 	$position = strpos( $source, $needle );
@@ -80,7 +79,7 @@ $probe_file = static function ( string $relative, array $tokens ) use ( $plugin_
 	);
 };
 $source_probe = array(
-	'schema'                   => 1,
+	'schema'                   => 2,
 	'evidence_class'           => 'GRAVITYVIEW_3_3_4_EXACT_INSTALLED_STRUCTURAL_PROBE',
 	'repository_sha'           => getenv( 'VAZIR_LAB_REPOSITORY_SHA' ) ?: null,
 	'gravity_forms_version'    => (string) ( $plugins['gravityforms/gravityforms.php']['Version'] ?? '' ),
@@ -135,6 +134,7 @@ $source_probe = array(
 				'editor_asset_hook'       => 'enqueue_block_editor_assets',
 				'register_style'          => 'wp_register_style(',
 				'register_script'         => 'wp_register_script(',
+				'editor_style_bridge'     => "$block_meta['editor_style'] = $editor_style_handle",
 				'register_block_metadata' => 'register_block_type_from_metadata',
 			)
 		),
@@ -146,17 +146,18 @@ $results = array(
 	'status'  => 'PASS',
 	'profile' => 'gravityview',
 	'assertions' => array(
-		'plugins_active'                   => 'PASS',
-		'exact_gravityforms_version'       => 'PASS',
-		'exact_gravityview_version'        => 'PASS',
-		'real_view_post'                   => 'PASS',
-		'form_binding'                     => 'PASS',
-		'table_configuration'              => 'PASS',
-		'explicit_modern_vantage_theme'    => 'PASS',
-		'real_gutenberg_view_blocks'       => 'PASS',
-		'gutenberg_view_block_registered'  => 'PASS',
-		'gutenberg_editor_assets_registered' => 'PASS',
-		'exact_source_risk_tokens_present' => 'PASS',
+		'plugins_active'                     => 'PASS',
+		'exact_gravityforms_version'         => 'PASS',
+		'exact_gravityview_version'          => 'PASS',
+		'real_view_post'                     => 'PASS',
+		'form_binding'                       => 'PASS',
+		'table_configuration'                => 'PASS',
+		'explicit_modern_vantage_theme'      => 'PASS',
+		'real_gutenberg_view_blocks'         => 'PASS',
+		'gutenberg_view_block_registered'    => 'PASS',
+		'gutenberg_editor_script_registered' => 'PASS',
+		'gutenberg_editor_style_registered'  => 'PASS',
+		'exact_source_risk_tokens_present'   => 'PASS',
 	),
 	'block_assets' => $block_assets,
 	'oembed_fixture' => ! empty( $manifest['oembed_page_id'] ) && ! empty( $manifest['oembed_entry_url'] ) ? 'READY' : 'NOT_PROVEN',
