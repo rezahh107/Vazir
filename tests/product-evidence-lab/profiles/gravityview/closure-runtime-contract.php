@@ -28,7 +28,10 @@ $assert( '7.1' === get_bloginfo( 'version' ), 'WordPress runtime version mismatc
 
 $manifest = get_option( 'vazir_view_evidence_fixture_manifest' );
 $assert( is_array( $manifest ), 'GravityView fixture manifest is missing.' );
-$assert( ! empty( $manifest['oembed_editor_page_id'] ), 'GravityView authentic oEmbed insertion fixture is missing.' );
+$assert( ! empty( $manifest['oembed_editor_post_id'] ), 'GravityView authentic oEmbed insertion fixture is missing.' );
+$assert( post_type_exists( 'vazir_gv_oembed' ), 'Classic-editor evidence post type is not registered.' );
+$assert( post_type_supports( 'vazir_gv_oembed', 'editor' ), 'Classic-editor evidence post type does not support the editor.' );
+$assert( false === use_block_editor_for_post_type( 'vazir_gv_oembed' ), 'Evidence post type unexpectedly resolves to the block editor.' );
 
 $files = array(
 	'gravityview_oembed' => WP_PLUGIN_DIR . '/gravityview/src/Media/oEmbed.php',
@@ -153,6 +156,11 @@ $results = array(
 		'wordpress'    => get_bloginfo( 'version' ),
 		'gravityforms' => (string) $plugins['gravityforms/gravityforms.php']['Version'],
 		'gravityview'  => (string) $plugins['gravityview/gravityview.php']['Version'],
+	),
+	'fixture' => array(
+		'post_type'          => 'vazir_gv_oembed',
+		'block_editor_used'  => false,
+		'classic_editor_used'=> true,
 	),
 	'files' => $metadata,
 	'tokens' => $tokens,
