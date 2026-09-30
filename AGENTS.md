@@ -56,7 +56,9 @@ Element-level exclusions are negative applicability boundaries: Vazirmatn `font-
 
 Pseudo-element exclusions must not be forced into relational element guards. Dedicated icon-family protections remain responsible for Dashicons and equivalent icon contexts.
 
-Gravity compatibility adapters must consume the same `vazir_font_options['exclude_selectors']` authority. Do not introduce a second incompatible selector model or a PHP/DOM imitation of arbitrary CSS selector matching. Inheritable Gravity Forms/Flow/Perks rules must preserve root/descendant negative applicability and descendant-containment protection so an excluded subtree cannot inherit Vazirmatn from an otherwise targeted ancestor. They must fail closed when the required exclusion boundary cannot be represented safely. Pseudo-element exclusions remain outside relational element guards; for the Gravity Perks adapter, an element-level configured exclusion containing `:has()` must fail the bounded repair closed rather than emit unsafe nested relational selectors.
+Gravity compatibility adapters must consume the same `vazir_font_options['exclude_selectors']` authority. Do not introduce a second incompatible selector model or a PHP/DOM imitation of arbitrary CSS selector matching. Inheritable Gravity Forms/Flow/Perks rules must preserve root/descendant negative applicability and descendant-containment protection so an excluded subtree cannot inherit Vazirmatn from an otherwise targeted ancestor.
+
+Descendant containment is target-relative, so a validated document-context exclusion must be lexically qualified before it is embedded in `:has()`. Local simple, compound, attribute, and safely bounded functional selectors remain usable as relative descendant predicates. The exact adapter-owned descendant scope may be stripped only when equivalence is guaranteed by the production target (`.gform_wrapper`, `.gflow-grid`, or `.perk-settings` respectively). Other top-level descendant/child/sibling relationships must fail the affected inheritable repair closed rather than be reinterpreted under the target. The lexical qualification must ignore combinator-looking characters and whitespace inside quoted strings, attribute selectors, and functional pseudo-class parentheses. Element exclusions containing `:has()` remain fail-closed. Pseudo-element exclusions remain outside relational element guards.
 
 ## 5. Gravity Compatibility
 
@@ -107,7 +109,7 @@ The standalone Settings adapter uses capability-based production admission. Pres
 - return the host style-handle list unchanged and attach the correction only through `wp_add_inline_style( 'gwp-admin', ... )`;
 - reuse `VazirFont_Loader::get_font_face_css()`, the public `vazir_font_family` filter, existing `enable_admin` / `enable_gravity_forms` settings, and the single `exclude_selectors` authority;
 - keep enforcement limited to bounded standalone Settings text surfaces; checkbox/radio glyphs and host icon pseudo-elements remain host-owned;
-- preserve root/descendant and descendant-containment exclusion protection for every inheritable Perks selector, and fail the bounded repair closed if an element exclusion contains `:has()` and therefore cannot be safely embedded in the required relational guard;
+- preserve root/descendant and descendant-containment exclusion protection for every inheritable Perks selector. A `.perk-settings <descendant>` exclusion may be safely reduced to its descendant predicate only because every bounded Perks target is guaranteed inside that exact Settings scope; other document-context complex selectors and selectors containing `:has()` must fail the bounded inheritable repair closed rather than be embedded with changed semantics;
 - do not edit Gravity Perks, rewrite output or stylesheet links, inject JavaScript, replace the Settings document, or create another stylesheet/font-delivery authority.
 
 Gravity Perks remains authoritative for routing, Settings rendering, saving, controls, notices, scripts, and host styles. Production admission is capability-based, while compatibility evidence is version-bound: current licensed browser/runtime qualification covers exact Gravity Perks `2.3.16`. Other Gravity Perks releases remain `NOT_PROVEN` until separately exercised. On exact `2.3.16`, the generated Documentation URL dispatches to the Settings handler and remains `NOT_REACHABLE_AS_DOCUMENTATION`; unreachable legacy source is not runtime support evidence.
@@ -121,6 +123,7 @@ Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms/Fl
 | `vazir-font-wp.php` | Plugin bootstrap, constants, options, autoloading |
 | `includes/class-vazirfont-loader.php` | WordPress typography loading and generated CSS |
 | `includes/class-vazirfont-admin-settings.php` | Admin settings and validation |
+| `includes/class-vazirfont-selector-boundary.php` | Internal lexical qualification for target-relative Gravity descendant exclusion guards |
 | `includes/class-vazirfont-gravityforms-integration.php` | Optional Gravity Forms compatibility adapter |
 | `includes/class-vazirfont-gravityflow-integration.php` | Capability-bounded Gravity Flow typography adapter |
 | `includes/class-vazirfont-gravityperks-integration.php` | Capability-bounded Gravity Perks standalone Settings typography adapter |
@@ -130,6 +133,7 @@ Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms/Fl
 | `languages/` | Translation template/resources |
 | `tests/gravityflow-runtime-contract.php` | Deterministic Gravity Flow admission/adapter contract |
 | `tests/gravityperks-runtime-contract.php` | Deterministic Gravity Perks standalone Settings admission/exclusion contract |
+| `tests/gravity-descendant-exclusion-contract.php` | Cross-adapter deterministic relative-safety/fail-closed exclusion contract |
 | `tests/gravityforms-evidence-lab/` | Deep Gravity Forms exact-runtime/browser profile and selector-admission manifest |
 | `tests/product-evidence-lab/` | Shared licensed package/runtime core plus Gravity Flow, GravityView, Gravity Perks, and combined-stack profiles |
 | `tests/product-evidence-lab/profiles/gravityperks/` | Exact-version Gravity Perks source/runtime/browser qualification profile |
@@ -153,7 +157,7 @@ composer lint
 composer compat
 ```
 
-`composer test` runs the standalone core/Gravity Forms contract, the Gravity Flow adapter contract for both the currently qualified `3.1.0` identity and a synthetic alternate version identity, the deterministic Gravity Perks standalone Settings runtime contract, and PHPUnit repository contracts. The synthetic Flow alternate identity proves only that Flow admission is not version-gated. `composer lint` uses the repository PHPCS ruleset. `composer compat` checks the production PHP surfaces against the configured PHP compatibility range.
+`composer test` runs the standalone core/Gravity Forms contract, the Gravity Flow adapter contract for both the currently qualified `3.1.0` identity and a synthetic alternate version identity, the deterministic Gravity Perks standalone Settings runtime contract, the shared Gravity descendant-exclusion boundary contract, and PHPUnit repository contracts. The synthetic Flow alternate identity proves only that Flow admission is not version-gated. `composer lint` uses the repository PHPCS ruleset. `composer compat` checks the production PHP surfaces against the configured PHP compatibility range.
 
 ## 8. Coding Standards
 
@@ -189,6 +193,7 @@ A PASS belongs only to the profile and scenarios that executed. Gravity Forms PA
 - Production behavior changes require a deterministic contract test where feasible.
 - CSS/typography changes that depend on cascade or computed style require browser characterization, not source inspection alone.
 - Changes to Gravity Forms compatibility should preserve Preview/No Conflict registered handles and include deterministic repository/runtime contracts.
+- Changes to inheritable Gravity exclusion semantics must exercise `tests/gravity-descendant-exclusion-contract.php`, including local selectors, exact adapter-owned ancestor qualification, unsafe top-level combinators, quoted/attribute/functional controls, pseudo-element ownership, and `:has()` fail-closed behavior.
 - Any claim about real Orbital/Theme Framework, Legacy Markup, Preview, Form Editor, AJAX, multi-page, validation rerender, conditional logic, admin components, or Gravity Forms icons requires the licensed `gravityforms` profile.
 - A source declaration in `admin-components.min.css`, `preview.css`, or Legacy CSS is only risk evidence. Production repair requires a rendered exact-runtime failure on the actual text-bearing node; already-correct components must not receive speculative broad fixes.
 - Gravity Flow admission changes require deterministic coverage separating version identity from actual host capabilities. Real Gravity Flow typography claims still require the licensed `gravityflow` profile to measure the actual rendered inner AG Grid/Flatpickr component, not only `.gflow-inbox`. Wrapper PASS must not be promoted to proof of inner AG Grid typography.
