@@ -15,7 +15,7 @@ The profile independently proves:
 - `gwp-admin` is selected and registered at the supported `print_styles_array` boundary;
 - page title, setting labels/descriptions, text input, select and save button resolve to Vazirmatn in the authentic standalone Settings document;
 - textarea is checked when deterministically rendered and otherwise remains explicitly `NOT_PROVEN`;
-- configured `exclude_selectors` remain authoritative, including a real `.vazir-gp-evidence-excluded` text surface and a non-excluded sibling;
+- configured `exclude_selectors` remain authoritative, including a direct `.vazir-gp-evidence-excluded` surface, an ancestor-qualified `.perk-settings .vazir-gp-evidence-excluded-nested` subtree whose targeted containing description is blocked from leaking Vazirmatn through inheritance, and a separate non-excluded control that remains Vazirmatn;
 - protected Dashicons / GFFontAwesome / FontAwesome computed families are preserved when actually rendered, or reported `NOT_EXERCISED` when the exact fixture renders none;
 - bundled Vazirmatn WOFF2 requests occur, configured Loader weights match emitted `@font-face` rules, and duplicate font URL delivery is absent;
 - `gwp-admin-css` remains the host stylesheet and no extra standalone Vazir `<link>` is introduced;
