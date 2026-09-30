@@ -137,13 +137,15 @@ $assert( wp_style_is( $global_style_handle, 'registered' ), 'GravityView View gl
 $assert( in_array( $editor_style_handle, (array) $block_type->editor_style_handles, true ), 'GravityView View block does not attach its registered editor style to block metadata.' );
 
 $block_assets = array(
-	'registered_editor_script_handle' => $editor_script_handle,
-	'registered_editor_style_handle'  => $editor_style_handle,
-	'registered_global_style_handle'  => $global_style_handle,
-	'block_editor_script_handles'     => array_values( (array) $block_type->editor_script_handles ),
-	'block_editor_style_handles'      => array_values( (array) $block_type->editor_style_handles ),
-	'block_style_handles'             => array_values( (array) $block_type->style_handles ),
-	'host_ownership'                  => 'GravityView registers the editor script/style directly; only editorStyle is also attached to block metadata for iframe propagation.',
+	'editor_script_handles'            => array( $editor_script_handle ),
+	'editor_style_handles'             => array( $editor_style_handle ),
+	'registered_editor_script_handle'  => $editor_script_handle,
+	'registered_editor_style_handle'   => $editor_style_handle,
+	'registered_global_style_handle'   => $global_style_handle,
+	'block_editor_script_handles'      => array_values( (array) $block_type->editor_script_handles ),
+	'block_editor_style_handles'       => array_values( (array) $block_type->editor_style_handles ),
+	'block_style_handles'              => array_values( (array) $block_type->style_handles ),
+	'host_ownership'                   => 'GravityView registers the editor script/style directly; only editorStyle is also attached to block metadata for iframe propagation.',
 );
 
 $results = array(
