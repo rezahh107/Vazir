@@ -22,6 +22,8 @@ The qualification preceding PR #24 established four distinct facts:
 
 PR #24 repaired exactly the two normal-descendant editor failures. The final-boundary qualification documented below does not extend production typography behavior. It exists to decide the remaining portal and oEmbed boundaries from exact runtime evidence.
 
+The repaired oEmbed qualification additionally recognizes the stable source-association attributes owned by WordPress `wp.mce.views`. This corrects the earlier evidence gap without admitting a production repair.
+
 ## Production lifecycle and ownership preserved from PR #24
 
 `VazirFont_GravityView_Integration` remains a bounded editor-only adapter. It initializes when GravityView is present and attaches on WordPress' supported `enqueue_block_editor_assets` lifecycle.
@@ -36,7 +38,7 @@ If any requirement is absent, the adapter fails closed and emits no repair CSS. 
 
 `wp_add_inline_style( 'gk-gravityview-blocks-view-editor-style', ... )`
 
-GravityView remains authoritative for block registration, controls, scripts, React Select/Datepicker behavior, editor state, host styles, icons, detached portals, and oEmbed rendering. Vazir does not edit or fork GravityView assets and adds no JavaScript typography mutation.
+GravityView remains authoritative for block registration, controls, scripts, React Select/Datepicker behavior, editor state, host styles, icons, detached portals, and oEmbed rendering. WordPress `wp.mce.views` remains authoritative for Classic Editor wpview/source association. Vazir does not edit or fork GravityView or WordPress assets and adds no JavaScript typography mutation.
 
 ## PR #24 React Select repair remains runtime-proven
 
@@ -82,7 +84,7 @@ No broad `.react-datepicker` rule is emitted outside the GravityView block scope
 
 `vazir_font_options['exclude_selectors']` remains the only exclusion authority. The admitted normal-descendant GravityView repairs continue through `VazirFont_Selector_Boundary` and retain negative applicability plus descendant-containment protection.
 
-No GravityView-specific persisted exclusion model, JavaScript selector engine, response rewrite, or DOM mutation was added by the final-boundary qualification.
+No GravityView-specific persisted exclusion model, JavaScript selector engine, response rewrite, renderer replacement, or DOM mutation was added by the final-boundary qualification.
 
 ## Detached React Select portal — final disposition: `NOT_PROVEN`
 
@@ -119,66 +121,94 @@ The source-control-to-portal association required for exclusion semantics theref
 
 This is intentionally **not** upgraded to `NO_ADMISSION`: the runtime did not expose enough stable visible portal structure to prove that every safe supported association is impossible. The truthful boundary is lack of proof, not proof of impossibility.
 
-## GravityView oEmbed placeholder — final disposition: `NO_ADMISSION`
+## GravityView oEmbed placeholder — final disposition: `NOT_PROVEN`
 
 ### Authentic supported insertion path
 
-The final qualification does not treat a manually mounted AJAX response as production scope authority. It creates a test-only classic-editor post type and persists the real GravityView entry URL as a native `[embed]...[/embed]` shortcode.
+The qualification does not treat a manually mounted AJAX response as production scope authority. It creates a test-only Classic Editor post type and persists the real GravityView entry URL as a native `[embed]...[/embed]` shortcode.
 
 The exercised path is:
 
 `WordPress Classic Editor -> TinyMCE wp.mce.views embed preview -> authenticated admin-ajax.php action=parse-embed -> GravityView oEmbed response`
 
-The runtime observed a real successful `parse-embed` request containing the GravityView entry URL and a returned body containing GravityView's `.loading-placeholder`. The placeholder was then inserted through WordPress' native wpview/TinyMCE machinery.
+The runtime observed a real successful `parse-embed` POST containing the exact GravityView entry URL, an HTTP 200 successful response whose body contains GravityView's `.loading-placeholder`, and authentic insertion of that placeholder through WordPress' native wpview/TinyMCE machinery.
 
-### Actual insertion context
+### Stable WordPress wpview/source association — proven
 
-Inside the TinyMCE content frame the relevant ancestry is effectively:
+WordPress 7.1 `wp.mce.views` is authoritative for the relationship between the persisted source text and the rendered wpview node. The authentic rendered ancestry contains:
 
 ```text
 .loading-placeholder
 └─ .wpview.wpview-wrap
-   └─ body#tinymce
+   ├─ data-wpview-type="embed"
+   └─ data-wpview-text="<encodeURIComponent(exact persisted source)>"
+      └─ body#tinymce
 ```
 
-The containing outer document exposes WordPress/TinyMCE editor wrappers such as `.mce-*`, `.wp-editor-container`, and `.wp-editor-wrap`.
+For the exact runtime fixture, the persisted Classic Editor source is the exact GravityView entry shortcode. The qualification mechanically proves all of the following:
 
-No stable GravityView-specific ancestor, class, or attribute surrounds the inserted placeholder. The observed scope is generic WordPress embed/editor presentation scope shared with unrelated embed providers.
+- the Classic Editor textarea source equals the persisted fixture source;
+- `data-wpview-type` is exactly `embed`;
+- `data-wpview-text` equals `encodeURIComponent()` of that exact persisted source;
+- `decodeURIComponent(data-wpview-text)` equals the persisted source;
+- WordPress `wp.mce.views.getText()` returns the same exact persisted source;
+- WordPress `wp.mce.views.getInstance()` binds the node to an instance whose `text` is the same exact persisted source;
+- that source contains the exact GravityView entry URL used by the successful `parse-embed` request.
 
-### Typography and cascade
+The association classifier also has deterministic negative controls. It must reject an unrelated expected source, a missing `data-wpview-text`, a missing `data-wpview-type`, a replaced unrelated encoded source, and a replaced unrelated view type. The exact runtime rejects all of those controls. Therefore the two wpview data attributes are material evidence rather than ignored metadata.
+
+There is still no GravityView-specific class or id ancestor around the placeholder. However, the exact WordPress-owned wpview source attributes provide a stable source-bound presentation association for this exact persisted GravityView embed. The earlier conclusion that the rendered context exposed no stable relevant attribute was therefore too strong.
+
+### Typography and cascade — failure and `!important` requirement proven
 
 The authentic placeholder remains a real typography failure:
 
-- placeholder/root context does not provide a GravityView-owned typography scope;
-- heading and paragraph resolve to the system stack declared inline by exact GravityView `3.3.4`;
-- exact source confirms the generic `.loading-placeholder` plus inline `font-family` declarations on the text-bearing heading and paragraph.
+- the placeholder/root context resolves to the TinyMCE/WordPress serif stack;
+- the text-bearing heading and paragraph resolve to the system stack declared inline by exact GravityView `3.3.4`;
+- the exact rendered heading and paragraph both contain inline `font-family` declarations.
 
 A normal stylesheet declaration cannot defeat those inline `font-family` declarations. A CSS correction would require higher importance, in practice `!important`.
 
-### Supported seam investigation
+This fact does not by itself admit a production repair; the remaining ownership/isolation/exclusion conditions must also hold.
 
-Bounded exact-source inspection covered GravityView's oEmbed lifecycle plus WordPress' embed/Classic Editor lifecycle. GravityView exposes oEmbed-related logic including its registration/render methods and hooks such as `pre_oembed_result`; WordPress exposes generic embed-response/lifecycle filters and the generic TinyMCE wpview path.
+### Isolation from unrelated embeds — exact-source association proven
 
-No inspected seam provides all of the following at once:
+The wpview classifier is bound to both the exact encoded source and `data-wpview-type="embed"`. Its negative controls reject an unrelated embed source as well as removed or replaced relevant attributes. This proves that the qualification can distinguish the exact GravityView fixture source from an unrelated wpview source without using generic `.wpview` or `.loading-placeholder` identity alone.
 
-- a stable GravityView-specific presentation scope around this placeholder;
-- a typography-only correction without replacing or rewriting the response;
-- isolation from unrelated WordPress/plugin embed placeholders;
-- a stable relationship back to the source embed element for the existing exclusion authority.
+This is an exact-source association result. It does not create a new persisted selector language or imply that every arbitrary GravityView embed can be targeted by broad generic WordPress embed selectors.
 
-Response rewriting, vendor edits, renderer replacement, output buffering, and a second exclusion model remain outside Vazir ownership.
+### Existing exclusion authority — preservation remains `NOT_PROVEN`
 
-### Exclusion result
+The configured `vazir_font_options['exclude_selectors']` remains the single exclusion authority. The exact persisted oEmbed fixture source is only the native GravityView `[embed]...[/embed]` shortcode; it is **not** itself placed inside the configured `.vazir-gv-evidence-excluded` boundary.
 
-The authentic placeholder lives inside a TinyMCE/wpview rendering context that has no usable relationship to the configured source-side `exclude_selectors` boundary. The existing single exclusion authority cannot truthfully determine that this detached embed preview belongs to an excluded source element.
+Consequently, these observed facts:
 
-A broad generic `wpview`/`.loading-placeholder ... !important` repair would therefore both affect unrelated embeds and silently bypass the exclusion contract.
+- the placeholder is not a descendant of `.vazir-gv-evidence-excluded` inside the TinyMCE frame; and
+- the containing iframe is not a descendant of that selector in the outer document
 
-The final oEmbed disposition is:
+do **not** prove that WordPress cannot preserve or expose an association when the source actually belongs to an excluded subtree. The current fixture simply does not exercise that required condition.
 
-`NO_ADMISSION`
+The stable `data-wpview-text` association proves source identity, but source identity alone is not proof of the arbitrary CSS-selector ancestry/state represented by the existing `exclude_selectors` contract. The qualification does not invent a second exclusion model, reinterpret selectors through shortcode text, or mutate/render a synthetic exclusion association.
 
-The failure is real, but there is no safe supported production repair within Vazir's current typography ownership and exclusion guarantees.
+Therefore exclusion preservation for this detached wpview preview remains:
+
+`NOT_PROVEN`
+
+### Resulting admission decision
+
+The repaired evidence invalidates the prior `NO_ADMISSION` conclusion because a relevant supported WordPress association had not been evaluated. The exact runtime now proves:
+
+- authentic GravityView oEmbed typography failure;
+- stable source-bound WordPress wpview presentation association;
+- deterministic rejection of unrelated/missing/replaced wpview association evidence;
+- inline cascade requiring `!important` for a CSS correction;
+- but **not** preservation of the existing single `exclude_selectors` authority, because the persisted fixture does not exercise an excluded source.
+
+The final oEmbed disposition is therefore:
+
+`NOT_PROVEN`
+
+No production repair is admitted from this result. `ADMITTABLE_REPAIR_SEAM` would require evidence that the existing exclusion authority is preserved without response rewriting, vendor edits, renderer replacement, DOM mutation, or a second exclusion model. `NO_ADMISSION` would require mechanically rejecting the relevant supported association evidence as well; this repaired runtime evidence does not do that.
 
 ## Icon and glyph ownership
 
@@ -203,12 +233,13 @@ No frontend theme-token override, per-View override, or new frontend dependency 
 | React Select input | `ALREADY_CORRECT` | Real combobox input resolves to Vazirmatn without a direct repair. |
 | React Select detached portal | `NOT_PROVEN` | No stable visible listbox/option typography surface reached after bounded authentic interaction; no repair admitted. |
 | React Datepicker | `REPAIRED / RUNTIME_PROVEN` | PR #24 root repair remains green; input already correct and interactions work. |
-| GravityView oEmbed placeholder | `NO_ADMISSION` | Authentic failure exists, but only generic WordPress/TinyMCE scope is available, inline font requires `!important`, and exclusion association is unavailable. |
+| GravityView oEmbed placeholder | `NOT_PROVEN` | Authentic failure and exact source-bound wpview presentation association are proven, and inline font requires `!important`; preservation of the existing exclusion authority is not proven. |
 | GravityView icon family | `PRESERVED` | Representative GravityView glyph retains the `gravityview` family. |
 | WordPress Dashicons | `PRESERVED` | Dashicons retain `dashicons`. |
 | Normal-descendant exclusions | `RUNTIME_PROVEN` | React Select and Datepicker repairs remain bounded by the single existing exclusion authority. |
 | Detached portal exclusion association | `NOT_PROVEN` | Stable source-control-to-portal association was not established. |
-| oEmbed exclusion association | `NO_USABLE_ASSOCIATION` | Authentic wpview/TinyMCE insertion has no stable relationship to the source exclusion boundary; this contributes to `NO_ADMISSION`. |
+| oEmbed wpview/source association | `RUNTIME_PROVEN` | `data-wpview-text`, `data-wpview-type`, `wp.mce.views.getText()`, and `getInstance()` bind the authentic wpview to the exact persisted GravityView source; negative controls reject unrelated evidence. |
+| oEmbed exclusion preservation | `NOT_PROVEN` | The persisted oEmbed fixture does not exercise an excluded source, so the existing `exclude_selectors` guarantee cannot yet be verified for the detached preview. |
 
 ## Evidence contract
 
@@ -217,16 +248,16 @@ The GravityView Product Evidence profile now has distinct responsibilities:
 1. baseline characterization of frontend, authentic editor assets, React Select, Datepicker, icons, and authenticated oEmbed failure;
 2. PR #24 production-repair regression verification;
 3. bounded detached-portal closure characterization;
-4. authentic Classic Editor/TinyMCE oEmbed insertion characterization plus exact lifecycle/source probes.
+4. authentic Classic Editor/TinyMCE oEmbed insertion characterization, including WordPress wpview data-attribute/source association, negative association controls, exact lifecycle/source probes, cascade evidence, unrelated-source isolation, and fail-honest exclusion-preservation classification.
 
-The profile remains successful when it truthfully records an admitted product disposition such as portal `NOT_PROVEN` or oEmbed `NO_ADMISSION`; a green evidence harness does not mean every host-owned surface is converted to Vazirmatn.
+The profile remains successful when it truthfully records an unresolved product disposition such as portal `NOT_PROVEN` or oEmbed `NOT_PROVEN`; a green evidence harness does not mean every host-owned surface is converted to Vazirmatn or that a production repair has been admitted.
 
 ## Closure state
 
 GravityView exact `3.3.4` is **not yet eligible for destination closure** under a destination that requires every remaining boundary to have a final supported disposition other than unresolved `NOT_PROVEN`.
 
-The oEmbed ambiguity is closed: the exact runtime failure has a defensible `NO_ADMISSION` result and should not receive a production repair under the current ownership/exclusion contract.
+The detached React Select portal remains unresolved because a stable visible menu surface and source-control/exclusion association have not been established.
 
-The detached React Select portal remains the only unresolved exact-3.3.4 typography boundary in this characterization. It must not receive speculative production repair. A later qualification may revisit it only if a stable visible menu can be reached through trustworthy user interaction and can be associated both with GravityView and with the source control/exclusion boundary through a supported mechanism.
+The oEmbed placeholder also remains unresolved. Its stable exact-source wpview presentation association is now proven, but the current fixture does not prove preservation of the single existing `exclude_selectors` authority for an excluded source. That boundary must remain `NOT_PROVEN` unless future bounded evidence resolves the exclusion question without changing the locked ownership model.
 
-No tag, GitHub Release, publication, deployment, or production behavior change belongs to this final-boundary qualification batch.
+Neither unresolved boundary justifies speculative production repair. No tag, GitHub Release, publication, deployment, or production behavior change belongs to this final-boundary qualification batch.
