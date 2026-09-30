@@ -100,9 +100,21 @@ $gutenberg_page_id = wp_insert_post(
 	true
 );
 if ( is_wp_error( $gutenberg_page_id ) ) { throw new RuntimeException( $gutenberg_page_id->get_error_message() ); }
-$entry_url = class_exists( 'GravityView_API' ) ? GravityView_API::entry_link( $entry_ids[0], $view_id, false, $view_id ) : '';
+$entry_url   = '';
+$entry_array = GFAPI::get_entry( $entry_ids[0] );
+if ( class_exists( 'GravityView_API' ) && is_array( $entry_array ) ) {
+	$entry_url = GravityView_API::entry_link( $entry_array, $view_id, false, $view_id );
+	$entry_url = is_string( $entry_url ) ? $entry_url : '';
+}
 $oembed_page_id = 0;
-if ( is_string( $entry_url ) && '' !== $entry_url ) {
+if ( '' !== $entry_url ) {
+	$entry_parts = wp_parse_url( $entry_url );
+	$entry_query = array();
+	if ( isset( $entry_parts['query'] ) ) { parse_str( $entry_parts['query'], $entry_query ); }
+	$entry_endpoint = class_exists( '\\GV\\Entry' ) ? \GV\Entry::get_endpoint_name() : 'entry';
+	if ( empty( $entry_query[ $entry_endpoint ] ) && false === strpos( $entry_url, '/' . $entry_endpoint . '/' ) ) {
+		throw new RuntimeException( 'GravityView public entry_link() did not produce a concrete entry endpoint.' );
+	}
 	$oembed_content = sprintf(
 		'<!-- wp:embed {"url":"%1$s","type":"rich"} --><figure class="wp-block-embed is-type-rich"><div class="wp-block-embed__wrapper">%1$s</div></figure><!-- /wp:embed -->',
 		esc_url_raw( $entry_url )
