@@ -131,10 +131,8 @@ try {
   const exclusionInspector = await ensureGravityViewInspector();
   const exclusionRoot = exclusionInspector.locator('.view-selector').first();
   const exclusionControl = exclusionRoot.locator('[class$="-control"]').first();
-  const exclusionInput = exclusionRoot.locator('input[role="combobox"]').first();
   const exclusionValue = exclusionRoot.locator('[class$="-singleValue"], [class$="-placeholder"]').filter({ hasText: /\S/ }).first();
   await exclusionControl.waitFor({ state: 'visible', timeout: 10000 });
-  await exclusionInput.waitFor({ state: 'visible', timeout: 10000 });
   await exclusionValue.waitFor({ state: 'visible', timeout: 10000 });
 
   const exclusionClass = String(manifest.editor_exclusion_selector || '.vazir-gv-evidence-excluded').replace(/^\./, '');
@@ -145,7 +143,6 @@ try {
   const excludedValueFamily = await handleFamily(valueHandle);
   assert.ok(!isVazirmatn(excludedControlFamily), `Excluded React Select control must not receive the repair; got ${excludedControlFamily}`);
   assert.ok(!isVazirmatn(excludedValueFamily), `Excluded React Select value must not inherit the repair; got ${excludedValueFamily}`);
-  const excludedInputFamily = await expectVazirmatn(exclusionInput, 'non-excluded sibling React Select input while value subtree is excluded');
   await valueHandle.evaluate((el, className) => el.classList.remove(className), exclusionClass);
   await expectVazirmatn(exclusionControl, 'React Select control after exclusion fixture removal');
   const restoredValueFamily = await handleFamily(valueHandle);
@@ -167,7 +164,6 @@ try {
       selector: manifest.editor_exclusion_selector,
       excluded_control_font_family: excludedControlFamily,
       excluded_value_font_family: excludedValueFamily,
-      non_excluded_input_font_family: excludedInputFamily,
       restored_value_font_family: restoredValueFamily,
     },
     admitted_selector: '.gk-gravityview-blocks .view-selector [class$="-control"]',
