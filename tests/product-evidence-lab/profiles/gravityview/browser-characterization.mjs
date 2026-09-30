@@ -152,7 +152,7 @@ await recorder.record('frontend_modern_view_inner_typography', async () => {
 
   const excludedFamily = await expectNotVazirmatn(page.locator('#vf-view-excluded'), 'GravityView profile exclusion fixture', /monospace/i);
   results.dispositions.frontend_modern_view = 'ALREADY_VAZIRMATN';
-  results.repair_seams.frontend_modern_view = 'NO_REPAIR_NEEDED: Vantage uses --gv-font-family: inherit and the real inner surfaces resolved to Vazirmatn.';
+  results.repair_seams.frontend_modern_view = 'NO_REPAIR_NEEDED: source default --gv-font-family is inherit; the runtime custom-property value is recorded separately and real inner text resolves to Vazirmatn through normal inheritance.';
 
   return {
     view_theme: manifest.expected_view_theme,
@@ -263,17 +263,37 @@ await recorder.record('gutenberg_react_select_control', async () => {
 
 await recorder.record('gutenberg_react_select_portaled_menu', async () => {
   const root = page.locator('.gk-gravityview-blocks .view-selector').first();
-  const input = root.locator('input[role="combobox"]').first();
-  await input.click();
-  await input.press('ArrowDown');
-  const listbox = page.locator('body > [class$="-menuPortal"] [role="listbox"]').last();
+  const control = root.locator('[class$="-control"]').first();
+  await control.click();
+
+  const listbox = page.locator('[role="listbox"]:visible').last();
   try {
     await listbox.waitFor({ state: 'visible', timeout: 5000 });
   } catch {
-    notProven('gutenberg_react_select_portaled_menu', 'The authentic GravityView react-select menu did not become visible after opening the View selector.');
-    return { status: 'NOT_PROVEN' };
+    const portalCandidates = await page.locator('body > *').evaluateAll(nodes => nodes.map(node => ({
+      tag: node.tagName,
+      class_name: typeof node.className === 'string' ? node.className : '',
+      role: node.getAttribute('role'),
+    })).filter(item => /gk-select|menu/i.test(item.class_name) || item.role === 'listbox'));
+    notProven('gutenberg_react_select_portaled_menu', `The authentic GravityView react-select menu did not expose a visible ARIA listbox after clicking the real control. Portal candidates: ${JSON.stringify(portalCandidates)}`);
+    return { status: 'NOT_PROVEN', portal_candidates: portalCandidates };
   }
-  const portal = listbox.locator('xpath=ancestor::*[contains(@class,"-menuPortal")][1]');
+
+  const portal = listbox.locator('xpath=ancestor::*[contains(@class,"menuPortal")][1]');
+  if (!(await portal.count())) {
+    const ancestry = await listbox.evaluate(el => {
+      const rows = [];
+      let node = el;
+      while (node && node !== document.body) {
+        rows.push({ tag: node.tagName, class_name: typeof node.className === 'string' ? node.className : '' });
+        node = node.parentElement;
+      }
+      return rows;
+    });
+    notProven('gutenberg_react_select_portaled_menu', `A real react-select listbox rendered, but no menuPortal ancestor was found. Ancestry: ${JSON.stringify(ancestry)}`);
+    return { status: 'NOT_PROVEN', ancestry };
+  }
+
   const option = listbox.locator('[role="option"]').filter({ hasText: /\S/ }).first();
   const optionMeasurement = await recordMeasuredTypography('gutenberg_react_select_menu_option', option);
   const portalFamily = await familyOf(portal);
@@ -286,7 +306,7 @@ await recorder.record('gutenberg_react_select_portaled_menu', async () => {
   const emotionOwnership = await page.locator('style[data-emotion*="gk-select"]').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-emotion')));
 
   results.dispositions.gutenberg_react_select_portaled_menu = typographyDisposition(optionMeasurement.computed_font_family);
-  results.repair_seams.gutenberg_react_select_portaled_menu = 'UNCERTAIN: the menu is detached under document.body. The source-owned Emotion key gk-select is observable, but the existing exclusion boundary cannot associate a detached portal with its source .view-selector by ancestry. Validate a stable gk-select portal selector before production repair; no JS mutation.';
+  results.repair_seams.gutenberg_react_select_portaled_menu = 'UNCERTAIN: the real menu is detached under document.body. GravityView owns the gk-select Emotion cache key, but existing exclusion semantics cannot associate this detached portal with a source .view-selector subtree by ancestry. Do not use dynamic Emotion hash classes or JavaScript typography mutation.';
   await page.keyboard.press('Escape').catch(() => {});
 
   return {
