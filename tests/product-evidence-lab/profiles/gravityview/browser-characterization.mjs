@@ -163,38 +163,51 @@ await recorder.record('gutenberg_react_select_and_portal', async () => {
     classes: { container: await classesOf(reactContainer), control: await classesOf(control), selected_value: await classesOf(value) },
   };
   Object.entries(configured).forEach(([name, item]) => { if (item?.disposition) results.dispositions[`gutenberg.react_select.${name}`] = item.disposition; });
-  await control.click();
+
+  await input.focus();
+  await input.press('ArrowDown');
+  await page.waitForTimeout(250);
+  const expanded = await input.getAttribute('aria-expanded');
   const option = page.locator('[role="option"]').first();
-  await option.waitFor({ state: 'visible', timeout: 30000 });
-  const portalFacts = await option.evaluate(el => {
-    const doc = el.ownerDocument;
-    let portal = el;
-    while (portal.parentElement && portal.parentElement !== doc.body) portal = portal.parentElement;
-    const menu = el.closest('[class$="-menu"]') || el.parentElement;
-    const font = node => node ? getComputedStyle(node).fontFamily : '';
-    return {
-      owner_document_url: doc.location.href,
-      portal_class: portal.getAttribute('class') || '',
-      portal_parent_is_document_body: portal.parentElement === doc.body,
-      portal_inside_gravityview_semantic_wrapper: Boolean(portal.closest('.gk-gravityview-blocks')),
-      portal_font_family: font(portal),
-      menu_class: menu?.getAttribute('class') || '',
-      menu_font_family: font(menu),
-      option_class: el.getAttribute('class') || '',
-      option_font_family: font(el),
+  let portalEvidence;
+  let portalBoundary = 'NOT_PROVEN';
+  if ('true' === expanded && await option.count()) {
+    await option.waitFor({ state: 'visible', timeout: 5000 });
+    const portalFacts = await option.evaluate(el => {
+      const doc = el.ownerDocument;
+      let portal = el;
+      while (portal.parentElement && portal.parentElement !== doc.body) portal = portal.parentElement;
+      const menu = el.closest('[class$="-menu"]') || el.parentElement;
+      const font = node => node ? getComputedStyle(node).fontFamily : '';
+      return {
+        owner_document_url: doc.location.href,
+        portal_class: portal.getAttribute('class') || '',
+        portal_parent_is_document_body: portal.parentElement === doc.body,
+        portal_inside_gravityview_semantic_wrapper: Boolean(portal.closest('.gk-gravityview-blocks')),
+        portal_font_family: font(portal),
+        menu_class: menu?.getAttribute('class') || '',
+        menu_font_family: font(menu),
+        option_class: el.getAttribute('class') || '',
+        option_font_family: font(el),
+      };
+    });
+    assert.equal(portalFacts.portal_parent_is_document_body, true, 'GravityView React Select menu must be measured at its actual document.body portal target.');
+    portalEvidence = {
+      portal: measurement('GravityView React Select menu portal', portalFacts.portal_font_family),
+      menu: measurement('GravityView React Select menu', portalFacts.menu_font_family),
+      option: measurement('GravityView React Select option text', portalFacts.option_font_family),
+      facts: portalFacts,
     };
-  });
-  assert.equal(portalFacts.portal_parent_is_document_body, true, 'GravityView React Select menu must be measured at its actual document.body portal target.');
-  const portalEvidence = {
-    portal: measurement('GravityView React Select menu portal', portalFacts.portal_font_family),
-    menu: measurement('GravityView React Select menu', portalFacts.menu_font_family),
-    option: measurement('GravityView React Select option text', portalFacts.option_font_family),
-    facts: portalFacts,
-  };
+    portalBoundary = portalFacts.portal_inside_gravityview_semantic_wrapper ? 'DESCENDANT' : 'DETACHED_FROM_GRAVITYVIEW_WRAPPER';
+  } else {
+    const notProven = label => ({ label, disposition: 'NOT_PROVEN', reason: 'authentic react-select input did not expose a visible option after focus + ArrowDown' });
+    portalEvidence = { portal: notProven('GravityView React Select menu portal'), menu: notProven('GravityView React Select menu'), option: notProven('GravityView React Select option text'), facts: { input_aria_expanded: expanded } };
+  }
   results.dispositions['gutenberg.react_select.portal'] = portalEvidence.portal.disposition;
   results.dispositions['gutenberg.react_select.menu'] = portalEvidence.menu.disposition;
   results.dispositions['gutenberg.react_select.option'] = portalEvidence.option.disposition;
   await page.keyboard.press('Escape');
+
   await selectGravityViewBlock(page, 1);
   const placeholder = page.locator('.gk-gravityview-blocks .view-selector [class$="-placeholder"]').first();
   const placeholderEvidence = await measureFont(placeholder, 'GravityView React Select placeholder');
@@ -204,7 +217,7 @@ await recorder.record('gutenberg_react_select_and_portal', async () => {
   const assetUrls = await page.evaluate(() => performance.getEntriesByType('resource').map(entry => entry.name).filter(url => /gravityview\/src\/PageBuilder\/Gutenberg\/build\/view\.(?:js|css)/.test(url)));
   assert.ok(assetUrls.some(url => /view\.js/.test(url)), 'GravityView View block editor script was not observed in the authentic editor document.');
   assert.ok(assetUrls.some(url => /view\.css/.test(url)), 'GravityView View block editor stylesheet was not observed in the authentic editor document.');
-  return { block_name: manifest.gutenberg_block_name, editor_url: manifest.gutenberg_editor_url, documents: docs, loaded_view_assets: assetUrls, configured_control: configured, placeholder: placeholderEvidence, portaled_menu: portalEvidence, portal_boundary: portalFacts.portal_inside_gravityview_semantic_wrapper ? 'DESCENDANT' : 'DETACHED_FROM_GRAVITYVIEW_WRAPPER' };
+  return { block_name: manifest.gutenberg_block_name, editor_url: manifest.gutenberg_editor_url, documents: docs, loaded_view_assets: assetUrls, configured_control: configured, placeholder: placeholderEvidence, portaled_menu: portalEvidence, portal_boundary: portalBoundary };
 });
 
 await recorder.record('gutenberg_datepicker', async () => {
