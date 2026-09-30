@@ -191,6 +191,8 @@ jobs:
             gravityforms) wp eval-file "$GITHUB_WORKSPACE/tests/gravityforms-evidence-lab/setup-fixtures.php" --use-include --path="$VAZIR_LAB_WP_PATH" ;;
             gravityflow) wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityflow/setup-fixtures.php" --use-include --path="$VAZIR_LAB_WP_PATH" ;;
             gravityview)
+              mkdir -p "$VAZIR_LAB_WP_PATH/wp-content/mu-plugins"
+              cp "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityview/classic-editor-fixture.php" "$VAZIR_LAB_WP_PATH/wp-content/mu-plugins/vazir-gravityview-classic-editor-fixture.php"
               wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityview/setup-fixtures.php" --use-include --path="$VAZIR_LAB_WP_PATH"
               wp eval-file "$GITHUB_WORKSPACE/tests/product-evidence-lab/profiles/gravityview/closure-setup-fixtures.php" --use-include --path="$VAZIR_LAB_WP_PATH"
               ;;
@@ -260,6 +262,7 @@ jobs:
               node tests/product-evidence-lab/profiles/gravityview/browser-characterization.mjs
               node tests/product-evidence-lab/profiles/gravityview/production-repair-characterization.mjs
               node tests/product-evidence-lab/profiles/gravityview/closure-characterization.mjs
+              node tests/product-evidence-lab/profiles/gravityview/closure-oembed-classic-characterization.mjs
               ;;
             gravityperks) node tests/product-evidence-lab/profiles/gravityperks/browser-characterization.mjs ;;
             gravity-stack) node tests/product-evidence-lab/profiles/gravity-stack/browser-characterization.mjs ;;
