@@ -86,7 +86,7 @@ final class VazirFont_Selector_Boundary {
 		$paren_depth   = 0;
 		$length        = strlen( $selector );
 
-		for ( $index = 0; $index < $length; $index++ ) {
+		for ( $index = 0; $index < $length; ++$index ) {
 			$char = $selector[ $index ];
 			if ( '' !== $quote ) {
 				if ( $char === $quote ) {
@@ -99,22 +99,22 @@ final class VazirFont_Selector_Boundary {
 				continue;
 			}
 			if ( '[' === $char ) {
-				$bracket_depth++;
+				++$bracket_depth;
 				continue;
 			}
 			if ( ']' === $char && $bracket_depth > 0 ) {
-				$bracket_depth--;
+				--$bracket_depth;
 				continue;
 			}
 			if ( 0 !== $bracket_depth ) {
 				continue;
 			}
 			if ( '(' === $char ) {
-				$paren_depth++;
+				++$paren_depth;
 				continue;
 			}
 			if ( ')' === $char && $paren_depth > 0 ) {
-				$paren_depth--;
+				--$paren_depth;
 				continue;
 			}
 			if ( 0 !== $paren_depth ) {
@@ -123,20 +123,32 @@ final class VazirFont_Selector_Boundary {
 
 			if ( '>' === $char || '+' === $char || '~' === $char ) {
 				$type = '>' === $char ? 'child' : ( '+' === $char ? 'adjacent' : 'sibling' );
-				return array( 'type' => $type, 'index' => $index, 'length' => 1 );
+				return array(
+					'type'   => $type,
+					'index'  => $index,
+					'length' => 1,
+				);
 			}
 
 			if ( ctype_space( $char ) ) {
 				$start = $index;
 				while ( $index + 1 < $length && ctype_space( $selector[ $index + 1 ] ) ) {
-					$index++;
+					++$index;
 				}
 				$next = $index + 1 < $length ? $selector[ $index + 1 ] : '';
 				if ( '>' === $next || '+' === $next || '~' === $next ) {
 					$type = '>' === $next ? 'child' : ( '+' === $next ? 'adjacent' : 'sibling' );
-					return array( 'type' => $type, 'index' => $index + 1, 'length' => 1 );
+					return array(
+						'type'   => $type,
+						'index'  => $index + 1,
+						'length' => 1,
+					);
 				}
-				return array( 'type' => 'descendant', 'index' => $start, 'length' => $index - $start + 1 );
+				return array(
+					'type'   => 'descendant',
+					'index'  => $start,
+					'length' => $index - $start + 1,
+				);
 			}
 		}
 
