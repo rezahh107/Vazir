@@ -33,7 +33,6 @@ if ( ! empty( $manifest['oembed_entry_url'] ) ) {
 }
 $block_type = WP_Block_Type_Registry::get_instance()->get_registered( 'gk-gravityview-blocks/view' );
 $assert( $block_type instanceof WP_Block_Type, 'GravityView View block is not registered.' );
-$assert( ! empty( $block_type->editor_script_handles ), 'GravityView View block has no registered editor script handle.' );
 $assert( ! empty( $block_type->editor_style_handles ), 'GravityView View block has no registered editor style handle.' );
 
 $plugin_root = WP_PLUGIN_DIR . '/gravityview';
@@ -69,6 +68,7 @@ $source_evidence = array(
 		'editor_style_handles' => array_values( (array) $block_type->editor_style_handles ),
 		'style_handles' => array_values( (array) $block_type->style_handles ),
 	),
+	'editor_script_registration_note' => 'GravityView 3.3.4 enqueues the block editor script through enqueue_block_editor_assets instead of attaching it to WP_Block_Type.',
 	'licensed_source_exported' => false,
 );
 foreach ( $source_evidence['probes'] as $probe ) {
@@ -91,6 +91,7 @@ $results = array(
 		'modern_vantage_theme'        => 'PASS',
 		'real_view_block_fixture'     => 'PASS',
 		'view_block_registered'       => 'PASS',
+		'view_block_editor_style'     => 'PASS',
 	),
 	'source_probe' => 'PASS',
 	'block_registration' => array(
