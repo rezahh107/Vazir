@@ -88,8 +88,9 @@ try {
   assert.equal(results.dispositions?.gravityview_oembed_admin_placeholder, 'FAIL', 'oEmbed must remain the qualified unrepaired failure in this batch.');
 
   await login(page, baseUrl, user, password);
-  const inspector = await ensureGravityViewInspector();
 
+  // Typography measurement: resolve the real control/value/input from a fresh inspector render.
+  const inspector = await ensureGravityViewInspector();
   const selectRoot = inspector.locator('.view-selector').first();
   const control = selectRoot.locator('[class$="-control"]').first();
   const input = selectRoot.locator('input[role="combobox"]').first();
@@ -102,44 +103,51 @@ try {
   const valueFamily = await expectVazirmatn(value, 'repaired GravityView React Select value');
   const inputFamily = await expectVazirmatn(input, 'pre-existing GravityView React Select input');
 
-  const comboboxSelector = '.gk-gravityview-blocks .view-selector input[role="combobox"]';
-  const liveInput = page.locator(comboboxSelector).first();
-  const ariaExpandedBefore = await liveInput.getAttribute('aria-expanded');
-  await liveInput.focus();
-  await page.keyboard.press('ArrowDown');
-  await page.waitForFunction(
-    selector => document.querySelector(selector)?.getAttribute('aria-expanded') === 'true',
-    comboboxSelector,
-    { timeout: 5000 },
-  );
-  const ariaExpandedOpen = await page.locator(comboboxSelector).first().getAttribute('aria-expanded');
+  // Functional interaction: React Select may rerender/unmount its internal input as the
+  // inspector reconciles. Drive the host control from a fresh render and treat ARIA/listbox
+  // state as the behavioral outcome rather than assuming one input node survives the cycle.
+  const interactionInspector = await ensureGravityViewInspector();
+  const interactionRoot = interactionInspector.locator('.view-selector').first();
+  const interactionControl = interactionRoot.locator('[class$="-control"]').first();
+  await interactionControl.waitFor({ state: 'visible', timeout: 10000 });
+  const ariaExpandedBefore = await interactionRoot.locator('input[role="combobox"]').first().getAttribute('aria-expanded');
+  await interactionControl.click();
+  await page.waitForFunction(() => {
+    const candidate = document.querySelector('.gk-gravityview-blocks .view-selector input[role="combobox"]');
+    return candidate?.getAttribute('aria-expanded') === 'true';
+  }, null, { timeout: 5000 });
+  const ariaExpandedOpen = await page.evaluate(() => document.querySelector('.gk-gravityview-blocks .view-selector input[role="combobox"]')?.getAttribute('aria-expanded') ?? null);
   await page.keyboard.press('Escape');
-  await page.waitForFunction(
-    selector => {
-      const inputNode = document.querySelector(selector);
-      return !inputNode || inputNode.getAttribute('aria-expanded') !== 'true';
-    },
-    comboboxSelector,
-    { timeout: 5000 },
-  );
-  const ariaExpandedClosed = await page.evaluate(
-    selector => document.querySelector(selector)?.getAttribute('aria-expanded') ?? null,
-    comboboxSelector,
-  );
+  await page.waitForFunction(() => {
+    const candidate = document.querySelector('.gk-gravityview-blocks .view-selector input[role="combobox"]');
+    return !candidate || candidate.getAttribute('aria-expanded') !== 'true';
+  }, null, { timeout: 5000 });
+  const ariaExpandedClosed = await page.evaluate(() => document.querySelector('.gk-gravityview-blocks .view-selector input[role="combobox"]')?.getAttribute('aria-expanded') ?? null);
   const visibleListboxesAfterEscape = await page.locator('[role="listbox"]:visible').count();
   assert.equal(visibleListboxesAfterEscape, 0, 'React Select Escape interaction must leave no visible listbox.');
 
+  // Exclusion proof: reacquire the real subtree after the interaction lifecycle so the
+  // probe does not depend on React preserving the prior control/input nodes.
+  const exclusionInspector = await ensureGravityViewInspector();
+  const exclusionRoot = exclusionInspector.locator('.view-selector').first();
+  const exclusionControl = exclusionRoot.locator('[class$="-control"]').first();
+  const exclusionInput = exclusionRoot.locator('input[role="combobox"]').first();
+  const exclusionValue = exclusionRoot.locator('[class$="-singleValue"], [class$="-placeholder"]').filter({ hasText: /\S/ }).first();
+  await exclusionControl.waitFor({ state: 'visible', timeout: 10000 });
+  await exclusionInput.waitFor({ state: 'visible', timeout: 10000 });
+  await exclusionValue.waitFor({ state: 'visible', timeout: 10000 });
+
   const exclusionClass = String(manifest.editor_exclusion_selector || '.vazir-gv-evidence-excluded').replace(/^\./, '');
-  const valueHandle = await value.elementHandle();
+  const valueHandle = await exclusionValue.elementHandle();
   assert.ok(valueHandle, 'React Select value node must remain available for exclusion mutation evidence.');
   await valueHandle.evaluate((el, className) => el.classList.add(className), exclusionClass);
-  const excludedControlFamily = await familyOf(control);
+  const excludedControlFamily = await familyOf(exclusionControl);
   const excludedValueFamily = await handleFamily(valueHandle);
   assert.ok(!isVazirmatn(excludedControlFamily), `Excluded React Select control must not receive the repair; got ${excludedControlFamily}`);
   assert.ok(!isVazirmatn(excludedValueFamily), `Excluded React Select value must not inherit the repair; got ${excludedValueFamily}`);
-  const excludedInputFamily = await expectVazirmatn(input, 'non-excluded sibling React Select input while value subtree is excluded');
+  const excludedInputFamily = await expectVazirmatn(exclusionInput, 'non-excluded sibling React Select input while value subtree is excluded');
   await valueHandle.evaluate((el, className) => el.classList.remove(className), exclusionClass);
-  await expectVazirmatn(control, 'React Select control after exclusion fixture removal');
+  await expectVazirmatn(exclusionControl, 'React Select control after exclusion fixture removal');
   const restoredValueFamily = await handleFamily(valueHandle);
   assert.ok(isVazirmatn(restoredValueFamily), `React Select value must recover Vazirmatn after exclusion removal; got ${restoredValueFamily}`);
 
@@ -149,6 +157,7 @@ try {
     value_font_family: valueFamily,
     input_font_family: inputFamily,
     functional_interaction: {
+      method: 'fresh-render control click -> aria-expanded true -> Escape',
       aria_expanded_before: ariaExpandedBefore,
       aria_expanded_open: ariaExpandedOpen,
       aria_expanded_closed: ariaExpandedClosed,
@@ -168,6 +177,8 @@ try {
   results.dispositions.gutenberg_react_select_value = 'REPAIRED_VAZIRMATN';
   results.repair_seams.gutenberg_react_select_control = 'PRODUCTION: enqueue_block_editor_assets -> GravityView registered gk-gravityview-blocks-view-editor-style; semantic [class$="-control"] selector under .gk-gravityview-blocks .view-selector; no generated Emotion hash and no input rule.';
 
+  // Datepicker verification likewise starts from a fresh authentic inspector render.
+  await ensureGravityViewInspector();
   const panelPresent = await expandPanelIfPresent('Entries Settings');
   assert.equal(panelPresent, true, 'Exact GravityView 3.3.4 must expose Entries Settings for Datepicker repair verification.');
   const dateInput = page.locator('.gk-gravityview-blocks .react-datepicker-wrapper input').first();
