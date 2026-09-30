@@ -34,10 +34,39 @@ const optionalFont = async (locator, label) => {
 };
 const classesOf = locator => locator.evaluate(el => el.getAttribute('class') || '');
 
+async function dismissEditorWelcomeGuide(page) {
+  const overlay = page.locator('.components-modal__screen-overlay').first();
+  if (!(await overlay.count())) return false;
+  try {
+    await overlay.waitFor({ state: 'visible', timeout: 1500 });
+  } catch {
+    return false;
+  }
+  const close = overlay.getByRole('button', { name: 'Close', exact: true }).first();
+  if (await close.count()) {
+    await close.click();
+  } else {
+    await page.keyboard.press('Escape');
+  }
+  try {
+    await overlay.waitFor({ state: 'hidden', timeout: 5000 });
+  } catch {}
+  return true;
+}
+
 async function ensureEditorSettingsSidebar(page) {
-  if (await page.locator('.interface-interface-skeleton__sidebar').count()) return;
-  const settingsButton = page.getByRole('button', { name: 'Settings', exact: true });
-  if (await settingsButton.count()) await settingsButton.first().click();
+  await dismissEditorWelcomeGuide(page);
+  if (!(await page.locator('.interface-interface-skeleton__sidebar').count())) {
+    const settingsButton = page.getByRole('button', { name: 'Settings', exact: true });
+    if (await settingsButton.count()) await settingsButton.first().click();
+  }
+  const tab = page.locator('[role="tab"]').filter({ hasText: /^Block$/ }).first();
+  if (await tab.count()) {
+    if ('true' !== await tab.getAttribute('aria-selected')) await tab.click();
+    return;
+  }
+  const blockButton = page.getByRole('button', { name: 'Block', exact: true }).first();
+  if (await blockButton.count()) await blockButton.click();
 }
 
 async function selectGravityViewBlock(page, index) {
@@ -164,6 +193,7 @@ await recorder.record('admin_view_configuration_and_icon_ownership', async () =>
 await recorder.record('gutenberg_react_select_and_portal', async () => {
   await page.goto(manifest.gutenberg_editor_url, { waitUntil: 'domcontentloaded' });
   await page.locator('body.block-editor-page').waitFor({ state: 'visible', timeout: 30000 });
+  await dismissEditorWelcomeGuide(page);
   await selectGravityViewBlock(page, 0);
   const wrapper = page.locator('.gk-gravityview-blocks .view-selector').first();
   await wrapper.waitFor({ state: 'visible', timeout: 30000 });
@@ -242,14 +272,14 @@ await recorder.record('gutenberg_datepicker', async () => {
   const panelButton = page.getByRole('button', { name: 'Entries Settings', exact: true }).first();
   if (!(await panelButton.count())) {
     results.dispositions['gutenberg.datepicker'] = 'NOT_PROVEN';
-    return { disposition: 'NOT_PROVEN', reason: 'Entries Settings panel did not render for the authentic GravityView View block' };
+    return { disposition: 'NOT_PROVEN', reason: 'Entries Settings panel did not render for the authentic GravityView View block after selecting the Block inspector tab' };
   }
   const expanded = await panelButton.getAttribute('aria-expanded');
   if ('true' !== expanded) await panelButton.click();
-  const input = page.locator('.gk-gravityview-blocks .react-datepicker-wrapper input').first();
+  const input = page.locator('.interface-interface-skeleton__sidebar .react-datepicker-wrapper input, .block-editor-block-inspector .react-datepicker-wrapper input').first();
   if (!(await input.count())) {
     results.dispositions['gutenberg.datepicker'] = 'NOT_PROVEN';
-    return { disposition: 'NOT_PROVEN', reason: 'Authentic GravityView date control did not expose a react-datepicker input' };
+    return { disposition: 'NOT_PROVEN', reason: 'Authentic GravityView date control did not expose a react-datepicker input in the selected block inspector' };
   }
   const inputEvidence = await measureFont(input, 'GravityView Datepicker input');
   await input.click();
@@ -267,6 +297,7 @@ await recorder.record('gutenberg_datepicker', async () => {
   const location = await root.evaluate(el => ({
     owner_document_url: el.ownerDocument.location.href,
     inside_gravityview_semantic_wrapper: Boolean(el.closest('.gk-gravityview-blocks')),
+    inside_block_inspector: Boolean(el.closest('.block-editor-block-inspector')),
     parent_class: el.parentElement?.getAttribute('class') || '',
     ancestor_classes: [el.parentElement, el.parentElement?.parentElement, el.parentElement?.parentElement?.parentElement]
       .filter(Boolean)
@@ -311,6 +342,7 @@ await recorder.record('oembed_admin_placeholder_reachability', async () => {
   }
   await page.goto(manifest.oembed_editor_url, { waitUntil: 'domcontentloaded' });
   await page.locator('body.block-editor-page').waitFor({ state: 'visible', timeout: 30000 });
+  await dismissEditorWelcomeGuide(page);
   await page.waitForLoadState('networkidle');
   const found = await findLoadingPlaceholder(page);
   if (!found) {
