@@ -96,7 +96,9 @@ async function ensureGravityViewInspector() {
     const settingsButton = page.getByRole('button', { name: /^Settings$/ }).last();
     if (await settingsButton.count()) await settingsButton.click();
     const blockTab = page.getByRole('tab', { name: /^Block$/ }).last();
-    if (await blockTab.count()) await blockTab.click();
+    if (await blockTab.count() && 'true' !== await blockTab.getAttribute('aria-selected')) {
+      await blockTab.click();
+    }
   }
   await inspector.waitFor({ state: 'visible', timeout: 30000 });
   return inspector;
