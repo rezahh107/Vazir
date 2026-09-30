@@ -102,21 +102,24 @@ try {
   const valueFamily = await expectVazirmatn(value, 'repaired GravityView React Select value');
   const inputFamily = await expectVazirmatn(input, 'pre-existing GravityView React Select input');
 
-  const ariaExpandedBefore = await input.getAttribute('aria-expanded');
-  await control.click();
+  const comboboxSelector = '.gk-gravityview-blocks .view-selector input[role="combobox"]';
+  const liveInput = page.locator(comboboxSelector).first();
+  const ariaExpandedBefore = await liveInput.getAttribute('aria-expanded');
+  await liveInput.focus();
+  await page.keyboard.press('ArrowDown');
   await page.waitForFunction(
-    element => element?.getAttribute('aria-expanded') === 'true',
-    await input.elementHandle(),
+    selector => document.querySelector(selector)?.getAttribute('aria-expanded') === 'true',
+    comboboxSelector,
     { timeout: 5000 },
   );
-  const ariaExpandedOpen = await input.getAttribute('aria-expanded');
+  const ariaExpandedOpen = await page.locator(comboboxSelector).first().getAttribute('aria-expanded');
   await page.keyboard.press('Escape');
   await page.waitForFunction(
-    element => element?.getAttribute('aria-expanded') !== 'true',
-    await input.elementHandle(),
+    selector => document.querySelector(selector)?.getAttribute('aria-expanded') !== 'true',
+    comboboxSelector,
     { timeout: 5000 },
   );
-  const ariaExpandedClosed = await input.getAttribute('aria-expanded');
+  const ariaExpandedClosed = await page.locator(comboboxSelector).first().getAttribute('aria-expanded');
 
   const exclusionClass = String(manifest.editor_exclusion_selector || '.vazir-gv-evidence-excluded').replace(/^\./, '');
   const valueHandle = await value.elementHandle();
