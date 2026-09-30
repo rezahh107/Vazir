@@ -55,7 +55,10 @@ foreach ( $route_expectations as $manifest_key => $expected_view ) {
 	$assert( $expected_view === (string) ( $params['view'] ?? '' ), $manifest_key . ' does not target the expected standalone view.' );
 	$assert( (string) $manifest['fixture_plugin'] === (string) ( $params['slug'] ?? '' ), $manifest_key . ' does not target the real test Perk basename.' );
 }
-$assert( array( '.vazir-gp-evidence-excluded' ) === $manifest['exclude_selectors'], 'Existing exclusion authority was not preserved in the fixture.' );
+$assert(
+	array( '.vazir-gp-evidence-excluded', '.vazir-gp-evidence-excluded-nested' ) === $manifest['exclude_selectors'],
+	'Existing exclusion authority did not preserve the direct and nested evidence selectors.'
+);
 
 $manage_file = WP_PLUGIN_DIR . '/gravityperks/admin/manage_perks.php';
 $manage_source = file_get_contents( $manage_file );
