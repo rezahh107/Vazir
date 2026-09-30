@@ -143,7 +143,7 @@ $options = get_option( 'vazir_font_options', array() );
 if ( ! is_array( $options ) ) { $options = array(); }
 $options['enable_admin'] = true;
 $options['enable_gravity_forms'] = true;
-$options['exclude_selectors'] = array( '.vazir-gp-evidence-excluded', '.vazir-gp-evidence-excluded-nested' );
+$options['exclude_selectors'] = array( '.vazir-gp-evidence-excluded', '.perk-settings .vazir-gp-evidence-excluded-nested' );
 update_option( 'vazir_font_options', $options, false );
 VazirFontPlugin::clear_cache();
 $configured_weights = VazirFont_Loader::get_instance()->get_selected_weights();
