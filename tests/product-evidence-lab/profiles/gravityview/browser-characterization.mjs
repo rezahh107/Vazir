@@ -394,7 +394,8 @@ await recorder.record('gutenberg_gform_icon_family_if_rendered', async () => {
 });
 
 await recorder.record('gravityview_oembed_admin_placeholder_via_core_parse_embed', async () => {
-  await ensureGravityViewInspector();
+  await page.goto(manifest.editor_url, { waitUntil: 'domcontentloaded' });
+  await page.locator('body.block-editor-page').waitFor({ state: 'visible', timeout: 30000 });
   const response = await page.evaluate(async fixture => {
     const body = new URLSearchParams({
       action: 'parse-embed',
