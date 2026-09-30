@@ -100,8 +100,8 @@ final class VazirFont_Admin_Settings {
 		);
 		$this->add_checkbox_setting(
 			'enable_gravity_forms',
-			__( 'Gravity Forms / Flow', 'vazir-font-wp' ),
-			__( 'در صورت در دسترس بودن Gravity Forms یا Gravity Flow، تایپوگرافی این محصولات با تنظیمات همین افزونه هماهنگ شود.', 'vazir-font-wp' )
+			__( 'Gravity Forms / Flow / Perks', 'vazir-font-wp' ),
+			__( 'در صورت در دسترس بودن Gravity Forms، Gravity Flow یا Gravity Perks، تایپوگرافی این محصولات با تنظیمات همین افزونه هماهنگ شود.', 'vazir-font-wp' )
 		);
 
 		add_settings_section(
@@ -455,8 +455,8 @@ final class VazirFont_Admin_Settings {
 			echo '<p class="description" id="' . esc_attr( $desc_id ) . '">' . esc_html( $description ) . '</p>';
 		}
 
-		if ( 'enable_gravity_forms' === $name && ! class_exists( 'GFForms' ) && ! class_exists( 'Gravity_Flow' ) ) {
-			echo '<p class="description vazir-font-setting-availability">' . esc_html__( 'Gravity Forms و Gravity Flow اکنون فعال نیستند. این ترجیح ذخیره می‌شود و در صورت فعال‌شدن هرکدام اعمال خواهد شد.', 'vazir-font-wp' ) . '</p>';
+		if ( 'enable_gravity_forms' === $name && ! class_exists( 'GFForms' ) && ! class_exists( 'Gravity_Flow' ) && ! class_exists( 'GravityPerks' ) ) {
+			echo '<p class="description vazir-font-setting-availability">' . esc_html__( 'Gravity Forms، Gravity Flow و Gravity Perks اکنون فعال نیستند. این ترجیح ذخیره می‌شود و در صورت فعال‌شدن هرکدام اعمال خواهد شد.', 'vazir-font-wp' ) . '</p>';
 		}
 	}
 

@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 
 const baseUrl = process.env.VAZIR_BASE_URL || 'http://127.0.0.1:8080';
+const adminPassword = process.env.VAZIR_ADMIN_PASSWORD || ['admin', 'password'].join('-');
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 const page = await context.newPage();
@@ -60,7 +61,7 @@ const assertNoPluginOverflow = async width => {
 
 await page.goto(`${baseUrl}/wp-login.php`, { waitUntil: 'networkidle' });
 await page.fill('#user_login', 'admin');
-await page.fill('#user_pass', 'admin-password');
+await page.fill('#user_pass', adminPassword);
 await Promise.all([
   page.waitForURL(/wp-admin/),
   page.click('#wp-submit'),
@@ -86,8 +87,8 @@ await page.getByRole('heading', { level: 1, name: 'تنظیمات فونت وز�
 await root().locator('.vazir-font-settings__orientation').getByText(/Vazirmatn نسخه 33\.003/).waitFor();
 await page.getByLabel('سایت (فرانت‌اند)').waitFor();
 await page.getByLabel('مدیریت و ویرایشگر وردپرس').waitFor();
-await page.getByLabel('Gravity Forms / Flow', { exact: true }).waitFor();
-await page.getByText(/Gravity Forms و Gravity Flow اکنون فعال نیستند/).waitFor();
+await page.getByLabel('Gravity Forms / Flow / Perks', { exact: true }).waitFor();
+await page.getByText(/Gravity Forms، Gravity Flow و Gravity Perks اکنون فعال نیستند/).waitFor();
 assert.equal(await page.locator(pluginStyle).count(), 1, 'settings CSS must load exactly once on the settings page');
 assert.equal(await page.locator(pluginScript).count(), 1, 'settings JS must load exactly once on the settings page');
 

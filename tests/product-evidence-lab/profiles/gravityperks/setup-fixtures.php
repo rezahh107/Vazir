@@ -49,6 +49,9 @@ DOC;
 			'label' => 'Vazir Evidence Text',
 			'description' => 'Vazir evidence text description',
 		) );
+		echo '<p class="description vazir-gp-evidence-excluded">Vazir excluded evidence description</p>';
+		echo '<p class="description vazir-gp-evidence-attribute" data-vazir="::before">Vazir quoted attribute exclusion description</p>';
+		echo '<p class="description vazir-gp-evidence-nested-parent">Vazir nested exclusion parent <span class="vazir-gp-evidence-excluded-nested">Vazir nested excluded child</span></p>';
 		echo self::generate_select( $this, array(
 			'id' => 'evidence_select',
 			'label' => 'Vazir Evidence Select',
@@ -67,19 +70,51 @@ DOC;
 	}
 }
 
-// Evidence-only sentinels. They do not change typography. The first asks whether
-// inline CSS attached to Gravity Perks' own handle survives the standalone
-// wp_print_styles() boundary. The second proves which links traverse the normal
-// WordPress style_loader_tag pipeline; the literal Google Fonts link should not.
-add_action( 'admin_enqueue_scripts', function() {
-	if ( ! isset( $_GET['page'] ) || 'gwp_perks' !== $_GET['page'] ) { return; }
-	if ( wp_style_is( 'gwp-admin', 'registered' ) ) {
+// Test-only option overlay for the quoted-attribute classifier scenario. It
+// keeps the persisted fixture authority unchanged while exercising the exact
+// same vazir_font_options['exclude_selectors'] option surface on the authentic
+// Settings request.
+add_filter( 'option_vazir_font_options', function( $options ) {
+	if ( ! isset( $_GET['vazir_attribute_exclusion_probe'] ) || '1' !== (string) $_GET['vazir_attribute_exclusion_probe'] ) {
+		return $options;
+	}
+	if ( ! is_array( $options ) ) {
+		return $options;
+	}
+	$selectors = isset( $options['exclude_selectors'] ) && is_array( $options['exclude_selectors'] ) ? $options['exclude_selectors'] : array();
+	if ( ! in_array( '[data-vazir="::before"]', $selectors, true ) ) {
+		$selectors[] = '[data-vazir="::before"]';
+	}
+	$options['exclude_selectors'] = $selectors;
+	return $options;
+} );
+
+// Evidence-only sentinels. They do not change typography. This filter proves
+// the exact early standalone Settings wp_print_styles() call reaches the
+// supported WordPress print_styles_array seam while Gravity Perks' own
+// gwp-admin handle is both selected and registered. The handle list is returned
+// byte-for-byte unchanged; only harmless inline custom properties are attached
+// to the existing host handle through the WordPress style API.
+add_filter( 'print_styles_array', function( $handles ) {
+	if ( ! is_admin() || ! is_array( $handles ) ) { return $handles; }
+	if ( ! isset( $_GET['page'] ) || 'gwp_perks' !== $_GET['page'] ) { return $handles; }
+	if ( ! isset( $_GET['view'] ) || '' === (string) $_GET['view'] ) { return $handles; }
+
+	$original = $handles;
+	if ( in_array( 'gwp-admin', $handles, true ) && wp_style_is( 'gwp-admin', 'registered' ) ) {
 		$options = class_exists( 'VazirFontPlugin' ) ? VazirFontPlugin::get_options() : array();
 		$exclusions = isset( $options['exclude_selectors'] ) && is_array( $options['exclude_selectors'] ) ? count( $options['exclude_selectors'] ) : -1;
-		wp_add_inline_style( 'gwp-admin', ':root{--vazir-gravityperks-gwp-admin-seam-probe:1;--vazir-gravityperks-exclusion-count:' . (int) $exclusions . ';}' );
+		wp_add_inline_style(
+			'gwp-admin',
+			':root{--vazir-gravityperks-gwp-admin-seam-probe:1;--vazir-gravityperks-print-styles-array-probe:1;--vazir-gravityperks-gwp-admin-in-todo:1;--vazir-gravityperks-gwp-admin-registered:1;--vazir-gravityperks-exclusion-count:' . (int) $exclusions . ';}'
+		);
 	}
+
+	return $original;
 }, 999 );
 
+// Evidence-only marker for links that traverse WordPress' style-loader output
+// pipeline. It does not alter resource identity or typography.
 add_filter( 'style_loader_tag', function( $html, $handle ) {
 	if ( 'gwp-admin' === $handle ) {
 		return str_replace( '<link ', '<link data-vazir-gp-style-loader-probe="gwp-admin" ', $html );
@@ -108,8 +143,10 @@ $options = get_option( 'vazir_font_options', array() );
 if ( ! is_array( $options ) ) { $options = array(); }
 $options['enable_admin'] = true;
 $options['enable_gravity_forms'] = true;
-$options['exclude_selectors'] = array( '.vazir-gp-evidence-excluded' );
+$options['exclude_selectors'] = array( '.vazir-gp-evidence-excluded', '.perk-settings .vazir-gp-evidence-excluded-nested' );
 update_option( 'vazir_font_options', $options, false );
+VazirFontPlugin::clear_cache();
+$configured_weights = VazirFont_Loader::get_instance()->get_selected_weights();
 
 $manifest = array(
 	'gravity_perks_version' => (string) ( get_plugin_data( WP_PLUGIN_DIR . '/gravityperks/gravityperks.php', false, false )['Version'] ?? '' ),
@@ -124,6 +161,7 @@ $manifest = array(
 	'perk_slug' => $perk->get_property( 'slug' ),
 	'perk_basename' => $perk->get_property( 'basename' ),
 	'exclude_selectors' => $options['exclude_selectors'],
+	'configured_font_weights' => $configured_weights,
 	'fixture_shipped_in_production' => false,
 );
 file_put_contents( $artifact_dir . '/fixture-manifest.json', wp_json_encode( $manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n" );

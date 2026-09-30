@@ -14,7 +14,7 @@ This document defines repository-specific contribution rules for human contribut
 - **Class prefix:** `VazirFont_`
 - **Autoloader:** bounded SPL autoloader in `vazir-font-wp.php`
 - **Persisted option:** `vazir_font_options`
-- **Optional integrations:** Gravity Forms; capability-admitted Gravity Flow typography compatibility
+- **Optional integrations:** Gravity Forms; capability-admitted Gravity Flow typography compatibility; capability-admitted Gravity Perks standalone Settings typography compatibility
 
 When changing version metadata, update the plugin header and `VAZIR_FONT_VERSION` in `vazir-font-wp.php` together.
 
@@ -26,8 +26,9 @@ The plugin owns typography only. Preserve these boundaries:
 - Editor content uses the current `enqueue_block_assets` path.
 - Gravity Forms compatibility is handled by `VazirFont_GravityForms_Integration` through WordPress/Gravity Forms style hooks and registered handles.
 - Gravity Flow typography compatibility is handled by `VazirFont_GravityFlow_Integration` through `gravityflow_enqueue_admin_scripts` / `gravityflow_enqueue_frontend_scripts` and host stylesheet dependencies. Gravity Flow continues to own Inbox data/query, assignment, authorization, workflow state, search, pagination, filtering, navigation, AG Grid lifecycle, and icon rendering.
+- Gravity Perks standalone Settings typography compatibility is handled by `VazirFont_GravityPerks_Integration` at WordPress' supported `print_styles_array` boundary while Gravity Perks processes its registered `gwp-admin` stylesheet. Gravity Perks continues to own routing, Settings rendering, saving, controls, notices, scripts, and host styles. The adapter reuses the existing Gravity compatibility/admin settings and Loader-owned font delivery, returns the host style-handle list unchanged, and attaches only bounded inline typography to `gwp-admin`.
 - GravityView remains an evidence profile, not a dedicated production integration layer.
-- Do not introduce a second settings authority, JavaScript DOM typography engine, or Gravity Forms/Flow/View cache/file ownership.
+- Do not introduce a second settings authority, JavaScript DOM typography engine, or Gravity Forms/Flow/Perks/View cache/file ownership.
 - Do not flush third-party caches, delete generated files/transients, or add periodic third-party cleanup jobs.
 
 ## 3. Font Delivery Invariants
@@ -55,7 +56,9 @@ Element-level exclusions are negative applicability boundaries: Vazirmatn `font-
 
 Pseudo-element exclusions must not be forced into relational element guards. Dedicated icon-family protections remain responsible for Dashicons and equivalent icon contexts.
 
-Gravity compatibility adapters must consume the same `vazir_font_options['exclude_selectors']` authority. Do not introduce a second incompatible selector model or a PHP/DOM imitation of arbitrary CSS selector matching. Inheritable Gravity Forms/Flow rules must fail closed when an exclusion cannot be represented safely.
+Gravity compatibility adapters must consume the same `vazir_font_options['exclude_selectors']` authority. Do not introduce a second incompatible selector model or a PHP/DOM imitation of arbitrary CSS selector matching. Inheritable Gravity Forms/Flow/Perks rules must preserve root/descendant negative applicability and descendant-containment protection so an excluded subtree cannot inherit Vazirmatn from an otherwise targeted ancestor.
+
+Descendant containment is target-relative, so a validated document-context exclusion must be lexically qualified before it is embedded in `:has()`. Local simple, compound, attribute, and safely bounded functional selectors remain usable as relative descendant predicates. The exact adapter-owned descendant scope may be stripped only when equivalence is guaranteed by the production target (`.gform_wrapper`, `.gflow-grid`, or `.perk-settings` respectively). Other top-level descendant/child/sibling relationships must fail the affected inheritable repair closed rather than be reinterpreted under the target. The lexical qualification must ignore combinator-looking characters and whitespace inside quoted strings, attribute selectors, and functional pseudo-class parentheses. Element exclusions containing `:has()` remain fail-closed. Pseudo-element exclusions remain outside relational element guards.
 
 ## 5. Gravity Compatibility
 
@@ -95,7 +98,23 @@ The dedicated adapter uses capability-based runtime admission. Preserve these in
 
 Runtime admission and compatibility evidence are separate. Real browser/runtime qualification currently covers the exact Gravity Flow `3.1.0` package used by the licensed evidence lab. A synthetic alternate-version runtime contract may prove that version identity does not control production admission, but it must never be represented as real compatibility evidence for that version.
 
-Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms/Flow runtime proof. If licensed characterization is unavailable, report it as unavailable rather than PASS.
+### Gravity Perks
+
+The standalone Settings adapter uses capability-based production admission. Preserve these invariants:
+
+- production admission is not version-gated and must not use an accepted-version whitelist;
+- initialize only when the Gravity Perks runtime is present, and admit only an admin `gwp_perks` request with a non-empty `view` and Perk `slug` while `GWPerksPage::load_perk_settings()` is available;
+- attach only at WordPress' supported `print_styles_array` boundary while Gravity Perks processes `gwp-admin`;
+- require `gwp-admin` to be both selected for the current print pass and registered by the host; if either condition is absent, fail closed without adding replacement styles;
+- return the host style-handle list unchanged and attach the correction only through `wp_add_inline_style( 'gwp-admin', ... )`;
+- reuse `VazirFont_Loader::get_font_face_css()`, the public `vazir_font_family` filter, existing `enable_admin` / `enable_gravity_forms` settings, and the single `exclude_selectors` authority;
+- keep enforcement limited to bounded standalone Settings text surfaces; checkbox/radio glyphs and host icon pseudo-elements remain host-owned;
+- preserve root/descendant and descendant-containment exclusion protection for every inheritable Perks selector. A `.perk-settings <descendant>` exclusion may be safely reduced to its descendant predicate only because every bounded Perks target is guaranteed inside that exact Settings scope; other document-context complex selectors and selectors containing `:has()` must fail the bounded inheritable repair closed rather than be embedded with changed semantics;
+- do not edit Gravity Perks, rewrite output or stylesheet links, inject JavaScript, replace the Settings document, or create another stylesheet/font-delivery authority.
+
+Gravity Perks remains authoritative for routing, Settings rendering, saving, controls, notices, scripts, and host styles. Production admission is capability-based, while compatibility evidence is version-bound: current licensed browser/runtime qualification covers exact Gravity Perks `2.3.16`. Other Gravity Perks releases remain `NOT_PROVEN` until separately exercised. On exact `2.3.16`, the generated Documentation URL dispatches to the Settings handler and remains `NOT_REACHABLE_AS_DOCUMENTATION`; unreachable legacy source is not runtime support evidence.
+
+Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms/Flow/Perks runtime proof. If licensed characterization is unavailable, report it as unavailable rather than PASS.
 
 ## 6. Directory Expectations
 
@@ -104,16 +123,22 @@ Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms/Fl
 | `vazir-font-wp.php` | Plugin bootstrap, constants, options, autoloading |
 | `includes/class-vazirfont-loader.php` | WordPress typography loading and generated CSS |
 | `includes/class-vazirfont-admin-settings.php` | Admin settings and validation |
+| `includes/class-vazirfont-selector-boundary.php` | Internal lexical qualification for target-relative Gravity descendant exclusion guards |
 | `includes/class-vazirfont-gravityforms-integration.php` | Optional Gravity Forms compatibility adapter |
 | `includes/class-vazirfont-gravityflow-integration.php` | Capability-bounded Gravity Flow typography adapter |
+| `includes/class-vazirfont-gravityperks-integration.php` | Capability-bounded Gravity Perks standalone Settings typography adapter |
 | `assets/fonts/` | Pinned Vazirmatn WOFF2 binaries, upstream license/authors, and provenance |
 | `assets/css/` | Shared/static CSS assets |
 | `assets/js/` | Admin-side JavaScript |
 | `languages/` | Translation template/resources |
 | `tests/gravityflow-runtime-contract.php` | Deterministic Gravity Flow admission/adapter contract |
+| `tests/gravityperks-runtime-contract.php` | Deterministic Gravity Perks standalone Settings admission/exclusion contract |
+| `tests/gravity-descendant-exclusion-contract.php` | Cross-adapter deterministic relative-safety/fail-closed exclusion contract |
 | `tests/gravityforms-evidence-lab/` | Deep Gravity Forms exact-runtime/browser profile and selector-admission manifest |
-| `tests/product-evidence-lab/` | Shared licensed package/runtime core plus Gravity Flow, GravityView, and combined-stack profiles |
+| `tests/product-evidence-lab/` | Shared licensed package/runtime core plus Gravity Flow, GravityView, Gravity Perks, and combined-stack profiles |
+| `tests/product-evidence-lab/profiles/gravityperks/` | Exact-version Gravity Perks source/runtime/browser qualification profile |
 | `docs/CHARACTERIZATION.md` | Evidence boundaries and characterization status |
+| `docs/GRAVITY-PERKS-CHARACTERIZATION.md` | Gravity Perks 2.3.16 evidence boundary and production-seam characterization |
 | `RELEASE.md` | Release verification checklist |
 
 ## 7. Local Tooling
@@ -132,7 +157,7 @@ composer lint
 composer compat
 ```
 
-`composer test` runs the standalone core/Gravity Forms contract, the Gravity Flow adapter contract for both the currently qualified `3.1.0` identity and a synthetic alternate version identity, and PHPUnit repository contracts. The synthetic alternate identity proves only that admission is not version-gated. `composer lint` uses the repository PHPCS ruleset. `composer compat` checks the production PHP surfaces against the configured PHP compatibility range.
+`composer test` runs the standalone core/Gravity Forms contract, the Gravity Flow adapter contract for both the currently qualified `3.1.0` identity and a synthetic alternate version identity, the deterministic Gravity Perks standalone Settings runtime contract, the shared Gravity descendant-exclusion boundary contract, and PHPUnit repository contracts. The synthetic Flow alternate identity proves only that Flow admission is not version-gated. `composer lint` uses the repository PHPCS ruleset. `composer compat` checks the production PHP surfaces against the configured PHP compatibility range.
 
 ## 8. Coding Standards
 
@@ -155,22 +180,24 @@ Current CI coverage includes:
 - standards: `composer lint` and `composer compat`;
 - WordPress smoke: `6.7/PHP 7.4`, `7.1/PHP 8.3`, `7.1/PHP 8.5`;
 - Chromium computed-style characterization on WordPress `7.1` with Twenty Twenty-One and Twenty Twenty-Five;
-- a separately diagnosable Product-Wide Reproducible Evidence Lab targeting WordPress `7.1`, PHP `8.3`, Chromium, and licensed profiles `gravityforms`, `gravityflow`, `gravityview`, and `gravity-stack`.
+- a separately diagnosable Product-Wide Reproducible Evidence Lab targeting WordPress `7.1`, PHP `8.3`, Chromium, and licensed profiles `gravityforms`, `gravityflow`, `gravityview`, `gravityperks`, and `gravity-stack`.
 
 The existing generic WordPress browser fixture remains the `wordpress` profile authority and is not duplicated inside the licensed matrix.
 
 The product evidence lab must fail closed unless every required Owner-supplied package matches its exact expected byte size, SHA-256, archive safety rules, entrypoint, plugin identity, and version. Licensed ZIPs must never be committed or uploaded as CI artifacts. A configured profile is not evidence by itself: claims require an actually executed exact-Head run, and unavailable runner/package conditions remain `ENVIRONMENT_UNAVAILABLE`/`NOT_PROVEN`, not PASS.
 
-A PASS belongs only to the profile and scenarios that executed. Gravity Forms PASS does not prove Gravity Flow or GravityView, and combined-stack PASS is representative coexistence evidence rather than exhaustive compatibility.
+A PASS belongs only to the profile and scenarios that executed. Gravity Forms PASS does not prove Gravity Flow, GravityView, or Gravity Perks, and combined-stack PASS is representative coexistence evidence rather than exhaustive compatibility.
 
 ## 10. Testing Rules for Changes
 
 - Production behavior changes require a deterministic contract test where feasible.
 - CSS/typography changes that depend on cascade or computed style require browser characterization, not source inspection alone.
 - Changes to Gravity Forms compatibility should preserve Preview/No Conflict registered handles and include deterministic repository/runtime contracts.
+- Changes to inheritable Gravity exclusion semantics must exercise `tests/gravity-descendant-exclusion-contract.php`, including local selectors, exact adapter-owned ancestor qualification, unsafe top-level combinators, quoted/attribute/functional controls, pseudo-element ownership, and `:has()` fail-closed behavior.
 - Any claim about real Orbital/Theme Framework, Legacy Markup, Preview, Form Editor, AJAX, multi-page, validation rerender, conditional logic, admin components, or Gravity Forms icons requires the licensed `gravityforms` profile.
 - A source declaration in `admin-components.min.css`, `preview.css`, or Legacy CSS is only risk evidence. Production repair requires a rendered exact-runtime failure on the actual text-bearing node; already-correct components must not receive speculative broad fixes.
 - Gravity Flow admission changes require deterministic coverage separating version identity from actual host capabilities. Real Gravity Flow typography claims still require the licensed `gravityflow` profile to measure the actual rendered inner AG Grid/Flatpickr component, not only `.gflow-inbox`. Wrapper PASS must not be promoted to proof of inner AG Grid typography.
+- Gravity Perks admission or standalone Settings typography changes require deterministic coverage of the capability-gated `print_styles_array` / registered-`gwp-admin` boundary, unchanged host style-handle ownership, exclusion semantics, and fail-closed behavior. Real Gravity Perks Settings typography, save-lifecycle, font-request, or Documentation-alias claims require the licensed `gravityperks` profile. Current runtime/browser evidence is bound to exact Gravity Perks `2.3.16`; other releases remain `NOT_PROVEN` until separately exercised.
 - Claims about GravityView surfaces require the licensed `gravityview` profile; fixture-created state proves behavior after that state exists, not production reachability of every setup path.
 - Keep exact-Head CI evidence bound to the commit and profile being evaluated.
 
@@ -192,7 +219,7 @@ At minimum:
 - run all repository checks;
 - verify packaged font URLs/assets;
 - run WordPress computed-style characterization;
-- run the relevant licensed product profile for any Gravity Forms/Flow/View compatibility claim made by the release;
+- run the relevant licensed product profile for any Gravity Forms/Flow/Perks/View compatibility claim made by the release;
 - do not promote unavailable, stub-only, wrapper-only, synthetic-version, or different-profile evidence to PASS;
 - build the production artifact without development-only tooling unless explicitly required;
 - publish only with Owner authorization.

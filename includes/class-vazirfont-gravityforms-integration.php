@@ -331,10 +331,10 @@ final class VazirFont_GravityForms_Integration {
 	 * reject targets containing an excluded subtree so font inheritance cannot
 	 * bypass the exclusion boundary.
 	 *
-	 * A configured selector containing :has() cannot safely be nested inside the
-	 * required descendant-protection :has(). In that case fail closed by omitting
-	 * the inheritable GF rule rather than emitting invalid CSS or approximating the
-	 * selector with a PHP/DOM matcher.
+	 * Only exclusions that can be represented safely relative to the current
+	 * target are admitted to descendant containment. Exact .gform_wrapper
+	 * ancestor qualification can be removed only for targets guaranteed inside
+	 * that wrapper; other document-context complex selectors fail closed.
 	 *
 	 * @param string[] $exclude_selectors Valid element-level exclusions.
 	 */
@@ -354,13 +354,17 @@ final class VazirFont_GravityForms_Integration {
 			return $guarded;
 		}
 
-		foreach ( $exclude_selectors as $exclude_selector ) {
-			if ( false !== stripos( $exclude_selector, ':has(' ) ) {
-				return '';
-			}
+		$descendant_exclusions = VazirFont_Selector_Boundary::for_descendant_containment(
+			$selector,
+			$exclude_selectors,
+			'.gform_wrapper',
+			'.gform_wrapper'
+		);
+		if ( null === $descendant_exclusions ) {
+			return '';
 		}
 
-		return $guarded . ':not(:has(:where(' . implode( ', ', $exclude_selectors ) . ')))';
+		return $guarded . ':not(:has(:where(' . implode( ', ', $descendant_exclusions ) . ')))';
 	}
 
 	/**
@@ -439,7 +443,44 @@ final class VazirFont_GravityForms_Integration {
 	}
 
 	private function selector_targets_pseudo_element( string $selector ): bool {
-		return 1 === preg_match( '/::[a-zA-Z0-9_-]+|:(?:before|after|first-letter|first-line)\b/i', $selector );
+		$quote         = '';
+		$bracket_depth = 0;
+		$length        = strlen( $selector );
+
+		for ( $index = 0; $index < $length; $index++ ) {
+			$char = $selector[ $index ];
+
+			if ( '' !== $quote ) {
+				if ( $char === $quote ) {
+					$quote = '';
+				}
+				continue;
+			}
+
+			if ( '"' === $char || "'" === $char ) {
+				$quote = $char;
+				continue;
+			}
+
+			if ( '[' === $char ) {
+				$bracket_depth++;
+				continue;
+			}
+			if ( ']' === $char && $bracket_depth > 0 ) {
+				$bracket_depth--;
+				continue;
+			}
+
+			if ( 0 !== $bracket_depth || ':' !== $char ) {
+				continue;
+			}
+
+			if ( 1 === preg_match( '/^(?:::[a-zA-Z0-9_-]+|:(?:before|after|first-letter|first-line)\b)/i', substr( $selector, $index ) ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private function sanitize_css_selector( string $selector ): string {
