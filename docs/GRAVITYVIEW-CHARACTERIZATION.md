@@ -7,147 +7,146 @@ This characterization is bound to the exact Owner-supplied runtime exercised by 
 - GravityView `3.3.4` (`gravityview.zip`, `7,569,755` bytes, SHA-256 `af5959fb6bf0cfcb4d07d14b1933cf9ea0a9d0f994b9991f27aed47edbcb9829`);
 - Gravity Forms prerequisite `3.1.1.1` (SHA-256 `542f56ae0747f3661d1474996527298027db3fb8ed3e6469a6391aaabf61069b`).
 
-The licensed package bytes remain outside the repository and outside uploaded evidence. Source evidence records only relative paths, hashes, line numbers, semantic token presence, registered handles, and runtime identity.
+Licensed package bytes remain outside the repository and uploaded public evidence. Source evidence records only bounded provenance such as relative paths, hashes, semantic-token presence, registered handles, and runtime identity.
 
-Compatibility claims are exact-runtime claims. Other GravityView versions remain `NOT_PROVEN` until separately exercised.
+Production admission is capability-based, but compatibility evidence is exact-version-bound. Other GravityView versions remain `NOT_PROVEN` until separately exercised.
 
-## Previous profile boundary
+## Qualification authority and repair scope
 
-The earlier GravityView profile proved a real frontend View, search interaction, filtered output, an exclusion fixture, the View editor route, and representative icon ownership when rendered. It did not prove the modern Vantage theme, Gutenberg controls, React Select portals, Datepicker, or oEmbed placeholder typography.
+The qualification preceding this repair established four distinct facts:
 
-The strengthened fixture explicitly opts the real View into Vantage and creates a normal WordPress Page containing the real registered `gk-gravityview-blocks/view` block. It therefore measures the requested surfaces through the installed GravityView runtime instead of reproducing GravityView components with imitation markup.
+1. Modern Vantage frontend typography was already correct and required no frontend repair.
+2. The authentic Gutenberg React Select control/value used an explicit editor system stack while its combobox input already resolved to Vazirmatn.
+3. The authentic View-block React Datepicker root/current-month/day used `"Helvetica Neue", helvetica, arial, sans-serif` while its associated input already resolved to Vazirmatn.
+4. The detached React Select menu portal remained `NOT_PROVEN`, while the oEmbed admin placeholder was a reproduced `FAIL` with no admitted safe production scope.
 
-## Runtime disposition summary
+This production batch therefore admits exactly the two normal-descendant editor repairs and nothing else.
 
-| Surface | Exact 3.3.4 disposition | Runtime result |
-| --- | --- | --- |
-| Modern Vantage frontend inner typography | `ALREADY_VAZIRMATN` | Real root, table header, entry value, search label/input/button, pagination, and filtered state resolve to Vazirmatn. No frontend repair is admitted. |
-| React Select selected/value/control | `FAIL` | Selected/value text and control resolve to GravityView's explicit editor system stack. The actual search input itself resolves to Vazirmatn. |
-| React Select detached menu portal | `NOT_PROVEN` | The real control produces a `gk-select` portal candidate under the top-level document body, but the exact run did not expose a stable visible ARIA listbox whose option typography could be measured. |
-| View-block Datepicker | `FAIL` | The authentic `.react-datepicker`, current month, and day text resolve to `"Helvetica Neue", helvetica, arial, sans-serif`; its input remains Vazirmatn. |
-| GravityView oEmbed admin placeholder | `FAIL` | The authentic WordPress `parse-embed` route returns GravityView's placeholder; its heading and paragraph retain inline system-font declarations. |
-| GravityView icon family | `PASS` | Representative GravityView pseudo-element retains the `gravityview` icon family. |
-| WordPress Dashicons | `PASS` | The Gutenberg admin-menu icon retains `dashicons`. |
-| `gform-icons-admin` on this exact editor path | `NOT_PROVEN` | No representative node rendered on the exercised GravityView View-block path. |
+## Production lifecycle and ownership
 
-A source declaration is not classified as a runtime failure unless the corresponding real surface is reached and measured. The detached React Select menu remains `NOT_PROVEN` even though exact source shows `menuPortalTarget={doc.body}` and applies the system-font object to `menuPortal`.
+`VazirFont_GravityView_Integration` is a bounded editor-only adapter. It initializes when GravityView is present and attaches on WordPress' supported:
 
-## Modern frontend and `--gv-font-family`
+`enqueue_block_editor_assets`
 
-Exact source defines the modern theme token default as `--gv-font-family: inherit` and maps GravityView's `font_family` token to that custom property. Supported GravityView theme override filters also exist.
+At that lifecycle point it requires all of the following host capabilities:
 
-The real Vantage fixture nevertheless needs no override. Computed typography on every exercised inner text surface resolves to:
+- registered block `gk-gravityview-blocks/view`;
+- GravityView-owned editor-style handle `gk-gravityview-blocks-view-editor-style` present in the block's `editor_style_handles` metadata;
+- the same style handle registered in WordPress.
 
-`Vazirmatn, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif`
+If any requirement is absent, the adapter fails closed and emits no repair CSS. When admitted, it uses:
 
-The measured custom-property value on the exercised `.gv-themed.gv-theme-vantage` root is the empty string rather than the literal text `inherit`; that measurement must not be rewritten into a stronger runtime-token claim. The important runtime result is that the real inner typography inherits Vazirmatn correctly.
+`wp_add_inline_style( 'gk-gravityview-blocks-view-editor-style', ... )`
 
-The configured `.vf-view-excluded` fixture remains `monospace`, proving that the existing shared exclusion authority is still effective for this normal descendant surface.
+GravityView remains authoritative for block registration, controls, scripts, React Select/Datepicker behavior, editor state, host styles, icons, detached portals, and oEmbed rendering. Vazir does not edit or fork GravityView assets and adds no JavaScript typography mutation.
 
-## Gutenberg fixture and host asset ownership
+## Admitted React Select repair
 
-The exercised block is the actual registered:
+The exact admitted production selector is:
 
-`gk-gravityview-blocks/view`
+```css
+.gk-gravityview-blocks .view-selector [class$="-control"]
+```
 
-The real editor runs in the top-level wp-admin post editor and exposes the WordPress editor canvas iframe. The exact GravityView View-block assets observed at runtime include its real `view.js`, `view.css`, and `style-view.css` builds.
+This does not depend on a generated Emotion hash prefix. Exact GravityView `3.3.4` source itself uses the semantic `[class$="-control"]` suffix to locate the real React Select control, so the suffix is host-owned semantic evidence rather than an inferred generated hash.
 
-The installed runtime reports these GravityView-owned handles:
+The repair sets only `font-family` on that control. The selected/value text inherits from the repaired control. The real `input[role="combobox"]` is intentionally not directly targeted because qualification already showed that input resolving to Vazirmatn.
 
-- editor script: `gk-gravityview-blocks-view-editor-script`;
-- editor style: `gk-gravityview-blocks-view-editor-style`;
-- global block style: `gk-gravityview-blocks-view-style`.
+No `!important` is admitted. The bounded selector has sufficient specificity to override the host control stack at the qualified cascade point without escalating importance.
 
-GravityView registers these assets; Vazir does not replace or fork them.
+## Admitted Datepicker repair
 
-## React Select control
+The exact admitted production selector is:
 
-The authentic `.gk-gravityview-blocks .view-selector` renders the selected View text with:
+```css
+.gk-gravityview-blocks .react-datepicker
+```
 
-`-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif`
+Exact GravityView `3.3.4` declares its Helvetica/Arial stack on the Datepicker root. The production repair therefore corrects that root only; current-month and day text inherit the repaired family. The associated input is not directly targeted because it was already correct.
 
-The control resolves to the same explicit system stack. The real combobox input itself resolves to the normal Vazirmatn stack.
+No broad `.react-datepicker` rule is emitted outside the GravityView block scope, and no descendant-wide reset is added.
 
-Exact installed source explains the result: `DocumentAwareSelect` defines an editor system-font object and applies it through react-select styles. Emotion ownership uses the stable cache key `gk-select`, while generated classes such as `gk-select-...-control` are runtime-generated and are not production selector authority.
+## Exclusion semantics
 
-A narrow control-side repair candidate exists: stable GravityView semantic scope such as `.gk-gravityview-blocks .view-selector`, attached through the GravityView-owned registered editor-style lifecycle or a narrowly scoped `enqueue_block_editor_assets` integration. Any future repair must still preserve the existing `exclude_selectors` negative-applicability contract and icon ownership.
+`vazir_font_options['exclude_selectors']` remains the only exclusion authority. The GravityView adapter reuses `VazirFont_Selector_Boundary` and the same negative-applicability model as other inheritable Gravity adapters:
 
-## Detached React Select menu
+- an excluded target or descendant is not repaired;
+- an admitted target containing an excluded subtree is also not repaired, preventing Vazirmatn inheritance from crossing into the excluded subtree;
+- `.gk-gravityview-blocks <local selector>` can be safely relativized only because the production targets are guaranteed inside that exact scope;
+- unsafe top-level document relationships and real element-level `:has()` exclusions fail the bounded repair closed;
+- pseudo-element exclusions stay outside relational text guards and remain host/icon-owned.
 
-Exact installed source portals the menu to the relevant document body. This means the menu is not a normal descendant of the source `.view-selector`, and existing ancestry-based exclusion semantics cannot automatically associate a detached portal with the source control.
+The exact-runtime browser profile additionally places a real exclusion class inside the React Select control/value and Datepicker subtrees, verifies that the ancestor repair no longer applies, then removes the class and verifies that non-excluded behavior returns. Deterministic contracts separately cover unsafe relationship fail-closed behavior.
 
-Runtime confirmed a real `gk-select` portal candidate under the top-level editor document body, but the exact qualified interaction did not produce a stable visible ARIA listbox whose option text could be measured. The portal/menu typography therefore remains `NOT_PROVEN`, not `FAIL`.
+## Icon and glyph ownership
 
-No production repair is admitted for the detached menu in this PR. In particular, do not:
+The repair contains only element-level `font-family` rules for the two admitted text roots. It does not target icon pseudo-elements.
 
-- depend on dynamic Emotion hash classes;
-- apply a global rule to every React Select in wp-admin;
-- pretend the portal is a descendant of `.view-selector` for exclusion purposes;
-- add JavaScript DOM typography mutation merely to bridge the portal boundary.
+The existing exact-runtime profile continues to verify:
 
-The next repair batch must first identify a stable GravityView-owned portal association that can preserve exclusion semantics.
+- representative GravityView icon pseudo-elements retain the `gravityview` icon family;
+- WordPress Dashicons retain `dashicons`;
+- any Gravity Forms icon family that renders on the exact path must not be replaced by Vazirmatn; when no representative node renders, that surface remains `NOT_PROVEN` rather than inferred.
 
-## Datepicker
+## Frontend remains untouched
 
-The authentic GravityView View-block `Entries Settings` path exposes the real React Datepicker. Runtime measurements are:
+Modern Vantage frontend typography remains an `ALREADY_VAZIRMATN` regression surface. The real root, table header, entry value, search label/input/button, pagination when rendered, and filtered state inherit Vazirmatn correctly.
 
-- Datepicker root: `"Helvetica Neue", helvetica, arial, sans-serif`;
-- current month text: same stack;
-- day text: same stack;
-- associated input: normal Vazirmatn stack.
+No frontend theme-token override, per-View override, or new frontend dependency is introduced by this repair.
 
-The observed Datepicker is in the top-level editor document and remains inside the GravityView inspector; its popper is a normal `.react-datepicker-popper` descendant rather than a detached source-control portal.
+## Detached React Select menu remains NOT_PROVEN
 
-This makes the smallest repair seam comparatively clear: a narrowly scoped `.gk-gravityview-blocks .react-datepicker` rule through the GravityView View-block editor-style lifecycle (or a bounded `enqueue_block_editor_assets` integration). The existing ancestry-based exclusion model can remain applicable on this observed path.
+Exact installed source portals the menu to the relevant document body. The qualification observed a real `gk-select` portal candidate, but did not establish stable visible listbox/option typography suitable for production admission.
 
-No Datepicker production CSS is included here because the same Owner batch also contains materially uncertain React Select portal and oEmbed boundaries. Qualification remains separate from production admission.
+The portal remains outside this repair. In particular, production code does not:
 
-## oEmbed admin placeholder
+- target generated Emotion hash classes;
+- apply a global React Select rule in wp-admin;
+- pretend the portal is a `.view-selector` descendant;
+- use JavaScript DOM mutation to associate source control and detached portal.
 
-The profile exercises GravityView oEmbed through WordPress' authenticated `admin-ajax.php` `parse-embed` route with a real GravityView entry URL. It does not call GravityView's private rendering method directly.
+A future admission requires its own stable GravityView-owned association and exclusion model.
 
-The authentic returned placeholder is mounted unchanged into the current authenticated wp-admin document solely for computed-style measurement. The surrounding admin document and placeholder container inherit Vazirmatn, but the placeholder heading and paragraph resolve to GravityView's inline system stack:
+## oEmbed remains unresolved
 
-`-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif`
+The profile continues to exercise GravityView oEmbed through WordPress' authenticated `admin-ajax.php` `parse-embed` route with a real GravityView entry URL.
 
-A normal stylesheet rule cannot beat those inline declarations; a CSS correction would require `!important`. Exact 3.3.4 returns only the generic `.loading-placeholder` fragment and no stable GravityView-specific wrapper. A broad `.loading-placeholder` override is therefore not admitted until a stable GravityView-owned insertion-context selector is proven.
+Exact `3.3.4` emits a generic `.loading-placeholder` fragment whose heading and paragraph carry inline system-font declarations. The runtime failure is real, but the returned fragment provides no stable GravityView-specific wrapper. A normal stylesheet cannot beat the inline declarations, while a broad `.loading-placeholder !important` rule would exceed product ownership.
 
-The plugin source itself must not be edited or rewritten to change the oEmbed HTML.
+Therefore oEmbed remains `FAIL / UNREPAIRED` in this production batch. Vazir does not rewrite GravityView HTML or vendor source.
 
-## Icon and exclusion ownership
+## Evidence contract
 
-Typography qualification is invalid if it fixes text by breaking glyph ownership. The exact runtime preserves:
+The GravityView Product Evidence profile intentionally has two phases:
 
-- GravityView icon font on the representative GravityView icon pseudo-element;
-- WordPress `dashicons` on the exercised Gutenberg admin icon.
+1. the existing qualification characterization continues to exercise frontend behavior, authentic editor assets, React Select portal reachability, Datepicker reachability, icon ownership, and authenticated oEmbed;
+2. `production-repair-characterization.mjs` then verifies the admitted production behavior on the same exact runtime.
 
-`gform-icons-admin` remains `NOT_PROVEN` on this path because no representative node rendered.
+The repair-verification phase requires:
 
-`vazir_font_options['exclude_selectors']` remains the only exclusion authority. Normal descendant GravityView repairs can reuse the shared `VazirFont_Selector_Boundary`. A detached React portal must not be treated as a descendant of the source control merely to reuse that mechanism.
+- React Select control → Vazirmatn;
+- React Select selected/value text → Vazirmatn;
+- React Select input remains Vazirmatn;
+- real control open/close interaction remains functional;
+- React Select descendant exclusion blocks ancestor repair and non-excluded behavior recovers;
+- Datepicker root/current month/day → Vazirmatn;
+- Datepicker input remains Vazirmatn;
+- real open/select/update/reopen/Escape-close behavior remains functional;
+- Datepicker descendant exclusion blocks ancestor repair and non-excluded behavior recovers;
+- frontend remains `ALREADY_VAZIRMATN`;
+- detached portal remains `NOT_PROVEN` unless separately and independently qualified;
+- oEmbed remains an executed unrepaired failure without causing the evidence harness itself to falsely fail.
 
-## Rejected brittle approaches
+Production ZIP dry-run qualification reuses the same profile against the already-built package, so packaged-artifact evidence—not source-tree evidence alone—must prove the two admitted surfaces before a later release can rely on this repair.
 
-This qualification does not admit any of the following:
+## Release boundary and remaining gaps
 
-- setting GravityView's frontend theme token merely because an override filter exists;
-- adding a broad generic GravityView adapter before runtime admission evidence;
-- targeting generated Emotion hash classes;
-- global wp-admin React Select overrides;
-- JavaScript typography mutation;
-- fake `.react-datepicker` or fake GravityView markup;
-- broad `.loading-placeholder` rules;
-- GravityView or Gravity Forms vendor edits.
+This repair is post-`v1.4.0`; it does not modify or republish the already released `v1.4.0`. Source product version remains unchanged in this batch because no new release is created here.
 
-## Production disposition
+GravityView is **not CLOSED** after these two repairs. Remaining gaps include at least:
 
-No production typography repair is included in this qualification PR.
+- detached React Select portal association/typography: `NOT_PROVEN`;
+- oEmbed placeholder typography: reproduced `FAIL`, intentionally unrepaired;
+- any GravityView version other than exact `3.3.4`: `NOT_PROVEN` until separately exercised.
 
-The modern frontend already behaves correctly and must remain untouched. The Datepicker has a narrow credible repair seam, but the detached React Select portal still lacks a proven bounded association and the oEmbed placeholder lacks a stable GravityView-specific CSS scope. Shipping only the easy Datepicker correction in this evidence batch would blur qualification and production admission while leaving the materially different uncertain families unresolved.
-
-GravityView is therefore **not CLOSED** by this qualification. The next production batch should be evidence-led and separated by seam:
-
-1. admit the normal-descendant Gutenberg repairs that are independently runtime-proven and exclusion-safe, including the React Select control/value and Datepicker, only after the final production selector set is rechecked against exact 3.3.4;
-2. separately resolve or explicitly no-admit the detached React Select portal based on a stable GravityView-owned association;
-3. separately resolve or explicitly no-admit oEmbed only if a stable GravityView-owned insertion context can be demonstrated without globally styling generic WordPress placeholders.
-
-No tag, release, public ZIP publication, or deployment is part of this characterization.
+No tag, GitHub Release, publication, or deployment belongs to this characterization/repair PR.
