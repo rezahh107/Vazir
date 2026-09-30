@@ -18,7 +18,7 @@ The builder creates:
 
 The ZIP has exactly one consumer root: `vazir-font-wp/`.
 
-The package contract is allowlist-based. Runtime PHP under `includes/`, required CSS/JS, translation resources, README, the five pinned Vazirmatn WOFF2 files, `OFL.txt`, `AUTHORS.txt`, and `Vazirmatn-PROVENANCE.md` are eligible. Repository/CI/release tooling, tests, development dependencies, build output, nested ZIPs, and licensed Gravity Forms/Flow/View packages are not eligible.
+The package contract is allowlist-based. Runtime PHP under `includes/`, required CSS/JS, translation resources, README, the five pinned Vazirmatn WOFF2 files, `OFL.txt`, `AUTHORS.txt`, and `Vazirmatn-PROVENANCE.md` are eligible. Repository/CI/release tooling, tests, development dependencies, build output, nested ZIPs, and licensed Gravity Forms/Flow/View/Perks packages are not eligible.
 
 The builder normalizes shipped file timestamps and ordering so two builds of the same source/version produce the same ZIP bytes and SHA-256.
 
@@ -50,26 +50,26 @@ The workflow:
 5. installs that exact ZIP into a fresh WordPress runtime with `wp plugin install` and activates it;
 6. proves runtime/settings hooks and packaged assets from the installed artifact;
 7. reuses the real admin settings browser characterization against that installed ZIP;
-8. passes the same already-built ZIP and SHA to the Product-Wide Evidence Lab for Gravity Forms, Gravity Flow, GravityView, and combined-stack qualification;
+8. passes the same already-built ZIP and SHA to the Product-Wide Evidence Lab for `gravityforms`, `gravityflow`, `gravityview`, `gravityperks`, and `gravity-stack` qualification;
 9. emits a bounded JSON manifest;
 10. uploads the candidate ZIP, checksum, and manifest as temporary Actions evidence.
 
 Dry-run publication state is always `NOT_ATTEMPTED_DRY_RUN`.
 
-The licensed Product Evidence profiles retain their existing truth boundaries. If a required licensed environment/package cannot execute, that is not promoted to PASS. The release manifest records product qualification as not proven/environment unavailable while the profile jobs remain the detailed evidence source.
+The licensed Product Evidence profiles retain their existing truth boundaries. If a required licensed environment/package cannot execute, that is not promoted to PASS. The release manifest records product qualification as not proven/environment unavailable while the profile jobs remain the detailed evidence source. A passing existing GravityView profile is regression evidence for its already-qualified scenarios only; it does not complete or admit separate in-progress GravityView surface qualification.
 
 ## Version handling
 
-There is currently no published GitHub Release history from which automation can truthfully infer a first public version. The release system therefore does **not** choose or bump the first public version.
+A public GitHub Release history now exists; `v1.3.0` is the currently published release at the time `v1.4.0` is prepared. The release system still does **not** infer or mutate the next release number. Version choice remains an explicit reviewed source change.
 
 For publication, the Owner supplies both:
 
 - the exact intended SemVer (`version`); and
 - the exact approved `main` commit SHA (`approved_sha`).
 
-The source at that SHA must already have matching `Version:` and `VAZIR_FONT_VERSION` values. If it does not, publication fails closed. Version preparation remains a normal reviewed source change instead of an invisible mutation performed during publication.
+The source at that SHA must already have matching plugin-header `Version:` and `VAZIR_FONT_VERSION` values. `release_assert_version_mirrors` verifies those product-version mirrors; publication fails closed if they disagree or do not match the requested version.
 
-A future patch/minor/major resolver can be added after a real release history exists if it materially improves the workflow; it is intentionally not required for the first-public-release boundary.
+The persisted option schema version is a separate runtime authority. `VAZIR_FONT_SCHEMA_VERSION` changes only when the persisted option schema actually changes. A product release bump by itself must not trigger an options migration.
 
 ## Explicit Owner publication
 
@@ -86,7 +86,7 @@ Before publication, automation verifies that:
 - dispatch is on `main`;
 - `approved_sha` equals the dispatch SHA;
 - remote `main` still equals `approved_sha` after qualification;
-- the requested version matches both internal version mirrors;
+- the requested version matches both internal product-version mirrors;
 - the production tag/release identity is not already occupied;
 - release contract, exact-ZIP validation, clean install/runtime smoke, installed admin settings browser characterization, and the artifact Product Evidence Lab have succeeded for the exact candidate bytes.
 
@@ -108,7 +108,7 @@ If last-mile verification fails after publication, the workflow stops with the r
 
 For a successful exact-Head run, release automation proves the identity and package contract of the exact ZIP, deterministic checksum, clean WordPress installation/activation, representative runtime initialization, bundled font availability, the packaged real settings surface, and whichever Product Evidence profiles actually executed successfully against that same ZIP.
 
-It does **not** prove every WordPress/theme/plugin combination, every Gravity Forms/Flow/View configuration, every browser/device, or behavior that the existing evidence architecture classifies as unobservable/unsupported. Source CI remains useful regression evidence but is not substituted for artifact qualification.
+It does **not** prove every WordPress/theme/plugin combination, every Gravity Forms/Flow/View/Perks configuration, every browser/device, or behavior that the existing evidence architecture classifies as unobservable/unsupported. Source CI remains useful regression evidence but is not substituted for artifact qualification.
 
 ## Human review that remains useful
 
