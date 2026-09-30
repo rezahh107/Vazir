@@ -32,7 +32,7 @@ final class VazirFont_Selector_Boundary {
 	): ?array {
 		$relative = array();
 		foreach ( $exclude_selectors as $exclude_selector ) {
-			if ( false !== stripos( $exclude_selector, ':has(' ) ) {
+			if ( self::selector_contains_relational_has( $exclude_selector ) ) {
 				return null;
 			}
 
@@ -76,6 +76,47 @@ final class VazirFont_Selector_Boundary {
 		}
 
 		return $relative;
+	}
+
+	/**
+	 * Detect a real :has() functional pseudo-class outside quoted strings and
+	 * attribute selectors. Literal :has( text inside those opaque regions must
+	 * not disable an otherwise representable exclusion.
+	 */
+	private static function selector_contains_relational_has( string $selector ): bool {
+		$quote         = '';
+		$bracket_depth = 0;
+		$length        = strlen( $selector );
+
+		for ( $index = 0; $index < $length; ++$index ) {
+			$char = $selector[ $index ];
+			if ( '' !== $quote ) {
+				if ( $char === $quote ) {
+					$quote = '';
+				}
+				continue;
+			}
+			if ( '"' === $char || "'" === $char ) {
+				$quote = $char;
+				continue;
+			}
+			if ( '[' === $char ) {
+				++$bracket_depth;
+				continue;
+			}
+			if ( ']' === $char && $bracket_depth > 0 ) {
+				--$bracket_depth;
+				continue;
+			}
+			if ( 0 !== $bracket_depth ) {
+				continue;
+			}
+			if ( ':' === $char && 0 === substr_compare( $selector, ':has(', $index, 5, true ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -135,9 +176,9 @@ final class VazirFont_Selector_Boundary {
 				);
 			}
 
-			if ( ctype_space( $char ) ) {
+			if ( self::is_css_whitespace( $char ) ) {
 				$start = $index;
-				while ( $index + 1 < $length && ctype_space( $selector[ $index + 1 ] ) ) {
+				while ( $index + 1 < $length && self::is_css_whitespace( $selector[ $index + 1 ] ) ) {
 					++$index;
 				}
 				$next = $index + 1 < $length ? $selector[ $index + 1 ] : '';
@@ -158,5 +199,13 @@ final class VazirFont_Selector_Boundary {
 		}
 
 		return null;
+	}
+
+	/**
+	 * CSS whitespace is exactly space, tab, line feed, carriage return, or form
+	 * feed. Keep this self-contained so selector parsing does not require Ctype.
+	 */
+	private static function is_css_whitespace( string $char ): bool {
+		return ' ' === $char || "\t" === $char || "\n" === $char || "\r" === $char || "\f" === $char;
 	}
 }
