@@ -115,11 +115,19 @@ try {
   const ariaExpandedOpen = await page.locator(comboboxSelector).first().getAttribute('aria-expanded');
   await page.keyboard.press('Escape');
   await page.waitForFunction(
-    selector => document.querySelector(selector)?.getAttribute('aria-expanded') !== 'true',
+    selector => {
+      const inputNode = document.querySelector(selector);
+      return !inputNode || inputNode.getAttribute('aria-expanded') !== 'true';
+    },
     comboboxSelector,
     { timeout: 5000 },
   );
-  const ariaExpandedClosed = await page.locator(comboboxSelector).first().getAttribute('aria-expanded');
+  const ariaExpandedClosed = await page.evaluate(
+    selector => document.querySelector(selector)?.getAttribute('aria-expanded') ?? null,
+    comboboxSelector,
+  );
+  const visibleListboxesAfterEscape = await page.locator('[role="listbox"]:visible').count();
+  assert.equal(visibleListboxesAfterEscape, 0, 'React Select Escape interaction must leave no visible listbox.');
 
   const exclusionClass = String(manifest.editor_exclusion_selector || '.vazir-gv-evidence-excluded').replace(/^\./, '');
   const valueHandle = await value.elementHandle();
@@ -144,6 +152,7 @@ try {
       aria_expanded_before: ariaExpandedBefore,
       aria_expanded_open: ariaExpandedOpen,
       aria_expanded_closed: ariaExpandedClosed,
+      visible_listboxes_after_escape: visibleListboxesAfterEscape,
     },
     exclusion_probe: {
       selector: manifest.editor_exclusion_selector,
