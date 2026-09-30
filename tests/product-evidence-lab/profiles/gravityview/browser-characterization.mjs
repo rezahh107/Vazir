@@ -58,6 +58,20 @@ async function recordMeasuredTypography(name, locator, extra = {}) {
   return { ...measurement, disposition, ...extra };
 }
 
+async function dismissCoreEditorWelcomeGuide() {
+  const overlay = page.locator('.components-modal__screen-overlay').filter({ hasText: /Welcome to the editor/i }).first();
+  if (!(await overlay.count()) || !(await overlay.isVisible())) return false;
+
+  const closeButton = overlay.locator('button[aria-label="Close"]').first();
+  if (await closeButton.count()) {
+    await closeButton.click();
+  } else {
+    await page.keyboard.press('Escape');
+  }
+  await overlay.waitFor({ state: 'hidden', timeout: 5000 });
+  return true;
+}
+
 async function ensureGravityViewInspector() {
   await page.goto(manifest.editor_url, { waitUntil: 'domcontentloaded' });
   await page.locator('body.block-editor-page').waitFor({ state: 'visible', timeout: 30000 });
@@ -69,6 +83,7 @@ async function ensureGravityViewInspector() {
     manifest.block_name,
     { timeout: 30000 },
   );
+  await dismissCoreEditorWelcomeGuide();
   await page.evaluate(blockName => {
     const blocks = window.wp.data.select('core/block-editor').getBlocks();
     const block = blocks.find(candidate => candidate.name === blockName);
@@ -88,7 +103,10 @@ async function ensureGravityViewInspector() {
 }
 
 async function expandPanelIfPresent(name) {
-  const button = page.getByRole('button', { name, exact: true }).first();
+  let button = page.getByRole('button', { name, exact: true }).first();
+  if (!(await button.count())) {
+    button = page.locator('.gk-gravityview-blocks .components-panel__body-title button').filter({ hasText: name }).first();
+  }
   if (!(await button.count())) return false;
   try {
     await button.waitFor({ state: 'visible', timeout: 3000 });
@@ -297,7 +315,7 @@ await recorder.record('gutenberg_datepicker', async () => {
   }
   const inputFamily = await familyOf(input);
   await input.click();
-  const picker = page.locator('.react-datepicker').filter({ visible: true }).first();
+  const picker = page.locator('.react-datepicker:visible').first();
   try {
     await picker.waitFor({ state: 'visible', timeout: 5000 });
   } catch {
