@@ -32,6 +32,17 @@ async function loadFixture() {
   await page.locator(`${root} .gpfup__droparea`).waitFor({ state: 'visible', timeout: 30000 });
 }
 
+async function waitForUploadSettled() {
+  // Exact 1.5.13 renders filename/file metadata before Plupload reaches DONE,
+  // and the Vue file node can be replaced while image processing completes.
+  // The product-owned progress component remains until status=5/DONE and its
+  // minimum display interval elapses. Measure computed typography only after
+  // that stable lifecycle boundary so a detached transient node cannot create
+  // a false empty computed-style result.
+  await page.locator(`${root} .gpfup__progress-container`).first().waitFor({ state: 'hidden', timeout: 30000 });
+  await page.waitForTimeout(100);
+}
+
 async function openCropEditor(preview, edit) {
   await preview.hover();
   await edit.waitFor({ state: 'visible', timeout: 10000 });
@@ -73,8 +84,10 @@ await recorder.record('uploaded_file_crop_cancel_save_and_rerender', async () =>
   await loadFixture();
   const input = page.locator(fileInputSelector).first();
   await input.setInputFiles({ name: 'vazir-crop-evidence.png', mimeType: 'image/png', buffer: png });
-  const filename = page.locator(`${root} .gpfup__filename`).first();
+  let filename = page.locator(`${root} .gpfup__filename`).first();
   await filename.waitFor({ state: 'visible', timeout: 30000 });
+  await waitForUploadSettled();
+  filename = page.locator(`${root} .gpfup__filename`).first();
   const families = {
     filename: await expectVazirmatn(filename, 'File Upload Pro uploaded filename'),
   };
@@ -100,6 +113,8 @@ await recorder.record('uploaded_file_crop_cancel_save_and_rerender', async () =>
   await save.click();
   await lightbox.waitFor({ state: 'hidden', timeout: 30000 });
   await filename.waitFor({ state: 'visible', timeout: 30000 });
+  await waitForUploadSettled();
+  filename = page.locator(`${root} .gpfup__filename`).first();
   families.post_crop_filename = await expectVazirmatn(filename, 'File Upload Pro post-crop file state');
 
   await page.evaluate(({ formId }) => {
@@ -110,6 +125,7 @@ await recorder.record('uploaded_file_crop_cancel_save_and_rerender', async () =>
   await page.waitForTimeout(800);
   assert.equal(await page.locator(`${root} .gpfup`).count(), 1, 'Rerender must retain exactly one File Upload Pro component root.');
   families.rerender_drop_guidance = await expectVazirmatn(page.locator(`${root} .gpfup__droparea > div`).first(), 'File Upload Pro rerendered guidance');
+  filename = page.locator(`${root} .gpfup__filename`).first();
   await filename.waitFor({ state: 'visible', timeout: 15000 });
   const rerenderPreview = page.locator(`${root} .gpfup__preview`).first();
   const rerenderEdit = page.locator(`${root} .gpfup__edit`).first();
