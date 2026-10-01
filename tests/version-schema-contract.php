@@ -44,7 +44,7 @@ function vazir_schema_assert( bool $condition, string $message ): void {
 
 require dirname( __DIR__ ) . '/vazir-font-wp.php';
 
-vazir_schema_assert( '1.4.0' === VAZIR_FONT_VERSION, 'release product version is 1.4.0' );
+vazir_schema_assert( '1.5.0' === VAZIR_FONT_VERSION, 'release product version is 1.5.0' );
 vazir_schema_assert( '1.3.0' === VAZIR_FONT_SCHEMA_VERSION, 'persisted option schema version remains 1.3.0' );
 
 $plugin     = VazirFontPlugin::get_instance();
@@ -55,7 +55,7 @@ $migrate->setAccessible( true );
 $before = $GLOBALS['vazir_schema_options'];
 $migrate->invoke( $plugin );
 
-vazir_schema_assert( $before === $GLOBALS['vazir_schema_options'], '1.3.0 schema state is untouched by the 1.4.0 product release bump' );
+vazir_schema_assert( $before === $GLOBALS['vazir_schema_options'], '1.3.0 schema state is untouched by the 1.5.0 product release bump' );
 vazir_schema_assert( [] === $GLOBALS['vazir_schema_updates'], 'no persisted option write occurs when schema is already current' );
 vazir_schema_assert( 0 === $GLOBALS['vazir_schema_cron_clears'], 'no migration cleanup runs solely because the product version changed' );
 
