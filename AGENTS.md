@@ -6,7 +6,7 @@ This document defines repository-specific contribution rules for human contribut
 
 - **Plugin slug:** `vazir-font-wp`
 - **Primary entrypoint:** `vazir-font-wp.php`
-- **Current plugin version:** `1.4.0`
+- **Current plugin version:** `1.5.0`
 - **Persisted option schema version:** `1.3.0` via `VAZIR_FONT_SCHEMA_VERSION`
 - **Minimum WordPress:** `6.7`
 - **Minimum PHP:** `7.4`

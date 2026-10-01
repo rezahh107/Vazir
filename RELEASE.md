@@ -60,7 +60,7 @@ The licensed Product Evidence profiles retain their existing truth boundaries. I
 
 ## Version handling
 
-A public GitHub Release history now exists; `v1.3.0` is the currently published release at the time `v1.4.0` is prepared. The release system still does **not** infer or mutate the next release number. Version choice remains an explicit reviewed source change.
+The currently published GitHub Release is `v1.4.0`. This repository state prepares `v1.5.0` as the next reviewed production candidate; the release system does **not** infer or mutate the next release number. Version choice remains an explicit reviewed source change.
 
 For publication, the Owner supplies both:
 
