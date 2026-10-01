@@ -50,7 +50,7 @@ $production_boundary = array(
  * boundary above. Normalization removes only whitespace, comments, and
  * docblocks; token names and token text remain part of the identity.
  */
-$production_boundary_baseline = 'af74867e64250dfb49c9db6a195ab5884d575bdde7975908071ccaf8302292db';
+$production_boundary_baseline = '3c78f78427be1275f9be05eba210ac81be4df9abd061d727bfef4c7877d65c7c';
 
 /* Exact primary boundary at reviewed Head 2e4af55... before Admin Settings was admitted. */
 $previous_2e4af55_boundary = $production_boundary;
