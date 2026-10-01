@@ -13,6 +13,9 @@ $expected = array(
 	'gravityview' => array( 'gravityforms/gravityforms.php' => '3.1.1.1', 'gravityview/gravityview.php' => '3.3.4' ),
 	'gravityperks' => array( 'gravityforms/gravityforms.php' => '3.1.1.1', 'gravityperks/gravityperks.php' => '2.3.16' ),
 	'gravity-stack' => array( 'gravityforms/gravityforms.php' => '3.1.1.1', 'gravityflow/gravityflow.php' => '3.1.0', 'gravityview/gravityview.php' => '3.3.4' ),
+	'gp-advanced-select' => array( 'gravityforms/gravityforms.php' => '3.1.1.1', 'gravityperks/gravityperks.php' => '2.3.16', 'gp-advanced-select/gp-advanced-select.php' => '1.1.21' ),
+	'gp-file-upload-pro' => array( 'gravityforms/gravityforms.php' => '3.1.1.1', 'gravityperks/gravityperks.php' => '2.3.16', 'gp-file-upload-pro/gp-file-upload-pro.php' => '1.5.13' ),
+	'gravity-addons-stack' => array( 'gravityforms/gravityforms.php' => '3.1.1.1', 'gravityflow/gravityflow.php' => '3.1.0', 'gravityview/gravityview.php' => '3.3.4', 'gravityperks/gravityperks.php' => '2.3.16', 'gp-advanced-select/gp-advanced-select.php' => '1.1.21', 'gp-file-upload-pro/gp-file-upload-pro.php' => '1.5.13' ),
 );
 if ( ! isset( $expected[ $profile ] ) ) { throw new RuntimeException( 'Unsupported licensed Product Evidence Lab profile: ' . $profile ); }
 $plugins = get_plugins(); $observed = array();
