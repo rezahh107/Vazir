@@ -119,7 +119,7 @@ Exact source still proves that `DocumentAwareSelect` portals the menu to the rel
 
 The source-control-to-portal association required for exclusion semantics therefore also remains `NOT_PROVEN`. No portal repair seam is admitted, and the existing single exclusion authority is not weakened or duplicated.
 
-This is intentionally **not** upgraded to `NO_ADMISSION`: the runtime did not expose enough stable visible portal structure to prove that every safe supported association is impossible. The truthful boundary is lack of proof, not proof of impossibility.
+This is intentionally **not** upgraded to `NO_ADMISSION`. The current runtime does not prove that every safe supported host seam or association is impossible, and even a future visible failing portal would remain `NOT_PROVEN` if the evidence consisted only of detached ancestry, dynamic ARIA linkage, absent accepted GravityView markers, or the portal falling outside the source exclusion subtree. `NO_ADMISSION` requires a separately executed exhaustive supported-seam falsification contract.
 
 ## GravityView oEmbed placeholder — final disposition: `NOT_PROVEN`
 
@@ -208,7 +208,7 @@ The final oEmbed disposition is therefore:
 
 `NOT_PROVEN`
 
-No production repair is admitted from this result. `ADMITTABLE_REPAIR_SEAM` would require evidence that the existing exclusion authority is preserved without response rewriting, vendor edits, renderer replacement, DOM mutation, or a second exclusion model. `NO_ADMISSION` would require mechanically rejecting the relevant supported association evidence as well; this repaired runtime evidence does not do that.
+No production repair is admitted from this result. `ADMITTABLE_REPAIR_SEAM` requires method-level runtime evidence for the actual proposed production repair, not merely one exact persisted wpview/source association, synthetic classifier controls, or one representative exclusion fixture. That method-level evidence must prove preservation of the existing `vazir_font_options['exclude_selectors']` authority while avoiding a second exclusion model, response rewriting, vendor edits, renderer replacement, and DOM mutation. This PR implements and exercises no such production method, so the terminal result remains `NOT_PROVEN`.
 
 ## Icon and glyph ownership
 
@@ -233,7 +233,7 @@ No frontend theme-token override, per-View override, or new frontend dependency 
 | React Select input | `ALREADY_CORRECT` | Real combobox input resolves to Vazirmatn without a direct repair. |
 | React Select detached portal | `NOT_PROVEN` | No stable visible listbox/option typography surface reached after bounded authentic interaction; no repair admitted. |
 | React Datepicker | `REPAIRED / RUNTIME_PROVEN` | PR #24 root repair remains green; input already correct and interactions work. |
-| GravityView oEmbed placeholder | `NOT_PROVEN` | Authentic failure and exact source-bound wpview presentation association are proven, and inline font requires `!important`; preservation of the existing exclusion authority is not proven. |
+| GravityView oEmbed placeholder | `NOT_PROVEN` | Authentic failure and exact source-bound wpview presentation association are proven, and inline font requires `!important`; preservation of the existing exclusion authority and an actual production repair method are not proven. |
 | GravityView icon family | `PRESERVED` | Representative GravityView glyph retains the `gravityview` family. |
 | WordPress Dashicons | `PRESERVED` | Dashicons retain `dashicons`. |
 | Normal-descendant exclusions | `RUNTIME_PROVEN` | React Select and Datepicker repairs remain bounded by the single existing exclusion authority. |
@@ -248,7 +248,8 @@ The GravityView Product Evidence profile now has distinct responsibilities:
 1. baseline characterization of frontend, authentic editor assets, React Select, Datepicker, icons, and authenticated oEmbed failure;
 2. PR #24 production-repair regression verification;
 3. bounded detached-portal closure characterization;
-4. authentic Classic Editor/TinyMCE oEmbed insertion characterization, including WordPress wpview data-attribute/source association, negative association controls, exact lifecycle/source probes, cascade evidence, unrelated-source isolation, and fail-honest exclusion-preservation classification.
+4. authentic Classic Editor/TinyMCE oEmbed insertion characterization, including WordPress wpview data-attribute/source association, negative association controls, exact lifecycle/source probes, cascade evidence, unrelated-source isolation, and fail-honest exclusion-preservation classification;
+5. deterministic terminal-disposition falsification that keeps a hypothetical visible failing portal at `NOT_PROVEN` without exhaustive supported-seam falsification and keeps oEmbed at `NOT_PROVEN` without actual production-method evidence.
 
 The profile remains successful when it truthfully records an unresolved product disposition such as portal `NOT_PROVEN` or oEmbed `NOT_PROVEN`; a green evidence harness does not mean every host-owned surface is converted to Vazirmatn or that a production repair has been admitted.
 
@@ -258,6 +259,6 @@ GravityView exact `3.3.4` is **not yet eligible for destination closure** under 
 
 The detached React Select portal remains unresolved because a stable visible menu surface and source-control/exclusion association have not been established.
 
-The oEmbed placeholder also remains unresolved. Its stable exact-source wpview presentation association is now proven, but the current fixture does not prove preservation of the single existing `exclude_selectors` authority for an excluded source. That boundary must remain `NOT_PROVEN` unless future bounded evidence resolves the exclusion question without changing the locked ownership model.
+The oEmbed placeholder also remains unresolved. Its stable exact-source wpview presentation association is now proven, but the current fixture does not prove preservation of the single existing `exclude_selectors` authority for an excluded source, and no actual production repair method is implemented or exercised. That boundary must remain `NOT_PROVEN` unless future bounded evidence resolves both requirements without changing the locked ownership model.
 
 Neither unresolved boundary justifies speculative production repair. No tag, GitHub Release, publication, deployment, or production behavior change belongs to this final-boundary qualification batch.
