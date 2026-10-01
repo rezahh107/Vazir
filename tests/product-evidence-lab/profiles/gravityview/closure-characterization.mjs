@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -24,6 +25,74 @@ const results = {
 
 const isVazirmatn = family => /Vazirmatn/i.test(family || '');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function classifyPortalTerminalDisposition({ typographyDisposition, exhaustiveSupportedSeamFalsificationProven = false }) {
+  if ('ALREADY_CORRECT' === typographyDisposition) {
+    return {
+      final_disposition: 'ALREADY_CORRECT',
+      reason: 'Visible portal text already resolves to Vazirmatn; no repair seam is needed.',
+    };
+  }
+
+  if ('FAIL' !== typographyDisposition) {
+    return {
+      final_disposition: 'NOT_PROVEN',
+      reason: 'Portal typography was not conclusively established as already-correct or failing.',
+    };
+  }
+
+  if (true === exhaustiveSupportedSeamFalsificationProven) {
+    return {
+      final_disposition: 'NO_ADMISSION',
+      reason: 'A separately executed exhaustive supported-seam falsification contract rejected every safe supported host seam or association for the failing portal.',
+    };
+  }
+
+  return {
+    final_disposition: 'NOT_PROVEN',
+    reason: 'The visible portal typography fails, but detached DOM ancestry, dynamic ARIA linkage, absent accepted GravityView markers, and source-subtree exclusion observations only falsify the currently examined CSS association. No exhaustive supported-seam falsification contract was executed, so NO_ADMISSION is not proven.',
+  };
+}
+
+function falsifyPortalTerminalDispositionClassifier() {
+  const insufficientFailureEvidence = classifyPortalTerminalDisposition({
+    typographyDisposition: 'FAIL',
+    exhaustiveSupportedSeamFalsificationProven: false,
+  });
+  assert.equal(
+    insufficientFailureEvidence.final_disposition,
+    'NOT_PROVEN',
+    'A hypothetical visible failing portal must not become NO_ADMISSION without exhaustive supported-seam falsification.',
+  );
+
+  const alreadyCorrect = classifyPortalTerminalDisposition({
+    typographyDisposition: 'ALREADY_CORRECT',
+    exhaustiveSupportedSeamFalsificationProven: false,
+  });
+  assert.equal(
+    alreadyCorrect.final_disposition,
+    'ALREADY_CORRECT',
+    'Authentically already-correct portal typography must remain eligible for ALREADY_CORRECT.',
+  );
+
+  const exhaustiveNoAdmission = classifyPortalTerminalDisposition({
+    typographyDisposition: 'FAIL',
+    exhaustiveSupportedSeamFalsificationProven: true,
+  });
+  assert.equal(
+    exhaustiveNoAdmission.final_disposition,
+    'NO_ADMISSION',
+    'NO_ADMISSION must remain gated behind an explicit exhaustive supported-seam falsification contract.',
+  );
+
+  return {
+    visible_failing_portal_without_exhaustive_supported_seam_falsification: insufficientFailureEvidence.final_disposition,
+    authentic_already_correct_portal: alreadyCorrect.final_disposition,
+    no_admission_requires_exhaustive_supported_seam_falsification: exhaustiveNoAdmission.final_disposition,
+  };
+}
+
+const portalTerminalDispositionFalsification = falsifyPortalTerminalDispositionClassifier();
 
 async function dismissCoreEditorWelcomeGuide(page) {
   const overlay = page.locator('.components-modal__screen-overlay').filter({ hasText: /Welcome to the editor/i }).first();
@@ -125,6 +194,8 @@ if (!portalOpen.listbox) {
     interaction_attempts: portalOpen.attempts,
     visible_listbox_reached: false,
     portal_candidates: portalCandidates,
+    terminal_disposition_falsification: portalTerminalDispositionFalsification,
+    exhaustive_supported_seam_falsification_executed: false,
     final_disposition: 'NOT_PROVEN',
     reason: 'A stable visible listbox/option surface was not reached after the bounded authentic interactions.',
   };
@@ -190,12 +261,10 @@ if (!portalOpen.listbox) {
   if (exclusionClass) await selectRoot.evaluate((el, className) => el.classList.remove(className), exclusionClass);
 
   const typographyDisposition = isVazirmatn(textFamily) ? 'ALREADY_CORRECT' : 'FAIL';
-  let finalDisposition = 'ALREADY_CORRECT';
-  let admissionReason = 'Visible portal text already resolves to Vazirmatn; no repair seam is needed.';
-  if ('FAIL' === typographyDisposition) {
-    finalDisposition = 'NO_ADMISSION';
-    admissionReason = 'The failing menu is detached from the GravityView source subtree. Runtime ARIA may link the combobox to the listbox, but static CSS cannot join two dynamic attribute values, the portal exposes no accepted stable GravityView-owned marker, and the single source exclusion boundary does not contain the portal. A repair would therefore require a prohibited generic/global selector or JavaScript/DOM association.';
-  }
+  const terminalDisposition = classifyPortalTerminalDisposition({
+    typographyDisposition,
+    exhaustiveSupportedSeamFalsificationProven: false,
+  });
 
   results.portal = {
     interaction_attempts: portalOpen.attempts,
@@ -220,8 +289,10 @@ if (!portalOpen.listbox) {
       source_control_marked_excluded: sourceMarkedExcluded,
       portal_inside_excluded_source: portalInsideExcludedSource,
     },
-    final_disposition: finalDisposition,
-    reason: admissionReason,
+    terminal_disposition_falsification: portalTerminalDispositionFalsification,
+    exhaustive_supported_seam_falsification_executed: false,
+    final_disposition: terminalDisposition.final_disposition,
+    reason: terminalDisposition.reason,
   };
   await page.keyboard.press('Escape').catch(() => {});
 }
