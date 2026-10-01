@@ -3,7 +3,7 @@
  * Plugin Name:       Vazir Font for WordPress
  * Plugin URI:        https://github.com/rezahh107/Vazir
  * Description:       Self-hosted Persian typography for WordPress, editor contexts, Gravity Forms, Gravity Flow, Gravity Perks, and bounded GravityView editor surfaces.
- * Version:           1.4.0
+ * Version:           1.5.0
  * Requires at least: 6.7
  * Requires PHP:      7.4
  * Author:            Reza Hashemi Hosseini
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-const VAZIR_FONT_VERSION          = '1.4.0';
+const VAZIR_FONT_VERSION          = '1.5.0';
 const VAZIR_FONT_PLUGIN_FILE      = __FILE__;
 const VAZIR_FONT_PLUGIN_DIR       = __DIR__ . '/';
 const VAZIR_FONT_OPTION_NAME      = 'vazir_font_options';
@@ -96,160 +96,93 @@ final class VazirFontPlugin {
 			VazirFont_GravityFlow_Integration::get_instance();
 		}
 
-		if ( class_exists( 'GravityPerks' ) && class_exists( 'VazirFont_GravityPerks_Integration' ) ) {
+		if ( class_exists( 'GWPerks' ) && class_exists( 'VazirFont_GravityPerks_Integration' ) ) {
 			VazirFont_GravityPerks_Integration::get_instance();
 		}
 
-		if ( defined( 'GRAVITYVIEW_FILE' ) && class_exists( 'VazirFont_GravityView_Integration' ) ) {
+		if ( class_exists( 'GV\Plugin' ) && class_exists( 'VazirFont_GravityView_Integration' ) ) {
 			VazirFont_GravityView_Integration::get_instance();
 		}
 	}
 
 	public static function activate(): void {
-		$defaults = self::get_default_options();
-		$current  = get_option( VAZIR_FONT_OPTION_NAME, [] );
-		if ( ! is_array( $current ) ) {
-			$current = [];
-		}
-
-		$options = [];
-		foreach ( $defaults as $key => $default_value ) {
-			$options[ $key ] = array_key_exists( $key, $current ) ? $current[ $key ] : $default_value;
-		}
-		update_option( VAZIR_FONT_OPTION_NAME, $options );
-		update_option( VAZIR_FONT_DB_VERSION_KEY, VAZIR_FONT_SCHEMA_VERSION );
-		self::clear_legacy_cron();
+		self::maybe_migrate_options_schema_static();
 	}
 
 	public static function deactivate(): void {
-		self::clear_legacy_cron();
+		wp_clear_scheduled_hook( VAZIR_FONT_LEGACY_CRON_HOOK );
 	}
 
-	private static function clear_legacy_cron(): void {
-		if ( function_exists( 'wp_clear_scheduled_hook' ) ) {
-			wp_clear_scheduled_hook( VAZIR_FONT_LEGACY_CRON_HOOK );
-		}
+	private function maybe_migrate_options_schema(): void {
+		self::maybe_migrate_options_schema_static();
 	}
 
-	public static function get_options(): array {
-		if ( null !== self::$cached_options ) {
-			return self::$cached_options;
+	private static function maybe_migrate_options_schema_static(): void {
+		$stored_schema_version = (string) get_option( VAZIR_FONT_DB_VERSION_KEY, '' );
+		if ( VAZIR_FONT_SCHEMA_VERSION === $stored_schema_version ) {
+			return;
 		}
 
-		$defaults = self::get_default_options();
-		$options  = get_option( VAZIR_FONT_OPTION_NAME, [] );
-		if ( ! is_array( $options ) ) {
-			$options = [];
-		}
-
-		$normalized = [];
-		foreach ( $defaults as $key => $default_value ) {
-			$normalized[ $key ] = array_key_exists( $key, $options ) ? $options[ $key ] : $default_value;
-		}
-		$normalized['font_weights']      = self::normalize_font_weights( $normalized['font_weights'] );
-		$normalized['exclude_selectors'] = self::normalize_exclude_selectors( $normalized['exclude_selectors'] );
-
-		self::$cached_options = $normalized;
-		return $normalized;
-	}
-
-	public static function update_options( array $new_options ): void {
-		$defaults = self::get_default_options();
-		$current  = self::get_options();
-		$merged   = [];
-
-		foreach ( $defaults as $key => $default_value ) {
-			$merged[ $key ] = array_key_exists( $key, $new_options )
-				? $new_options[ $key ]
-				: ( $current[ $key ] ?? $default_value );
-		}
-
-		update_option( VAZIR_FONT_OPTION_NAME, $merged );
+		$options = self::normalize_options( get_option( VAZIR_FONT_OPTION_NAME, [] ) );
+		update_option( VAZIR_FONT_OPTION_NAME, $options );
+		update_option( VAZIR_FONT_DB_VERSION_KEY, VAZIR_FONT_SCHEMA_VERSION );
+		wp_clear_scheduled_hook( VAZIR_FONT_LEGACY_CRON_HOOK );
 		self::clear_cache();
 	}
 
-	/**
-	 * Clear only this plugin's in-request option cache.
-	 *
-	 * Font CSS is generated per request from immutable bundled assets, so no
-	 * Gravity Forms cache, transient, generated file, or scheduled cleanup is
-	 * owned by this plugin.
-	 */
+	public static function get_options(): array {
+		if ( null === self::$cached_options ) {
+			self::$cached_options = self::normalize_options( get_option( VAZIR_FONT_OPTION_NAME, [] ) );
+		}
+		return self::$cached_options;
+	}
+
 	public static function clear_cache(): void {
 		self::$cached_options = null;
 	}
 
-	private static function get_default_options(): array {
-		return [
+	private static function normalize_options( $raw ): array {
+		$defaults = [
 			'enable_frontend'      => true,
 			'enable_admin'         => true,
 			'enable_gravity_forms' => true,
 			'font_weights'         => [ '300', '400', '500', '700', '900' ],
-			'exclude_selectors'    => [
-				'.dashicons',
-				'.menu-icon',
-				'.menu-image',
-				'[class^="dashicons-"]',
-				'[class*=" dashicons-"]',
-				'[class^="fa-"]',
-				'[class*=" fa-"]',
-				'.material-icons',
-				'[data-icon]:before',
-			],
+			'exclude_selectors'    => [],
 		];
-	}
 
-	private static function normalize_font_weights( $weights ): array {
-		if ( ! is_array( $weights ) ) {
-			$weights = [];
-		}
-		$allowed = [ '300', '400', '500', '700', '900' ];
-		$weights = array_map( 'strval', $weights );
-		$weights = array_values( array_unique( array_intersect( $weights, $allowed ) ) );
-		if ( [] === $weights ) {
-			return [ '400' ];
-		}
-		if ( ! in_array( '400', $weights, true ) ) {
-			array_unshift( $weights, '400' );
-		}
-		return array_values( array_unique( $weights ) );
-	}
-
-	private static function normalize_exclude_selectors( $selectors ): array {
-		if ( ! is_array( $selectors ) ) {
-			$selectors = [];
-		}
-		$selectors = array_map(
-			static function ( $selector ): string {
-				return trim( (string) $selector );
-			},
-			$selectors
-		);
-		$selectors = array_filter( $selectors, static fn( string $selector ): bool => '' !== $selector );
-		return array_values( $selectors );
-	}
-
-	private static function migrate_options_schema(): void {
-		$defaults = self::get_default_options();
-		$options  = get_option( VAZIR_FONT_OPTION_NAME, [] );
-		if ( ! is_array( $options ) ) {
-			$options = [];
+		if ( ! is_array( $raw ) ) {
+			return $defaults;
 		}
 
-		$clean = [];
-		foreach ( $defaults as $key => $default_value ) {
-			$clean[ $key ] = array_key_exists( $key, $options ) ? $options[ $key ] : $default_value;
-		}
-		update_option( VAZIR_FONT_OPTION_NAME, $clean );
-	}
+		$options = $defaults;
 
-	private function maybe_migrate_options_schema(): void {
-		$current_db_version = (string) get_option( VAZIR_FONT_DB_VERSION_KEY, '1.0.0' );
-		if ( version_compare( $current_db_version, VAZIR_FONT_SCHEMA_VERSION, '<' ) ) {
-			self::migrate_options_schema();
-			self::clear_legacy_cron();
-			update_option( VAZIR_FONT_DB_VERSION_KEY, VAZIR_FONT_SCHEMA_VERSION );
+		foreach ( [ 'enable_frontend', 'enable_admin', 'enable_gravity_forms' ] as $key ) {
+			if ( array_key_exists( $key, $raw ) ) {
+				$options[ $key ] = (bool) $raw[ $key ];
+			}
 		}
+
+		if ( isset( $raw['font_weights'] ) && is_array( $raw['font_weights'] ) ) {
+			$allowed = [ '300', '400', '500', '700', '900' ];
+			$weights = array_values( array_intersect( $allowed, array_map( 'strval', $raw['font_weights'] ) ) );
+			if ( [] !== $weights ) {
+				$options['font_weights'] = $weights;
+			}
+		}
+
+		if ( isset( $raw['exclude_selectors'] ) && is_array( $raw['exclude_selectors'] ) ) {
+			$options['exclude_selectors'] = array_values(
+				array_filter(
+					array_map(
+						static fn( $selector ): string => trim( (string) $selector ),
+						$raw['exclude_selectors']
+					),
+					static fn( string $selector ): bool => '' !== $selector
+				)
+			);
+		}
+
+		return $options;
 	}
 }
 
