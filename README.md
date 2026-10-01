@@ -25,7 +25,7 @@ The plugin is designed to cover:
 - Block Editor and Site Editor content canvases through `enqueue_block_assets`;
 - Gravity Forms frontend, Preview, Form Editor, and No Conflict Mode through registered WordPress style handles;
 - currently supported Gravity Forms legacy/current wrapper markup;
-- Gravity Flow Inbox typography through the product's supported admin/frontend enqueue seams, including the AG Grid text root, material text/date inputs, and Flow-bound Flatpickr calendar without replacing host-owned icon families or Inbox behavior;
+- Gravity Flow Inbox typography through the product's supported admin/frontend enqueue seams, including the AG Grid text root, material AG text/date inputs, and Flow-bound Flatpickr calendar without replacing host-owned icon families or Inbox behavior;
 - Gravity Perks standalone Perk Settings typography through WordPress' `print_styles_array` boundary while the host `gwp-admin` stylesheet is being processed;
 - Gravity Perks frontend add-ons that preserve normal Gravity Forms/Vazir inheritance; exact current evidence covers GP Advanced Select `1.1.21` and GP File Upload Pro `1.5.13` without add-on-specific production repair;
 - the two exact-runtime-admitted GravityView View-block editor surfaces: React Select control/value typography and the normal-descendant React Datepicker, through GravityView's own registered editor-style handle.
@@ -44,7 +44,7 @@ The runtime:
 
 - references only packaged `vazirmatn-*.woff2` files;
 - exposes the truthful canonical CSS family `Vazirmatn`;
-- retains the public `vazir_font_family` filter as the existing compatibility API for overriding the complete family stack;
+- retains the public `vazir_font_family` filter as the existing compatibility API for overriding the complete stack;
 - does **not** create a hidden `Vazir` alias for Vazirmatn bytes;
 - uses `font-display: swap`;
 - performs no default font preloading;
