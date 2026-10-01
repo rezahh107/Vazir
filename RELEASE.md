@@ -50,13 +50,13 @@ The workflow:
 5. installs that exact ZIP into a fresh WordPress runtime with `wp plugin install` and activates it;
 6. proves runtime/settings hooks and packaged assets from the installed artifact;
 7. reuses the real admin settings browser characterization against that installed ZIP;
-8. passes the same already-built ZIP and SHA to the Product-Wide Evidence Lab for `gravityforms`, `gravityflow`, `gravityview`, `gravityperks`, and `gravity-stack` qualification;
+8. passes the same already-built ZIP and SHA to the Product-Wide Evidence Lab for `gravityforms`, `gravityflow`, `gravityview`, `gravityperks`, `gp-advanced-select`, `gp-file-upload-pro`, `gravity-stack`, and `gravity-addons-stack` qualification;
 9. emits a bounded JSON manifest;
 10. uploads the candidate ZIP, checksum, and manifest as temporary Actions evidence.
 
 Dry-run publication state is always `NOT_ATTEMPTED_DRY_RUN`.
 
-The licensed Product Evidence profiles retain their existing truth boundaries. If a required licensed environment/package cannot execute, that is not promoted to PASS. The release manifest records product qualification as not proven/environment unavailable while the profile jobs remain the detailed evidence source. A passing existing GravityView profile is regression evidence for its already-qualified scenarios only; it does not complete or admit separate in-progress GravityView surface qualification.
+The licensed Product Evidence profiles retain their existing truth boundaries. If a required licensed environment/package cannot execute, that is not promoted to PASS. The release manifest records product qualification as not proven/environment unavailable while the profile jobs remain the detailed evidence source. A passing existing GravityView profile is regression evidence for its already-qualified scenarios only; it does not complete or admit separate in-progress GravityView surface qualification. The GP Advanced Select and GP File Upload Pro profiles are exact-version frontend evidence profiles: their current qualified package identities resolve through native inheritance and require no add-on-specific production adapter. Their versions remain evidence identities, not production admission gates, and later versions remain `NOT_PROVEN` until separately exercised. `gravity-addons-stack` is representative coexistence evidence, not exhaustive cross-product compatibility.
 
 ## Version handling
 

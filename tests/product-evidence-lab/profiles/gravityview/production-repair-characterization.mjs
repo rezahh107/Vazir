@@ -48,20 +48,31 @@ async function ensureGravityViewInspector() {
   }, manifest.block_name);
 
   const inspector = page.locator('.gk-gravityview-blocks').first();
-  if (!(await inspector.count()) || !(await inspector.isVisible())) {
+  try {
+    await inspector.waitFor({ state: 'visible', timeout: 3000 });
+    return inspector;
+  } catch {}
+
+  // The editor persists sidebar state. Do not blindly toggle Settings while the
+  // selected block is still reconciling: that can close an already-open sidebar.
+  let blockTab = page.getByRole('tab', { name: /^Block$/ }).last();
+  if (!(await blockTab.count()) || !(await blockTab.isVisible().catch(() => false))) {
     const settingsButton = page.getByRole('button', { name: /^Settings$/ }).last();
-    if (await settingsButton.count()) await settingsButton.click();
-    const blockTab = page.getByRole('tab', { name: /^Block$/ }).last();
-    if (await blockTab.count() && 'true' !== await blockTab.getAttribute('aria-selected')) await blockTab.click();
+    if (!(await settingsButton.count())) throw new Error('WordPress Settings toggle is unavailable while GravityView inspector is hidden.');
+    await settingsButton.click();
+    blockTab = page.getByRole('tab', { name: /^Block$/ }).last();
+    await blockTab.waitFor({ state: 'visible', timeout: 5000 });
   }
+  if ('true' !== await blockTab.getAttribute('aria-selected')) await blockTab.click();
   await inspector.waitFor({ state: 'visible', timeout: 30000 });
   return inspector;
 }
 
 async function expandPanelIfPresent(name) {
+  const panelButtons = '.gk-gravityview-blocks .components-panel__body-title button';
   let button = page.getByRole('button', { name, exact: true }).first();
   if (!(await button.count())) {
-    button = page.locator('.gk-gravityview-blocks .components-panel__body-title button').filter({ hasText: name }).first();
+    button = page.locator(panelButtons).filter({ hasText: name }).first();
   }
   if (!(await button.count())) return false;
   try {
@@ -69,8 +80,34 @@ async function expandPanelIfPresent(name) {
   } catch {
     return false;
   }
-  if ('false' === await button.getAttribute('aria-expanded')) await button.click();
-  return true;
+  if ('true' === await button.getAttribute('aria-expanded')) return true;
+
+  // GravityView's inspector can replace panel button nodes while React is
+  // reconciling. This expansion is setup for the Datepicker qualification, not
+  // the interaction under test. Resolve and click the currently connected host
+  // button atomically, then verify the real expanded state before continuing.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const dispatched = await page.evaluate(({ selector, panelName }) => {
+      const candidates = [...document.querySelectorAll(selector)];
+      const current = candidates.find(candidate => (candidate.textContent || '').replace(/\s+/g, ' ').trim().includes(panelName));
+      if (!current || !(current instanceof HTMLElement)) return false;
+      if (current.getAttribute('aria-expanded') === 'false') current.click();
+      return true;
+    }, { selector: panelButtons, panelName: name });
+    if (!dispatched) return false;
+
+    try {
+      await page.waitForFunction(({ selector, panelName }) => {
+        const candidates = [...document.querySelectorAll(selector)];
+        const current = candidates.find(candidate => (candidate.textContent || '').replace(/\s+/g, ' ').trim().includes(panelName));
+        return current?.getAttribute('aria-expanded') === 'true';
+      }, { selector: panelButtons, panelName: name }, { timeout: 3000 });
+      return true;
+    } catch {
+      await page.waitForTimeout(150);
+    }
+  }
+  return false;
 }
 
 function isVazirmatn(family) {

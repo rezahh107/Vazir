@@ -24,6 +24,7 @@
       "@php tests/gravityperks-runtime-contract.php",
       "@php tests/gravityview-runtime-contract.php",
       "@php tests/gravity-descendant-exclusion-contract.php",
+      "@php tests/gravity-version-neutrality-contract.php",
       "phpunit"
     ]
   },
