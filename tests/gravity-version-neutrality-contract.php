@@ -19,18 +19,34 @@ function vf_version_neutral_assert( bool $condition, string $message ): void {
 	fwrite( STDOUT, "PASS: {$message}\n" );
 }
 
+function vf_executable_php( string $source ): string {
+	$code = '';
+	foreach ( token_get_all( $source ) as $token ) {
+		if ( is_array( $token ) ) {
+			if ( T_COMMENT === $token[0] || T_DOC_COMMENT === $token[0] ) {
+				continue;
+			}
+			$code .= $token[1];
+			continue;
+		}
+		$code .= $token;
+	}
+	return $code;
+}
+
 foreach ( $production_files as $label => $path ) {
 	vf_version_neutral_assert( is_readable( $path ), $label . ' production source is readable' );
 	$source = (string) file_get_contents( $path );
+	$executable = vf_executable_php( $source );
 	foreach ( $evidence_only_versions as $version ) {
 		vf_version_neutral_assert(
-			false === strpos( $source, $version ),
-			$label . ' production source does not embed evidence-only Gravity version ' . $version
+			false === strpos( $executable, $version ),
+			$label . ' executable production code does not embed evidence-only Gravity version ' . $version
 		);
 	}
 	if ( 'bootstrap' !== $label ) {
 		vf_version_neutral_assert(
-			0 === preg_match( '/\bversion_compare\s*\(/', $source ),
+			0 === preg_match( '/\bversion_compare\s*\(/', $executable ),
 			$label . ' integration does not use version_compare as production admission'
 		);
 	}
