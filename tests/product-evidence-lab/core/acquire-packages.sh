@@ -15,6 +15,9 @@ case "$profile" in
   gravityview) packages=(gf view) ;;
   gravityperks) packages=(gf perks) ;;
   gravity-stack) packages=(gf flow view) ;;
+  gp-advanced-select) packages=(gf perks advs) ;;
+  gp-file-upload-pro) packages=(gf perks fup) ;;
+  gravity-addons-stack) packages=(gf flow view perks advs fup) ;;
   *) echo "Unsupported licensed evidence profile: $profile" >&2; exit 64 ;;
 esac
 identity_file="$evidence_dir/package-identities.jsonl"; : > "$identity_file"
@@ -24,6 +27,8 @@ for package in "${packages[@]}"; do
     flow) label="$VAZIR_LAB_FLOW_LABEL"; drive_id="$VAZIR_LAB_FLOW_DRIVE_ID"; filename="$VAZIR_LAB_FLOW_FILENAME"; size="$VAZIR_LAB_FLOW_SIZE"; sha="$VAZIR_LAB_FLOW_SHA256"; entrypoint="$VAZIR_LAB_FLOW_ENTRYPOINT"; plugin_name="$VAZIR_LAB_FLOW_PLUGIN_NAME"; version="$VAZIR_LAB_FLOW_VERSION" ;;
     view) label="$VAZIR_LAB_VIEW_LABEL"; drive_id="$VAZIR_LAB_VIEW_DRIVE_ID"; filename="$VAZIR_LAB_VIEW_FILENAME"; size="$VAZIR_LAB_VIEW_SIZE"; sha="$VAZIR_LAB_VIEW_SHA256"; entrypoint="$VAZIR_LAB_VIEW_ENTRYPOINT"; plugin_name="$VAZIR_LAB_VIEW_PLUGIN_NAME"; version="$VAZIR_LAB_VIEW_VERSION" ;;
     perks) label="$VAZIR_LAB_PERKS_LABEL"; drive_id="$VAZIR_LAB_PERKS_DRIVE_ID"; filename="$VAZIR_LAB_PERKS_FILENAME"; size="$VAZIR_LAB_PERKS_SIZE"; sha="$VAZIR_LAB_PERKS_SHA256"; entrypoint="$VAZIR_LAB_PERKS_ENTRYPOINT"; plugin_name="$VAZIR_LAB_PERKS_PLUGIN_NAME"; version="$VAZIR_LAB_PERKS_VERSION" ;;
+    advs) label="$VAZIR_LAB_ADVS_LABEL"; drive_id="$VAZIR_LAB_ADVS_DRIVE_ID"; filename="$VAZIR_LAB_ADVS_FILENAME"; size="$VAZIR_LAB_ADVS_SIZE"; sha="$VAZIR_LAB_ADVS_SHA256"; entrypoint="$VAZIR_LAB_ADVS_ENTRYPOINT"; plugin_name="$VAZIR_LAB_ADVS_PLUGIN_NAME"; version="$VAZIR_LAB_ADVS_VERSION" ;;
+    fup) label="$VAZIR_LAB_FUP_LABEL"; drive_id="$VAZIR_LAB_FUP_DRIVE_ID"; filename="$VAZIR_LAB_FUP_FILENAME"; size="$VAZIR_LAB_FUP_SIZE"; sha="$VAZIR_LAB_FUP_SHA256"; entrypoint="$VAZIR_LAB_FUP_ENTRYPOINT"; plugin_name="$VAZIR_LAB_FUP_PLUGIN_NAME"; version="$VAZIR_LAB_FUP_VERSION" ;;
   esac
   zip_path="$package_dir/$filename"
   curl -L --fail --retry 4 --retry-all-errors -o "$zip_path" "https://drive.usercontent.google.com/download?id=${drive_id}&export=download&confirm=t"
