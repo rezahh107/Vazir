@@ -6,10 +6,9 @@ $root = dirname( __DIR__ );
 
 /*
  * Primary conformance boundary: every repo-owned executable production surface
- * that can admit, reject, enable, disable, or materially alter Gravity
- * typography application. The boundary is intentionally source-oriented rather
- * than version-pattern-oriented: executable-token changes fail closed until a
- * reviewer updates this baseline.
+ * evidenced to admit, reject, enable, disable, persist, or materially alter
+ * Gravity typography application. Executable-token changes fail closed until a
+ * reviewer updates the baseline.
  */
 $production_boundary = array(
 	'bootstrap' => array(
@@ -40,6 +39,10 @@ $production_boundary = array(
 		'path'     => $root . '/includes/class-vazirfont-loader.php',
 		'relative' => 'includes/class-vazirfont-loader.php',
 	),
+	'admin_settings' => array(
+		'path'     => $root . '/includes/class-vazirfont-admin-settings.php',
+		'relative' => 'includes/class-vazirfont-admin-settings.php',
+	),
 );
 
 /*
@@ -47,7 +50,12 @@ $production_boundary = array(
  * boundary above. Normalization removes only whitespace, comments, and
  * docblocks; token names and token text remain part of the identity.
  */
-$production_boundary_baseline = '8bfd92f1730b6d1349090ae5b9c20d8a8735095cbcad70418074f223d36cb52f';
+$production_boundary_baseline = '__BASELINE__';
+
+/* Exact primary boundary at reviewed Head 2e4af55... before Admin Settings was admitted. */
+$previous_2e4af55_boundary = $production_boundary;
+unset( $previous_2e4af55_boundary['admin_settings'] );
+$previous_2e4af55_baseline = '8bfd92f1730b6d1349090ae5b9c20d8a8735095cbcad70418074f223d36cb52f';
 
 $legacy_integration_classes = array(
 	'gravityforms' => 'VazirFont_GravityForms_Integration',
@@ -216,10 +224,8 @@ function vf_extract_class_method_bodies( string $source, string $class_name ): ?
 }
 
 /**
- * Model the exact structural coverage of the previous cd97e256 primary lock:
+ * Model the exact structural coverage of the cd97e256 primary lock:
  * VazirFontPlugin::init() plus every method of the four integration classes.
- * This is used only to prove same-root bypass mutations really escaped the old
- * primary boundary; it is not the repaired conformance mechanism.
  */
 function vf_legacy_primary_detects_change( array $original, array $mutated, array $integration_classes ): bool {
 	$original_bootstrap = vf_extract_class_method_bodies( $original['bootstrap'], 'VazirFontPlugin' );
@@ -349,7 +355,21 @@ $loader_mutation['loader'] = vf_replace_once(
 );
 vf_same_root_bypass_rejected( $sources, $loader_mutation, $production_boundary, $production_boundary_baseline, $legacy_integration_classes, 'VazirFont_Loader Gravity Perks build gate' );
 
-/* Retained regression mutations already covered by the previous method lock. */
+/* Same-root bypass at 2e4af55: Admin Settings persisted preference was outside that primary boundary. */
+$admin_settings_mutation = $sources;
+$admin_settings_mutation['admin_settings'] = vf_replace_once(
+	$admin_settings_mutation['admin_settings'],
+	"\t\t\t\$sanitized[ \$checkbox ] = \$value;\n\t\t}\n\n\t\t\$selected =",
+	"\t\t\t\$sanitized[ \$checkbox ] = \$value;\n\t\t}\n\n\t\tif ( defined( 'GF_BUILD_ID' ) && GF_BUILD_ID < 99723 ) {\n\t\t\t\$sanitized['enable_gravity_forms'] = false;\n\t\t}\n\n\t\t\$selected =",
+	'Admin Settings persisted Gravity preference gate'
+);
+vf_version_neutral_assert(
+	array() === vf_primary_boundary_violations( $admin_settings_mutation, $previous_2e4af55_boundary, $previous_2e4af55_baseline ),
+	'Admin Settings persisted Gravity build gate would evade the previous 2e4af55 primary executable-token boundary'
+);
+vf_primary_boundary_rejects( $admin_settings_mutation, $production_boundary, $production_boundary_baseline, 'VazirFont_Admin_Settings::sanitize_options() GF_BUILD_ID persistence gate' );
+
+/* Retained regression mutations already covered by the earlier executable-token boundary. */
 $assignment_mutation = $sources;
 $assignment_mutation['gravityforms'] = vf_replace_once(
 	$assignment_mutation['gravityforms'],
@@ -409,6 +429,12 @@ $build_id_mutation['gravityflow'] = vf_replace_once(
 	'GRAVITY_FLOW_BUILD_ID adapter bypass'
 );
 vf_primary_boundary_rejects( $build_id_mutation, $production_boundary, $production_boundary_baseline, 'Gravity Flow GRAVITY_FLOW_BUILD_ID adapter gate' );
+
+vf_version_neutral_assert(
+	false !== strpos( $sources['admin_settings'], "\$checkboxes = [ 'enable_frontend', 'enable_admin', 'enable_gravity_forms' ];" )
+	&& false !== strpos( $sources['admin_settings'], '$sanitized[ $checkbox ] = $value;' ),
+	'enable_gravity_forms remains an ordinary persisted Owner preference in Admin Settings'
+);
 
 vf_version_neutral_assert(
 	false !== strpos( $sources['bootstrap'], "version_compare( \$current_db_version, VAZIR_FONT_SCHEMA_VERSION, '<' )" ),
