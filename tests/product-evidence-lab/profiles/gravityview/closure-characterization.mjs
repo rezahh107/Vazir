@@ -124,12 +124,25 @@ async function ensureGravityViewInspector(page) {
   }, manifest.block_name);
 
   const inspector = page.locator('.gk-gravityview-blocks').first();
-  if (!(await inspector.count()) || !(await inspector.isVisible())) {
+  try {
+    await inspector.waitFor({ state: 'visible', timeout: 3000 });
+    return inspector;
+  } catch {}
+
+  // WordPress persists editor sidebar preferences for the user. A previous
+  // characterization can therefore leave Settings already open. Do not blindly
+  // click the Settings toggle when the inspector is merely still reconciling,
+  // because that closes an already-open sidebar and makes the real inspector
+  // unreachable. Use the visible Block tab as the state signal instead.
+  let blockTab = page.getByRole('tab', { name: /^Block$/ }).last();
+  if (!(await blockTab.count()) || !(await blockTab.isVisible().catch(() => false))) {
     const settingsButton = page.getByRole('button', { name: /^Settings$/ }).last();
-    if (await settingsButton.count()) await settingsButton.click();
-    const blockTab = page.getByRole('tab', { name: /^Block$/ }).last();
-    if (await blockTab.count() && 'true' !== await blockTab.getAttribute('aria-selected')) await blockTab.click();
+    if (!(await settingsButton.count())) throw new Error('WordPress Settings toggle is unavailable while GravityView inspector is hidden.');
+    await settingsButton.click();
+    blockTab = page.getByRole('tab', { name: /^Block$/ }).last();
+    await blockTab.waitFor({ state: 'visible', timeout: 5000 });
   }
+  if ('true' !== await blockTab.getAttribute('aria-selected')) await blockTab.click();
   await inspector.waitFor({ state: 'visible', timeout: 30000 });
   return inspector;
 }
