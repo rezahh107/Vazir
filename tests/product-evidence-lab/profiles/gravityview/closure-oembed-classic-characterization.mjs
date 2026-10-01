@@ -90,6 +90,145 @@ function falsifyWpviewAssociationClassifier(realAttributes, expectedSource) {
   };
 }
 
+function classifyOembedTerminalDisposition({
+  typographyDisposition,
+  presentationAssociationProven,
+  unrelatedEmbedIsolationProven,
+  exclusionPreservationProven,
+  productionMethodEvidence = {},
+}) {
+  if ('ALREADY_CORRECT' === typographyDisposition) {
+    return {
+      final_disposition: 'ALREADY_CORRECT',
+      method_level_repair_evidence_proven: false,
+      reason: 'Authentically inserted placeholder text already resolves to Vazirmatn.',
+    };
+  }
+
+  if ('FAIL' !== typographyDisposition) {
+    return {
+      final_disposition: 'NOT_PROVEN',
+      method_level_repair_evidence_proven: false,
+      reason: 'oEmbed typography was not conclusively established as already-correct or failing.',
+    };
+  }
+
+  const prohibitedMethodAbsent = productionMethodEvidence.second_exclusion_model_introduced === false
+    && productionMethodEvidence.response_rewriting_used === false
+    && productionMethodEvidence.vendor_edits_used === false
+    && productionMethodEvidence.renderer_replacement_used === false
+    && productionMethodEvidence.dom_mutation_used === false;
+  const methodLevelRepairEvidenceProven = productionMethodEvidence.actual_production_method_exercised === true
+    && productionMethodEvidence.existing_exclusion_authority_preserved === true
+    && prohibitedMethodAbsent;
+
+  if (
+    presentationAssociationProven
+    && unrelatedEmbedIsolationProven
+    && exclusionPreservationProven
+    && methodLevelRepairEvidenceProven
+  ) {
+    return {
+      final_disposition: 'ADMITTABLE_REPAIR_SEAM',
+      method_level_repair_evidence_proven: true,
+      reason: 'The actual proposed production method was exercised and proved to preserve the existing exclusion authority while avoiding a second exclusion model, response rewriting, vendor edits, renderer replacement, and DOM mutation.',
+    };
+  }
+
+  return {
+    final_disposition: 'NOT_PROVEN',
+    method_level_repair_evidence_proven: methodLevelRepairEvidenceProven,
+    reason: 'The authentic oEmbed evidence may prove source-bound presentation association, unrelated-source isolation, and representative exclusion behavior, but those facts do not by themselves prove the actual production repair method. Without method-level runtime evidence preserving the existing exclude_selectors authority and avoiding prohibited alternate ownership mechanisms, ADMITTABLE_REPAIR_SEAM is not proven.',
+  };
+}
+
+function falsifyOembedTerminalDispositionClassifier() {
+  const representativeOnly = classifyOembedTerminalDisposition({
+    typographyDisposition: 'FAIL',
+    presentationAssociationProven: true,
+    unrelatedEmbedIsolationProven: true,
+    exclusionPreservationProven: true,
+    productionMethodEvidence: {
+      actual_production_method_exercised: false,
+      existing_exclusion_authority_preserved: true,
+      second_exclusion_model_introduced: false,
+      response_rewriting_used: false,
+      vendor_edits_used: false,
+      renderer_replacement_used: false,
+      dom_mutation_used: false,
+    },
+  });
+  assert.equal(
+    representativeOnly.final_disposition,
+    'NOT_PROVEN',
+    'Exact wpview association, synthetic negative controls, and one representative exclusion fixture must not silently admit a production repair seam.',
+  );
+
+  const prohibitedMethod = classifyOembedTerminalDisposition({
+    typographyDisposition: 'FAIL',
+    presentationAssociationProven: true,
+    unrelatedEmbedIsolationProven: true,
+    exclusionPreservationProven: true,
+    productionMethodEvidence: {
+      actual_production_method_exercised: true,
+      existing_exclusion_authority_preserved: true,
+      second_exclusion_model_introduced: false,
+      response_rewriting_used: false,
+      vendor_edits_used: false,
+      renderer_replacement_used: false,
+      dom_mutation_used: true,
+    },
+  });
+  assert.equal(
+    prohibitedMethod.final_disposition,
+    'NOT_PROVEN',
+    'A method using prohibited DOM mutation must not become ADMITTABLE_REPAIR_SEAM.',
+  );
+
+  const alreadyCorrect = classifyOembedTerminalDisposition({
+    typographyDisposition: 'ALREADY_CORRECT',
+    presentationAssociationProven: false,
+    unrelatedEmbedIsolationProven: false,
+    exclusionPreservationProven: false,
+    productionMethodEvidence: {},
+  });
+  assert.equal(
+    alreadyCorrect.final_disposition,
+    'ALREADY_CORRECT',
+    'Authentically already-correct oEmbed typography must remain eligible for ALREADY_CORRECT.',
+  );
+
+  const fullyProvenMethod = classifyOembedTerminalDisposition({
+    typographyDisposition: 'FAIL',
+    presentationAssociationProven: true,
+    unrelatedEmbedIsolationProven: true,
+    exclusionPreservationProven: true,
+    productionMethodEvidence: {
+      actual_production_method_exercised: true,
+      existing_exclusion_authority_preserved: true,
+      second_exclusion_model_introduced: false,
+      response_rewriting_used: false,
+      vendor_edits_used: false,
+      renderer_replacement_used: false,
+      dom_mutation_used: false,
+    },
+  });
+  assert.equal(
+    fullyProvenMethod.final_disposition,
+    'ADMITTABLE_REPAIR_SEAM',
+    'ADMITTABLE_REPAIR_SEAM must remain gated behind explicit method-level production evidence.',
+  );
+
+  return {
+    representative_association_and_exclusion_without_method_evidence: representativeOnly.final_disposition,
+    prohibited_method_cannot_be_admitted: prohibitedMethod.final_disposition,
+    authentic_already_correct_oembed: alreadyCorrect.final_disposition,
+    admittable_requires_method_level_production_evidence: fullyProvenMethod.final_disposition,
+  };
+}
+
+const oembedTerminalDispositionFalsification = falsifyOembedTerminalDispositionClassifier();
+
 async function firstVisible(locator) {
   const count = await locator.count();
   for (let index = 0; index < count; index += 1) {
@@ -207,6 +346,7 @@ if (!placeholderHit) {
     parse_embed_requests: parseEmbedRequests,
     parse_embed_responses: responseEvidence,
     authentic_placeholder_inserted: false,
+    terminal_disposition_falsification: oembedTerminalDispositionFalsification,
     wpview_data_attribute_association: {
       proven: false,
       reason: 'No authentic placeholder/wpview node was available for data-attribute association qualification.',
@@ -370,23 +510,23 @@ if (!placeholderHit) {
   const existingExclusionAssociationProven = sourceFixtureExercisesExclusion && exclusionAssociationObserved;
   const importantRequired = /font-family\s*:/i.test(inlineStyles.heading || '') || /font-family\s*:/i.test(inlineStyles.paragraph || '');
   const typographyDisposition = isVazirmatn(headingFamily) && isVazirmatn(paragraphFamily) ? 'ALREADY_CORRECT' : 'FAIL';
-
-  let finalDisposition = 'ALREADY_CORRECT';
-  let reason = 'Authentically inserted placeholder text already resolves to Vazirmatn.';
-  if ('FAIL' === typographyDisposition) {
-    if (gravityViewSpecificScope && unrelatedEmbedIsolation && existingExclusionAssociationProven) {
-      finalDisposition = 'ADMITTABLE_REPAIR_SEAM';
-      reason = 'The authentic insertion exposes a stable source-bound wpview presentation association, rejects unrelated wpview sources, and preserves a usable relationship to the single configured exclusion boundary.';
-    } else if (gravityViewSpecificScope && unrelatedEmbedIsolation && !existingExclusionAssociationProven) {
-      finalDisposition = 'NOT_PROVEN';
-      reason = sourceFixtureExercisesExclusion
-        ? 'The authentic insertion has a stable source-bound wpview presentation association and rejects unrelated wpview sources, but the existing exclusion boundary was not preserved into the rendered placeholder context. The current bounded evidence therefore cannot admit a repair without weakening the single exclude_selectors authority.'
-        : 'The authentic insertion has a stable source-bound wpview presentation association and rejects unrelated wpview sources. The inline GravityView font declarations still require !important, but the persisted fixture does not exercise an excluded source, so preservation of the single existing exclude_selectors authority remains unproven. No production repair is admitted from this evidence.';
-    } else {
-      finalDisposition = 'NOT_PROVEN';
-      reason = 'The authentic typography failure is reproduced, but the repaired evidence does not establish every presentation-scoping, unrelated-embed isolation, and exclusion-preservation condition required to admit or mechanically reject a production seam.';
-    }
-  }
+  const productionMethodEvidence = {
+    actual_production_method_exercised: false,
+    existing_exclusion_authority_preserved: existingExclusionAssociationProven,
+    second_exclusion_model_introduced: false,
+    response_rewriting_used: false,
+    vendor_edits_used: false,
+    renderer_replacement_used: false,
+    dom_mutation_used: false,
+    reason: 'This qualification PR implements and exercises no portal/oEmbed production repair method.',
+  };
+  const terminalDisposition = classifyOembedTerminalDisposition({
+    typographyDisposition,
+    presentationAssociationProven: gravityViewSpecificScope,
+    unrelatedEmbedIsolationProven: unrelatedEmbedIsolation,
+    exclusionPreservationProven: existingExclusionAssociationProven,
+    productionMethodEvidence,
+  });
 
   results.oembed = {
     interaction_path: insertionPath,
@@ -434,6 +574,9 @@ if (!placeholderHit) {
       usable_existing_exclusion_association_proven: existingExclusionAssociationProven,
       preservation_disposition: existingExclusionAssociationProven ? 'PROVEN' : 'NOT_PROVEN',
     },
+    production_method_evidence: productionMethodEvidence,
+    terminal_disposition_falsification: oembedTerminalDispositionFalsification,
+    method_level_repair_evidence_proven: terminalDisposition.method_level_repair_evidence_proven,
     supported_source_seams: {
       gravityview_embed_related_hook_names: sourceEvidence.gravityview_oembed.embed_related_literal_hook_names,
       wordpress_embed_related_hook_names: sourceEvidence.wordpress_embed_lifecycle.embed_related_literal_hook_names,
@@ -441,8 +584,8 @@ if (!placeholderHit) {
       response_rewriting_admitted: false,
     },
     typography_disposition: typographyDisposition,
-    final_disposition: finalDisposition,
-    reason,
+    final_disposition: terminalDisposition.final_disposition,
+    reason: terminalDisposition.reason,
   };
 }
 
