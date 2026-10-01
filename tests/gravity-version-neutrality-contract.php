@@ -36,7 +36,7 @@ function vf_normalized_executable_tokens( string $source ): string {
 			if ( T_OPEN_TAG === $token[0] || T_WHITESPACE === $token[0] || T_COMMENT === $token[0] || T_DOC_COMMENT === $token[0] ) {
 				continue;
 			}
-			$normalized[] = 'T' . $token[0] . ':' . $token[1];
+			$normalized[] = 'T:' . token_name( $token[0] ) . ':' . $token[1];
 			continue;
 		}
 		$normalized[] = 'C:' . $token;
