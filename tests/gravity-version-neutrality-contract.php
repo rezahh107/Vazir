@@ -89,8 +89,7 @@ function vf_extract_method_source( string $source, string $method_name ): ?strin
 		$body  = '';
 		for ( ; $cursor < $count; $cursor++ ) {
 			$current = $tokens[ $cursor ];
-			$text    = vf_token_text( $current );
-			$body   .= $text;
+			$body   .= vf_token_text( $current );
 			if ( '{' === $current ) {
 				$depth++;
 			} elseif ( '}' === $current ) {
@@ -169,6 +168,99 @@ function vf_extract_return_expressions( string $method_source ): array {
 	return $returns;
 }
 
+/** @param string[] $expressions @return string[] */
+function vf_compact_expressions( array $expressions ): array {
+	return array_map( 'vf_compact_php', $expressions );
+}
+
+function vf_logical_operator_count( string $source ): int {
+	$count = 0;
+	foreach ( token_get_all( '<?php ' . $source ) as $token ) {
+		if ( ! is_array( $token ) ) {
+			continue;
+		}
+		if ( T_BOOLEAN_AND === $token[0] || T_BOOLEAN_OR === $token[0] || T_LOGICAL_AND === $token[0] || T_LOGICAL_OR === $token[0] ) {
+			$count++;
+		}
+	}
+	return $count;
+}
+
+function vf_ternary_count( string $source ): int {
+	$count = 0;
+	foreach ( token_get_all( '<?php ' . $source ) as $token ) {
+		if ( '?' === $token ) {
+			$count++;
+		}
+	}
+	return $count;
+}
+
+function vf_disallowed_control_count( string $source ): int {
+	$count = 0;
+	foreach ( token_get_all( '<?php ' . $source ) as $token ) {
+		if ( ! is_array( $token ) ) {
+			continue;
+		}
+		if ( T_SWITCH === $token[0] || T_WHILE === $token[0] || T_FOR === $token[0] || T_FOREACH === $token[0] || T_DO === $token[0] ) {
+			$count++;
+		}
+	}
+	return $count;
+}
+
+/**
+ * Admission-boundary structure is fail-closed. Every current predicate is
+ * explicitly admitted; a new/changed predicate fails regardless of vendor
+ * identifier, literal, or comparison mechanism. Logical short-circuit and
+ * alternate control-flow counts prevent a gate being moved outside an if.
+ *
+ * @param string[]      $expected_conditions
+ * @param string[]|null $expected_returns
+ */
+function vf_method_predicate_structure_matches(
+	string $source,
+	string $method_name,
+	array $expected_conditions,
+	?array $expected_returns = null,
+	int $expected_ternaries = 0
+): bool {
+	$method = vf_extract_method_source( $source, $method_name );
+	if ( null === $method ) {
+		return false;
+	}
+
+	if ( vf_compact_expressions( vf_extract_if_conditions( $method ) ) !== vf_compact_expressions( $expected_conditions ) ) {
+		return false;
+	}
+
+	if ( null !== $expected_returns && vf_compact_expressions( vf_extract_return_expressions( $method ) ) !== vf_compact_expressions( $expected_returns ) ) {
+		return false;
+	}
+
+	$expected_logical = 0;
+	foreach ( $expected_conditions as $expression ) {
+		$expected_logical += vf_logical_operator_count( $expression );
+	}
+	if ( null !== $expected_returns ) {
+		foreach ( $expected_returns as $expression ) {
+			$expected_logical += vf_logical_operator_count( $expression );
+		}
+	}
+
+	if ( vf_logical_operator_count( $method ) !== $expected_logical ) {
+		return false;
+	}
+	if ( vf_ternary_count( $method ) !== $expected_ternaries ) {
+		return false;
+	}
+	if ( 0 !== vf_disallowed_control_count( $method ) ) {
+		return false;
+	}
+
+	return true;
+}
+
 /**
  * Capability-only admission permits only the declared runtime capability leaves
  * joined by logical AND, with optional grouping parentheses. Any additional
@@ -222,6 +314,7 @@ function vf_non_vazir_version_signals( string $source ): array {
 function vf_gravity_admission_violations( array $sources, array $evidence_only_versions ): array {
 	$violations = array();
 
+	// Secondary defense: qualified versions belong in evidence, never production.
 	foreach ( $sources as $label => $source ) {
 		$executable = vf_executable_php( $source );
 		foreach ( $evidence_only_versions as $version ) {
@@ -306,6 +399,131 @@ function vf_gravity_admission_violations( array $sources, array $evidence_only_v
 		}
 	}
 
+	// Primary defect-class closure: exact predicate structure at production
+	// admission/application boundaries. New vendor gates fail even if their
+	// identifiers contain no word "version" and even if known capability checks
+	// remain present.
+	$boundary_contracts = array(
+		'gravityforms' => array(
+			'__construct' => array( 'conditions' => array( '$this->gf_available' ) ),
+			'init_hooks' => array( 'conditions' => array() ),
+			'enqueue_gravityforms_assets' => array( 'conditions' => array( '! $this->is_enabled()' ) ),
+			'mark_preview_request' => array( 'conditions' => array( '! $this->is_enabled()' ) ),
+			'enqueue_gravityforms_admin_assets' => array( 'conditions' => array( '! $this->is_enabled() || ! $this->is_gravity_forms_admin_screen()' ) ),
+			'filter_preview_styles' => array( 'conditions' => array( '! $this->is_enabled()' ) ),
+			'add_noconflict_styles' => array(
+				'conditions' => array( '! $this->is_enabled()', "! empty( \$options['enable_admin'] )" ),
+			),
+			'add_field_css_class' => array( 'conditions' => array( '$this->is_enabled()' ) ),
+			'remove_inline_font_styles' => array( 'conditions' => array( '! $this->is_enabled() || [] !== $this->get_negative_scope_selectors()' ) ),
+			'enqueue_style' => array( 'conditions' => array( '! $this->inline_attached' ) ),
+			'register_style' => array( 'conditions' => array( '$this->style_registered' ) ),
+			'is_enabled' => array(
+				'conditions' => array(),
+				'returns'    => array( "! empty( \$options['enable_gravity_forms'] )" ),
+			),
+			'is_gravity_forms_admin_screen' => array(
+				'conditions' => array(
+					"class_exists( 'GFForms' ) && method_exists( 'GFForms', 'is_gravity_page' )",
+					"class_exists( 'RGForms' ) && method_exists( 'RGForms', 'is_gravity_page' )",
+					"! function_exists( 'get_current_screen' )",
+					'! $screen instanceof WP_Screen',
+				),
+				'returns' => array(
+					'(bool) GFForms::is_gravity_page()',
+					'(bool) RGForms::is_gravity_page()',
+					'false',
+					'false',
+					"false !== strpos( \$screen->id, 'gf_' ) || false !== strpos( \$screen->id, 'gravityforms' )",
+				),
+			),
+		),
+		'gravityflow' => array(
+			'__construct' => array( 'conditions' => array( '$this->flow_available' ) ),
+			'init_hooks' => array( 'conditions' => array() ),
+			'enqueue_admin_assets' => array( 'conditions' => array() ),
+			'enqueue_frontend_assets' => array( 'conditions' => array() ),
+			'enqueue_style' => array(
+				'conditions' => array(
+					'! $this->is_enabled( $context )',
+					"! wp_style_is( \$dependency, 'registered' )",
+					'isset( $this->inline_handles[ $handle ] )',
+					"'' !== trim( \$css )",
+				),
+			),
+			'is_enabled' => array(
+				'conditions' => array(
+					"empty( \$options['enable_gravity_forms'] )",
+					"'admin' === \$context",
+					"'frontend' === \$context",
+				),
+				'returns' => array(
+					'false',
+					"! empty( \$options['enable_admin'] )",
+					"! empty( \$options['enable_frontend'] )",
+					'false',
+				),
+			),
+		),
+		'gravityperks' => array(
+			'__construct' => array( 'conditions' => array( '$this->perks_available' ) ),
+			'filter_print_styles_array' => array(
+				'conditions' => array(
+					'$this->inline_attached || ! $this->is_enabled() || ! $this->is_standalone_settings_request( $handles )',
+					"'' === trim( \$css )",
+					'wp_add_inline_style( self::HOST_STYLE_HANDLE, $css )',
+				),
+			),
+			'is_enabled' => array(
+				'conditions' => array(),
+				'returns' => array( "! empty( \$options['enable_admin'] ) && ! empty( \$options['enable_gravity_forms'] )" ),
+			),
+			'is_standalone_settings_request' => array(
+				'conditions' => array(
+					"! is_admin() || ! \$this->perks_available || ! class_exists( 'GWPerksPage' ) || ! method_exists( 'GWPerksPage', 'load_perk_settings' )",
+					"'gwp_perks' !== \$page || '' === \$view || '' === \$slug",
+					'! in_array( self::HOST_STYLE_HANDLE, $handles, true )',
+				),
+				'returns' => array( 'false', 'false', 'false', "wp_style_is( self::HOST_STYLE_HANDLE, 'registered' )" ),
+				'ternaries' => 3,
+			),
+		),
+		'gravityview' => array(
+			'__construct' => array( 'conditions' => array( '$this->gravityview_available' ) ),
+			'enqueue_editor_typography' => array(
+				'conditions' => array(
+					'$this->inline_attached || ! $this->is_enabled() || ! $this->has_view_block_editor_style_capability()',
+					"'' === trim( \$css )",
+					'wp_add_inline_style( self::HOST_STYLE_HANDLE, $css )',
+				),
+			),
+			'is_enabled' => array(
+				'conditions' => array(),
+				'returns' => array( "! empty( \$options['enable_admin'] ) && ! empty( \$options['enable_gravity_forms'] )" ),
+			),
+			'has_view_block_editor_style_capability' => array(
+				'conditions' => array(
+					"! is_admin() || ! \$this->gravityview_available || ! class_exists( 'WP_Block_Type_Registry' ) || ! class_exists( 'WP_Block_Type' )",
+					'! $block_type instanceof WP_Block_Type',
+					'! in_array( self::HOST_STYLE_HANDLE, (array) $block_type->editor_style_handles, true )',
+				),
+				'returns' => array( 'false', 'false', 'false', "wp_style_is( self::HOST_STYLE_HANDLE, 'registered' )" ),
+			),
+		),
+	);
+
+	foreach ( $boundary_contracts as $label => $methods ) {
+		foreach ( $methods as $method_name => $contract ) {
+			$returns    = array_key_exists( 'returns', $contract ) ? $contract['returns'] : null;
+			$ternaries  = isset( $contract['ternaries'] ) ? (int) $contract['ternaries'] : 0;
+			if ( ! vf_method_predicate_structure_matches( $sources[ $label ], $method_name, $contract['conditions'], $returns, $ternaries ) ) {
+				$violations[] = $label . ' ' . $method_name . ' admission predicate structure changed outside the capability contract';
+			}
+		}
+	}
+
+	// Secondary lexical tripwire: useful diagnostics for obvious version APIs,
+	// but no longer the proof of defect-class closure.
 	foreach ( array( 'gravityforms', 'gravityflow', 'gravityperks', 'gravityview' ) as $label ) {
 		$signals = vf_non_vazir_version_signals( $sources[ $label ] );
 		if ( array() !== $signals ) {
@@ -372,13 +590,17 @@ vf_version_neutral_assert(
 
 $adapter_mutation = $sources;
 $adapter_needle   = "if ( ! wp_style_is( \$dependency, 'registered' ) ) {";
-$adapter_gate     = "if ( defined( 'GRAVITY_FLOW_VERSION' ) && GRAVITY_FLOW_VERSION !== '99.7.15' ) {\n\t\t\treturn;\n\t\t}\n\n\t\tif ( ! wp_style_is( \$dependency, 'registered' ) ) {";
+$adapter_gate     = "if ( defined( 'GRAVITY_FLOW_BUILD_ID' ) && GRAVITY_FLOW_BUILD_ID >= 99715 ) {\n\t\t\treturn;\n\t\t}\n\n\t\tif ( ! wp_style_is( \$dependency, 'registered' ) ) {";
 vf_version_neutral_assert( false !== strpos( $adapter_mutation['gravityflow'], $adapter_needle ), 'adapter-boundary mutation anchor is present' );
 $adapter_mutation['gravityflow'] = str_replace( $adapter_needle, $adapter_gate, $adapter_mutation['gravityflow'], $adapter_replacements );
 vf_version_neutral_assert( 1 === $adapter_replacements, 'adapter-boundary mutation was applied exactly once' );
 vf_version_neutral_assert(
-	vf_mutation_is_rejected( $adapter_mutation, $evidence_only_versions, 'Gravity Flow enqueue admission gated by a new vendor version while host capability check remains present' ),
-	'adapter-boundary falsification is rejected deterministically'
+	array() === vf_non_vazir_version_signals( $adapter_mutation['gravityflow'] ),
+	'adapter mutation intentionally uses vendor build identity with no version-named token, so lexical detection cannot prove rejection'
+);
+vf_version_neutral_assert(
+	vf_mutation_is_rejected( $adapter_mutation, $evidence_only_versions, 'Gravity Flow enqueue admission gated by vendor build identity while host capability check remains present' ),
+	'adapter-boundary falsification is rejected by admission predicate structure'
 );
 
 $evidence_doc      = $root . '/docs/GRAVITY-PERKS-FRONTEND-CHARACTERIZATION.md';
