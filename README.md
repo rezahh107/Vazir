@@ -15,6 +15,8 @@ The persisted option/API contract is unchanged. Product version `1.4.0` is inten
 
 GravityView targeted Gutenberg/editor/date/oEmbed work is **not** part of the already-published `v1.4.0`. The bounded GravityView production repair described below belongs to a later release and does not modify or republish `v1.4.0`. Compatibility evidence is exact-version-bound even where production admission is capability-based, so this repository does not claim unexecuted Gravity product versions.
 
+Post-release evidence closure also qualifies exact GP Advanced Select `1.1.21` and GP File Upload Pro `1.5.13` frontend typography. Both resolve through native Vazirmatn inheritance on the exercised exact runtimes, so **no add-on-specific production adapter or selector repair is admitted**. This qualification changes evidence and regression coverage, not the already-published `v1.4.0` runtime. See `docs/GRAVITY-PERKS-FRONTEND-CHARACTERIZATION.md`.
+
 ## Intended runtime coverage
 
 The plugin is designed to cover:
@@ -27,9 +29,10 @@ The plugin is designed to cover:
 - currently supported Gravity Forms legacy/current wrapper markup;
 - Gravity Flow Inbox typography through the product's supported admin/frontend enqueue seams, including the AG Grid text root, material text/date inputs, and Flow-bound Flatpickr calendar without replacing host-owned icon families or Inbox behavior;
 - Gravity Perks standalone Perk Settings typography through WordPress' `print_styles_array` boundary while the host `gwp-admin` stylesheet is being processed;
+- Gravity Perks frontend add-ons that preserve normal Gravity Forms/Vazir inheritance; exact current evidence covers GP Advanced Select `1.1.21` and GP File Upload Pro `1.5.13` without add-on-specific production repair;
 - the two exact-runtime-admitted GravityView View-block editor surfaces: React Select control/value typography and the normal-descendant React Datepicker, through GravityView's own registered editor-style handle.
 
-Automated PHP and repository contracts verify the loading/API paths. Real-WordPress smoke lanes verify bootstrap and enqueue behavior, and Chromium computed-style lanes exercise WordPress frontend/login/admin/editor coverage on classic and block themes. Licensed Gravity product coverage is handled separately by the Product-Wide Reproducible Evidence Lab; see `docs/CHARACTERIZATION.md`.
+Automated PHP and repository contracts verify the loading/API paths. Real-WordPress smoke lanes verify bootstrap and enqueue behavior, and Chromium computed-style lanes exercise WordPress frontend/login/admin/editor coverage on classic and block themes. Licensed Gravity product/add-on coverage is handled separately by the Product-Wide Reproducible Evidence Lab; see `docs/CHARACTERIZATION.md` and `docs/GRAVITY-PERKS-FRONTEND-CHARACTERIZATION.md`.
 
 ## Font delivery
 
@@ -89,6 +92,10 @@ Gravity Perks remains authoritative for routing, Settings rendering, saving, con
 
 Real browser/runtime qualification currently covers exact Gravity Perks `2.3.16`. Other versions remain `NOT_PROVEN` until separately exercised. On the exact qualified runtime, the generated Documentation URL aliases to the Settings handler and is not claimed as independent Documentation-page compatibility evidence.
 
+Frontend Perk qualification is separate from the standalone Settings adapter. Exact GP Advanced Select `1.1.21` resolves its exercised Tom Select control, search/value/options/no-results/multiselect surfaces and rebuilt widget through native Vazirmatn inheritance. Exact GP File Upload Pro `1.5.13` resolves its exercised uploader guidance/action/error/file metadata plus detached crop actions and rerendered state through native inheritance. Both dedicated profiles also prove single-authority bundled font delivery with no duplicate URL requests. No production adapter was added for either add-on; later versions remain `NOT_PROVEN` until separately exercised, and their version strings must not become production admission gates.
+
+The separate `gravity-addons-stack` profile verifies representative coexistence with the retained Gravity stack and both add-ons enabled together. It is not exhaustive cross-product compatibility. See `docs/GRAVITY-PERKS-FRONTEND-CHARACTERIZATION.md` for exact package identities, exercised interactions, and explicit `NOT_PROVEN` / `NOT_REACHABLE` boundaries.
+
 ## GravityView compatibility boundary
 
 `VazirFont_GravityView_Integration` is intentionally a small View-block **editor-only** adapter, not a general GravityView presentation layer. Production admission is capability-based: the GravityView runtime must be present, the real `gk-gravityview-blocks/view` block must be registered, its editor-style metadata must contain `gk-gravityview-blocks-view-editor-style`, and that host handle must be registered at `enqueue_block_editor_assets`. Only then does Vazir attach bounded inline CSS to that GravityView-owned handle.
@@ -111,6 +118,8 @@ Production admission is capability-based, while compatibility evidence is exact-
 - Gravity Forms: optional; current exact browser/runtime qualification covers `3.1.1.1`
 - Gravity Flow: optional; runtime admission is capability-based; current exact browser/runtime qualification covers `3.1.0`
 - Gravity Perks: optional; standalone Settings admission is capability-based; current exact browser/runtime qualification covers `2.3.16`
+- GP Advanced Select: optional evidence-qualified frontend add-on; current exact browser/runtime qualification covers `1.1.21` with native inheritance and no production repair
+- GP File Upload Pro: optional evidence-qualified frontend add-on; current exact browser/runtime qualification covers `1.5.13` with native inheritance and no production repair
 - GravityView: optional; bounded View-block editor admission is capability-based; current exact browser/runtime qualification targets `3.3.4`
 - Recommended production PHP when Gravity Forms is part of the stack: 8.3, matching current Gravity Forms guidance
 - For WordPress-only deployments, current WordPress hosting guidance recommends PHP 8.4 or later
@@ -141,9 +150,9 @@ composer lint
 composer compat
 ```
 
-`tests/runtime-contract.php` is the standalone core/Gravity Forms contract harness. `tests/version-schema-contract.php` proves that a product release bump does not trigger an options migration when the persisted schema is already current, while older schema state still follows the real migration path. `tests/gravityflow-runtime-contract.php`, `tests/gravityperks-runtime-contract.php`, and `tests/gravityview-runtime-contract.php` verify their respective capability/admission, settings, exclusion, ownership, and fail-closed boundaries. `tests/gravity-descendant-exclusion-contract.php` exercises the shared target-relative exclusion rules across admitted Gravity adapters. `tests/wordpress-smoke.php` is executed by CI against real WordPress installations. `tests/browser-characterization.mjs` verifies computed typography and icon behavior for current WordPress fixtures.
+`tests/runtime-contract.php` is the standalone core/Gravity Forms contract harness. `tests/version-schema-contract.php` proves that a product release bump does not trigger an options migration when the persisted schema is already current, while older schema state still follows the real migration path. `tests/gravity-version-neutrality-contract.php` guards the production Gravity bootstrap/adapters against evidence-only product/Perk version whitelists. `tests/gravityflow-runtime-contract.php`, `tests/gravityperks-runtime-contract.php`, and `tests/gravityview-runtime-contract.php` verify their respective capability/admission, settings, exclusion, ownership, and fail-closed boundaries. `tests/gravity-descendant-exclusion-contract.php` exercises the shared target-relative exclusion rules across admitted Gravity adapters. `tests/wordpress-smoke.php` is executed by CI against real WordPress installations. `tests/browser-characterization.mjs` verifies computed typography and icon behavior for current WordPress fixtures.
 
-The Product-Wide Reproducible Evidence Lab adds separately diagnosable licensed profiles for Gravity Forms, Gravity Flow, GravityView, Gravity Perks, and the combined Gravity stack. The GravityView profile preserves its qualification phase for frontend/portal/oEmbed/icon truth while a second repair-verification phase proves the two admitted editor surfaces, their real interactions, and exclusion behavior. The existing WordPress lanes remain the `wordpress` profile authority. A PASS is scoped to the exact profile/scenarios that ran; package verification or another profile is not a substitute for licensed runtime evidence.
+The Product-Wide Reproducible Evidence Lab adds separately diagnosable licensed profiles for Gravity Forms, Gravity Flow, GravityView, Gravity Perks, GP Advanced Select, GP File Upload Pro, the retained Gravity stack, and the full add-on coexistence stack. The add-on profiles use exact licensed package identities only as evidence boundaries and do not version-gate production admission. The GravityView profile preserves its qualification phase for frontend/portal/oEmbed/icon truth while a second repair-verification phase proves the two admitted editor surfaces, their real interactions, and exclusion behavior. The existing WordPress lanes remain the `wordpress` profile authority. A PASS is scoped to the exact profile/scenarios that ran; package verification or another profile is not a substitute for licensed runtime evidence.
 
 ## Licensing
 
