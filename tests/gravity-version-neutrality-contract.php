@@ -399,13 +399,28 @@ function vf_gravity_admission_violations( array $sources, array $evidence_only_v
 		}
 	}
 
-	// Primary defect-class closure: exact predicate structure at production
-	// admission/application boundaries. New vendor gates fail even if their
-	// identifiers contain no word "version" and even if known capability checks
-	// remain present.
+	// Primary defect-class closure: bind the executable predicate structure of
+	// the production bootstrap plus every Gravity runtime/admission/application
+	// boundary. A new gate fails even if its identifier never says "version".
 	$boundary_contracts = array(
+		'bootstrap' => array(
+			'init' => array(
+				'conditions' => array(
+					"class_exists( 'VazirFont_Loader' )",
+					"is_admin() && class_exists( 'VazirFont_Admin_Settings' )",
+					"class_exists( 'GFForms' ) && class_exists( 'VazirFont_GravityForms_Integration' )",
+					"class_exists( 'Gravity_Flow' ) && class_exists( 'VazirFont_GravityFlow_Integration' )",
+					"class_exists( 'GravityPerks' ) && class_exists( 'VazirFont_GravityPerks_Integration' )",
+					"defined( 'GRAVITYVIEW_FILE' ) && class_exists( 'VazirFont_GravityView_Integration' )",
+				),
+			),
+		),
 		'gravityforms' => array(
 			'__construct' => array( 'conditions' => array( '$this->gf_available' ) ),
+			'is_gravity_forms_active' => array(
+				'conditions' => array(),
+				'returns' => array( "class_exists( 'GFForms' ) && class_exists( 'GFCommon' )" ),
+			),
 			'init_hooks' => array( 'conditions' => array() ),
 			'enqueue_gravityforms_assets' => array( 'conditions' => array( '! $this->is_enabled()' ) ),
 			'mark_preview_request' => array( 'conditions' => array( '! $this->is_enabled()' ) ),
@@ -440,6 +455,10 @@ function vf_gravity_admission_violations( array $sources, array $evidence_only_v
 		),
 		'gravityflow' => array(
 			'__construct' => array( 'conditions' => array( '$this->flow_available' ) ),
+			'is_gravity_flow_runtime_available' => array(
+				'conditions' => array(),
+				'returns' => array( "class_exists( 'Gravity_Flow' )" ),
+			),
 			'init_hooks' => array( 'conditions' => array() ),
 			'enqueue_admin_assets' => array( 'conditions' => array() ),
 			'enqueue_frontend_assets' => array( 'conditions' => array() ),
@@ -467,6 +486,10 @@ function vf_gravity_admission_violations( array $sources, array $evidence_only_v
 		),
 		'gravityperks' => array(
 			'__construct' => array( 'conditions' => array( '$this->perks_available' ) ),
+			'is_gravity_perks_runtime_available' => array(
+				'conditions' => array(),
+				'returns' => array( "class_exists( 'GravityPerks' )" ),
+			),
 			'filter_print_styles_array' => array(
 				'conditions' => array(
 					'$this->inline_attached || ! $this->is_enabled() || ! $this->is_standalone_settings_request( $handles )',
@@ -490,6 +513,10 @@ function vf_gravity_admission_violations( array $sources, array $evidence_only_v
 		),
 		'gravityview' => array(
 			'__construct' => array( 'conditions' => array( '$this->gravityview_available' ) ),
+			'is_gravityview_runtime_available' => array(
+				'conditions' => array(),
+				'returns' => array( "defined( 'GRAVITYVIEW_FILE' )" ),
+			),
 			'enqueue_editor_typography' => array(
 				'conditions' => array(
 					'$this->inline_attached || ! $this->is_enabled() || ! $this->has_view_block_editor_style_capability()',
@@ -514,8 +541,8 @@ function vf_gravity_admission_violations( array $sources, array $evidence_only_v
 
 	foreach ( $boundary_contracts as $label => $methods ) {
 		foreach ( $methods as $method_name => $contract ) {
-			$returns    = array_key_exists( 'returns', $contract ) ? $contract['returns'] : null;
-			$ternaries  = isset( $contract['ternaries'] ) ? (int) $contract['ternaries'] : 0;
+			$returns   = array_key_exists( 'returns', $contract ) ? $contract['returns'] : null;
+			$ternaries = isset( $contract['ternaries'] ) ? (int) $contract['ternaries'] : 0;
 			if ( ! vf_method_predicate_structure_matches( $sources[ $label ], $method_name, $contract['conditions'], $returns, $ternaries ) ) {
 				$violations[] = $label . ' ' . $method_name . ' admission predicate structure changed outside the capability contract';
 			}
