@@ -2,20 +2,18 @@
 
 A self-hosted Persian typography plugin for WordPress with optional Gravity Forms, Gravity Flow, Gravity Perks, and bounded GravityView editor compatibility.
 
-## Release 1.4.0
+## Release 1.5.0
 
-`v1.4.0` is a backward-compatible feature/compatibility release over the public `v1.3.0` release. It keeps the official self-hosted Vazirmatn `v33.003` payload and adds the stable merged compatibility work qualified on these exact licensed runtimes:
+`v1.5.0` is a backward-compatible feature/evidence release prepared over the currently published `v1.4.0`. It keeps the official self-hosted Vazirmatn `v33.003` payload and the existing WordPress/Gravity compatibility architecture while adding the post-1.4.0 work that is ready for production release:
 
-- Gravity Flow `3.1.0`: bounded AG Grid and Flow-owned Flatpickr typography repair through supported host enqueue/style capabilities;
-- Gravity Forms `3.1.1.1`: closure of independently reproduced Legacy, admin-component, and Preview typography gaps while preserving existing Theme Framework, AJAX/rerender, exclusions, icon ownership, and No Conflict behavior;
-- Gravity Perks `2.3.16`: standalone Perk Settings typography repair through WordPress' supported `print_styles_array` boundary while Gravity Perks retains routing, rendering, saving, controls, scripts, notices, and host-style ownership;
-- shared Gravity descendant-exclusion hardening through `VazirFont_Selector_Boundary`, including quoted/attribute/functional-selector handling, real `:has()` fail-closed behavior, pseudo-element protection, and no `ctype_*` runtime dependency.
+- bounded GravityView View-block editor typography support for the exact admitted React Select control/value and normal-descendant React Datepicker surfaces, attached through GravityView's own registered editor-style handle;
+- exact runtime closure for GP Advanced Select `1.1.21` and GP File Upload Pro `1.5.13`, both resolving through native Vazirmatn inheritance with **no add-on-specific production CSS/PHP/JS repair**;
+- expanded exact-artifact Product Evidence coverage across eight retained profiles: `gravityforms`, `gravityflow`, `gravityview`, `gravityperks`, `gp-advanced-select`, `gp-file-upload-pro`, `gravity-stack`, and `gravity-addons-stack`, including representative combined-stack coexistence evidence;
+- continued capability-based, version-neutral production admission for Gravity integrations: exact product/add-on versions define evidence boundaries, not runtime activation whitelists.
 
-The persisted option/API contract is unchanged. Product version `1.4.0` is intentionally separate from the unchanged persisted option schema version `1.3.0`, so this release bump alone does not run an options migration.
+The persisted option/API contract is unchanged. Product version `1.5.0` remains intentionally separate from the unchanged persisted option schema version `1.3.0`, so this release bump alone does not run an options migration.
 
-GravityView targeted Gutenberg/editor/date/oEmbed work is **not** part of the already-published `v1.4.0`. The bounded GravityView production repair described below belongs to a later release and does not modify or republish `v1.4.0`. Compatibility evidence is exact-version-bound even where production admission is capability-based, so this repository does not claim unexecuted Gravity product versions.
-
-Post-release evidence closure also qualifies exact GP Advanced Select `1.1.21` and GP File Upload Pro `1.5.13` frontend typography. Both resolve through native Vazirmatn inheritance on the exercised exact runtimes, so **no add-on-specific production adapter or selector repair is admitted**. This qualification changes evidence and regression coverage, not the already-published `v1.4.0` runtime. See `docs/GRAVITY-PERKS-FRONTEND-CHARACTERIZATION.md`.
+Evidence claims remain bounded to what was actually exercised. Later/unexecuted Gravity ecosystem versions remain `NOT_PROVEN`, not automatically unsupported. GravityView's detached React Select portal remains `NOT_PROVEN`, and the generic oEmbed `.loading-placeholder` inline-font failure remains intentionally unrepaired because no stable GravityView-owned insertion scope has been admitted. The `gravity-stack` and `gravity-addons-stack` profiles are representative coexistence evidence rather than exhaustive compatibility guarantees.
 
 ## Intended runtime coverage
 
@@ -58,7 +56,7 @@ Existing callbacks on `vazir_font_family` continue to run unchanged. A callback 
 
 The persisted option name and schema are unchanged: existing frontend/admin/Gravity compatibility toggles, selected weights, and `exclude_selectors` remain backward compatible. `enable_gravity_forms` remains the stored Gravity-specific compatibility key and is reused by the Gravity Forms, Gravity Flow, Gravity Perks, and bounded GravityView adapters. Flow additionally respects the existing frontend/admin context toggle for the surface being rendered, while the standalone Perks Settings and GravityView editor adapters require admin typography to be enabled.
 
-The plugin keeps the product release version and persisted schema version as separate authorities. `VAZIR_FONT_VERSION` remains `1.4.0` in this post-release development branch, while the unchanged persisted schema remains `VAZIR_FONT_SCHEMA_VERSION = 1.3.0`; adding the bounded GravityView adapter does not require an option migration.
+The plugin keeps the product release version and persisted schema version as separate authorities. `VAZIR_FONT_VERSION` is `1.5.0`, while the unchanged persisted schema remains `VAZIR_FONT_SCHEMA_VERSION = 1.3.0`; the bounded GravityView adapter and evidence closure do not require an option migration.
 
 For this personal plugin, rollback is intentionally simple: reinstall/restore the previous compatible plugin revision/package. Because the option schema is unchanged, the prior version can reuse the same saved settings.
 
