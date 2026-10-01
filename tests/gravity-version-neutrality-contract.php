@@ -45,8 +45,44 @@ function vf_normalized_executable_tokens( string $source ): string {
 }
 
 /**
- * @return array<string,string>|null Method name => complete method body, including braces.
+ * Extract a structural brace body while treating {$var} / ${var} interpolation
+ * braces as string syntax rather than executable/class nesting.
+ *
+ * @param array<int,mixed> $tokens
+ * @return array{body:string,end:int}|null
  */
+function vf_extract_braced_body( array $tokens, int $body_start ): ?array {
+	$count               = count( $tokens );
+	$body_depth          = 0;
+	$interpolation_depth = 0;
+	$body                = '';
+	for ( $cursor = $body_start; $cursor < $count; $cursor++ ) {
+		$current = $tokens[ $cursor ];
+		$body   .= vf_token_text( $current );
+
+		if ( is_array( $current ) && ( T_CURLY_OPEN === $current[0] || T_DOLLAR_OPEN_CURLY_BRACES === $current[0] ) ) {
+			$interpolation_depth++;
+			continue;
+		}
+		if ( '}' === $current && $interpolation_depth > 0 ) {
+			$interpolation_depth--;
+			continue;
+		}
+		if ( '{' === $current ) {
+			$body_depth++;
+			continue;
+		}
+		if ( '}' === $current ) {
+			$body_depth--;
+			if ( 0 === $body_depth ) {
+				return array( 'body' => $body, 'end' => $cursor );
+			}
+		}
+	}
+	return null;
+}
+
+/** @return array<string,string>|null Method name => complete method body, including braces. */
 function vf_extract_class_method_bodies( string $source, string $class_name ): ?array {
 	$tokens = token_get_all( $source );
 	$count  = count( $tokens );
@@ -113,23 +149,12 @@ function vf_extract_class_method_bodies( string $source, string $class_name ): ?
 				return null;
 			}
 
-			$body_depth = 0;
-			$body       = '';
-			$body_end   = $body_start;
-			for ( ; $body_end < $count; $body_end++ ) {
-				$body_token = $tokens[ $body_end ];
-				$body      .= vf_token_text( $body_token );
-				if ( '{' === $body_token ) {
-					$body_depth++;
-				} elseif ( '}' === $body_token ) {
-					$body_depth--;
-					if ( 0 === $body_depth ) {
-						break;
-					}
-				}
+			$extracted = vf_extract_braced_body( $tokens, $body_start );
+			if ( null === $extracted ) {
+				return null;
 			}
-			$methods[ $method_name ] = $body;
-			$cursor                  = $body_end;
+			$methods[ $method_name ] = $extracted['body'];
+			$cursor                  = $extracted['end'];
 		}
 		ksort( $methods );
 		return $methods;
