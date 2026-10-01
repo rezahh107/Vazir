@@ -50,7 +50,7 @@ $production_boundary = array(
  * boundary above. Normalization removes only whitespace, comments, and
  * docblocks; token names and token text remain part of the identity.
  */
-$production_boundary_baseline = '__BASELINE__';
+$production_boundary_baseline = 'af74867e64250dfb49c9db6a195ab5884d575bdde7975908071ccaf8302292db';
 
 /* Exact primary boundary at reviewed Head 2e4af55... before Admin Settings was admitted. */
 $previous_2e4af55_boundary = $production_boundary;
@@ -223,10 +223,7 @@ function vf_extract_class_method_bodies( string $source, string $class_name ): ?
 	return null;
 }
 
-/**
- * Model the exact structural coverage of the cd97e256 primary lock:
- * VazirFontPlugin::init() plus every method of the four integration classes.
- */
+/** Model the exact structural coverage of the cd97e256 primary lock. */
 function vf_legacy_primary_detects_change( array $original, array $mutated, array $integration_classes ): bool {
 	$original_bootstrap = vf_extract_class_method_bodies( $original['bootstrap'], 'VazirFontPlugin' );
 	$mutated_bootstrap  = vf_extract_class_method_bodies( $mutated['bootstrap'], 'VazirFontPlugin' );
@@ -309,7 +306,6 @@ if ( array() !== $current_secondary ) {
 }
 vf_version_neutral_assert( array() === $current_secondary, 'secondary Gravity vendor-identity diagnostics remain clean' );
 
-/* Same-root bypasses that the previous cd97e256 primary control did not cover. */
 $top_level_bootstrap_mutation = $sources;
 $top_level_bootstrap_mutation['bootstrap'] = vf_replace_once(
 	$top_level_bootstrap_mutation['bootstrap'],
@@ -355,7 +351,6 @@ $loader_mutation['loader'] = vf_replace_once(
 );
 vf_same_root_bypass_rejected( $sources, $loader_mutation, $production_boundary, $production_boundary_baseline, $legacy_integration_classes, 'VazirFont_Loader Gravity Perks build gate' );
 
-/* Same-root bypass at 2e4af55: Admin Settings persisted preference was outside that primary boundary. */
 $admin_settings_mutation = $sources;
 $admin_settings_mutation['admin_settings'] = vf_replace_once(
 	$admin_settings_mutation['admin_settings'],
@@ -369,7 +364,6 @@ vf_version_neutral_assert(
 );
 vf_primary_boundary_rejects( $admin_settings_mutation, $production_boundary, $production_boundary_baseline, 'VazirFont_Admin_Settings::sanitize_options() GF_BUILD_ID persistence gate' );
 
-/* Retained regression mutations already covered by the earlier executable-token boundary. */
 $assignment_mutation = $sources;
 $assignment_mutation['gravityforms'] = vf_replace_once(
 	$assignment_mutation['gravityforms'],
