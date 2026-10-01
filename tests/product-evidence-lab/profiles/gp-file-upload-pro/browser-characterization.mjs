@@ -43,6 +43,28 @@ async function waitForUploadSettled() {
   await page.waitForTimeout(100);
 }
 
+async function waitForCropperReady(lightbox) {
+  // Exact 1.5.13 enables the Save button as soon as imgSrc exists, while its
+  // save() implementation still returns early if vue-advanced-cropper's
+  // getResult().canvas is not ready yet. Wait for the actual cropper image and
+  // stencil plus two paint frames before exercising Save so the test does not
+  // turn that transient initialization window into a false interaction failure.
+  const cropperImage = lightbox.locator('.vue-advanced-cropper__image').first();
+  await cropperImage.waitFor({ state: 'visible', timeout: 15000 });
+  await cropperImage.evaluate(async (el) => {
+    if (el instanceof HTMLImageElement && (!el.complete || el.naturalWidth === 0)) {
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Cropper image did not finish loading.')), 10000);
+        el.addEventListener('load', () => { clearTimeout(timer); resolve(); }, { once: true });
+        el.addEventListener('error', () => { clearTimeout(timer); reject(new Error('Cropper image failed to load.')); }, { once: true });
+      });
+    }
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  await lightbox.locator('.vue-rectangle-stencil:visible, .vue-circle-stencil:visible').first().waitFor({ state: 'visible', timeout: 15000 });
+  await page.waitForTimeout(100);
+}
+
 async function openCropEditor(preview, edit) {
   await preview.hover();
   await edit.waitFor({ state: 'visible', timeout: 10000 });
@@ -54,6 +76,7 @@ async function openCropEditor(preview, edit) {
     true,
     'Authentic crop lightbox must be detached from the Gravity Forms field ancestry.'
   );
+  await waitForCropperReady(lightbox);
   return lightbox;
 }
 
@@ -110,6 +133,7 @@ await recorder.record('uploaded_file_crop_cancel_save_and_rerender', async () =>
   await lightbox.waitFor({ state: 'hidden', timeout: 10000 });
   lightbox = await openCropEditor(preview, edit);
   save = lightbox.locator('.gpfup__crop').first();
+  assert.equal(await save.isEnabled(), true, 'File Upload Pro Save action must be enabled after the cropper reaches its rendered-ready state.');
   await save.click();
   await lightbox.waitFor({ state: 'hidden', timeout: 30000 });
   await filename.waitFor({ state: 'visible', timeout: 30000 });
