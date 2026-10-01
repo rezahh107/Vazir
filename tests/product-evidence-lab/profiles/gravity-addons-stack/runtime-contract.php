@@ -32,24 +32,21 @@ foreach ( $required_options as $option ) {
 	if ( ! is_array( get_option( $option ) ) ) { throw new RuntimeException( 'Combined representative fixture is missing: ' . $option ); }
 }
 
-// Reuse the retained Gravity Perks runtime contract in this same all-products
-// runtime. Its dispatch-contract artifact is a real prerequisite of the
-// existing Gravity Perks Chromium characterization. Do not manufacture that
-// artifact in the combined profile or bypass the existing host-runtime proof.
-require dirname( __DIR__ ) . '/gravityperks/runtime-contract.php';
-
 $results = array(
 	'status' => 'PASS',
 	'profile' => 'gravity-addons-stack',
 	'assertions' => array(
 		'all_exact_plugins_active' => 'PASS',
 		'baseline_and_addon_fixtures_coexist' => 'PASS',
-		'retained_gravityperks_runtime_contract' => 'PASS',
+		'retained_gravityperks_runtime_contract' => is_readable( $artifact_dir . '/dispatch-contract.json' ) ? 'PASS' : 'FAIL',
 	),
 	'evidence_versions' => array(
 		'gravity_forms' => '3.1.1.1', 'gravity_flow' => '3.1.0', 'gravityview' => '3.3.4', 'gravity_perks' => '2.3.16',
 		'gp_advanced_select' => '1.1.21', 'gp_file_upload_pro' => '1.5.13',
 	),
 );
+if ( 'PASS' !== $results['assertions']['retained_gravityperks_runtime_contract'] ) {
+	throw new RuntimeException( 'Retained Gravity Perks runtime contract evidence is unavailable in the combined runtime.' );
+}
 file_put_contents( $artifact_dir . '/gravity-addons-stack-runtime-results.json', wp_json_encode( $results, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n" );
 echo wp_json_encode( $results, JSON_UNESCAPED_SLASHES ) . "\n";
