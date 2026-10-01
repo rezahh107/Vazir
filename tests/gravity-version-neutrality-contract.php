@@ -430,7 +430,10 @@ function vf_gravity_admission_violations( array $sources, array $evidence_only_v
 				'conditions' => array( '! $this->is_enabled()', "! empty( \$options['enable_admin'] )" ),
 			),
 			'add_field_css_class' => array( 'conditions' => array( '$this->is_enabled()' ) ),
-			'remove_inline_font_styles' => array( 'conditions' => array( '! $this->is_enabled() || [] !== $this->get_negative_scope_selectors()' ) ),
+			'remove_inline_font_styles' => array(
+				'conditions' => array( '! $this->is_enabled() || [] !== $this->get_negative_scope_selectors()' ),
+				'ternaries' => 1,
+			),
 			'enqueue_style' => array( 'conditions' => array( '! $this->inline_attached' ) ),
 			'register_style' => array( 'conditions' => array( '$this->style_registered' ) ),
 			'is_enabled' => array(
