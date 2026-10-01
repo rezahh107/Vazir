@@ -63,3 +63,9 @@ The dedicated `gravityperks` Product Evidence profile is authoritative for this 
 The ancestor-qualified browser scenario requires both the targeted containing description and the matching excluded descendant to remain non-Vazirmatn while a separate non-excluded description remains Vazirmatn. That combination proves the relative descendant predicate blocks inheritance across the configured document-context exclusion without disabling ordinary Settings typography.
 
 A post-repair `PASS` means only that exact 2.3.16 and the exercised material surfaces are admitted. It does not turn the unreachable legacy Documentation implementation into supported runtime evidence and does not prove later Gravity Perks releases.
+
+## Frontend add-on evidence is separate
+
+The standalone Settings repair above must not be generalized into frontend Perk selectors. Exact GP Advanced Select `1.1.21` and GP File Upload Pro `1.5.13` have their own licensed Product Evidence profiles and currently resolve through native Gravity Forms/Vazir inheritance, so no add-on-specific production correction is admitted.
+
+Their exact package identities, interactive browser scenarios, coexistence profile, harness-race falsification, and `NOT_PROVEN` / `NOT_REACHABLE` ceilings are recorded in `docs/GRAVITY-PERKS-FRONTEND-CHARACTERIZATION.md`. Those versions are evidence identities only and must not become production admission whitelists.
