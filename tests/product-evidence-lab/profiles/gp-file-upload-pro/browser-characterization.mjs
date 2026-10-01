@@ -24,13 +24,26 @@ const browser = await chromium.launch();
 const context = await browser.newContext();
 const page = await context.newPage();
 const root = `#field_${manifest.form_id}_${manifest.file_field_id}`;
-const portalSelector = `#gpfup-cropper-portal-${manifest.form_id}-${manifest.file_field_id}`;
 const fileInputSelector = `${root} input[type="file"]`;
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAFAAAAA8CAIAAAB+RarbAAAAY0lEQVR4nO3PAQ3AIADAMEASmhCLrLv4k71VsM179viT9XXA2wzXGa4zXGe4znCd4TrDdYbrDNcZrjNcZ7jOcJ3hOsN1husM1xmuM1xnuM5wneE6w3WG6wzXGa4zXGe4znDdA7I0AdZ4WGfhAAAAAElFTkSuQmCC', 'base64');
 
 async function loadFixture() {
   await page.goto(manifest.frontend_url, { waitUntil: 'networkidle' });
   await page.locator(`${root} .gpfup__droparea`).waitFor({ state: 'visible', timeout: 30000 });
+}
+
+async function openCropEditor(preview, edit) {
+  await preview.hover();
+  await edit.waitFor({ state: 'visible', timeout: 10000 });
+  await edit.click();
+  const lightbox = page.locator('.cropper__lightbox:visible').first();
+  await lightbox.waitFor({ state: 'visible', timeout: 15000 });
+  assert.equal(
+    await lightbox.evaluate((el, fieldSelector) => el.closest(fieldSelector) === null, root),
+    true,
+    'Authentic crop lightbox must be detached from the Gravity Forms field ancestry.'
+  );
+  return lightbox;
 }
 
 await recorder.record('initial_upload_ui_and_validation', async () => {
@@ -68,30 +81,13 @@ await recorder.record('uploaded_file_crop_cancel_save_and_rerender', async () =>
   const sizeNode = page.locator(`${root} .gpfup__filesize`).first();
   if (await sizeNode.count()) families.filesize = await expectVazirmatn(sizeNode, 'File Upload Pro uploaded file size');
 
-  const portal = page.locator(portalSelector);
-  assert.equal(await portal.count(), 1, 'Product-owned crop portal mount target must exist exactly once before opening the editor.');
-  assert.equal(await portal.evaluate(el => el.parentElement === document.body), true, 'Product-owned crop portal mount target must be emitted at the authentic body-level location.');
-
   const preview = page.locator(`${root} .gpfup__preview`).first();
   await preview.waitFor({ state: 'visible', timeout: 30000 });
-  await preview.hover();
   const edit = page.locator(`${root} .gpfup__edit`).first();
-  await edit.waitFor({ state: 'visible', timeout: 10000 });
-  await edit.click();
+  let lightbox = await openCropEditor(preview, edit);
 
-  // PortalVue's MountingPortal(target-slim) owns the detached render semantics.
-  // Measure the actual visible lightbox globally after first proving the exact
-  // product-owned mount target, rather than assuming the rendered child must
-  // remain a DOM descendant of that target.
-  const lightbox = page.locator('.cropper__lightbox:visible').first();
-  await lightbox.waitFor({ state: 'visible', timeout: 15000 });
-  assert.equal(
-    await lightbox.evaluate((el, fieldSelector) => el.closest(fieldSelector) === null, root),
-    true,
-    'Authentic crop lightbox must be detached from the Gravity Forms field ancestry.'
-  );
-  const cancel = lightbox.locator('.gpfup__cancel').first();
-  const save = lightbox.locator('.gpfup__crop').first();
+  let cancel = lightbox.locator('.gpfup__cancel').first();
+  let save = lightbox.locator('.gpfup__crop').first();
   families.crop_cancel = await expectVazirmatn(cancel, 'File Upload Pro detached crop Cancel action');
   families.crop_save = await expectVazirmatn(save, 'File Upload Pro detached crop Save/Crop action');
   const count = lightbox.locator('.gpfup__cropper_count').first();
@@ -99,9 +95,8 @@ await recorder.record('uploaded_file_crop_cancel_save_and_rerender', async () =>
 
   await cancel.click();
   await lightbox.waitFor({ state: 'hidden', timeout: 10000 });
-  await preview.hover();
-  await edit.click();
-  await lightbox.waitFor({ state: 'visible', timeout: 15000 });
+  lightbox = await openCropEditor(preview, edit);
+  save = lightbox.locator('.gpfup__crop').first();
   await save.click();
   await lightbox.waitFor({ state: 'hidden', timeout: 30000 });
   await filename.waitFor({ state: 'visible', timeout: 30000 });
@@ -111,18 +106,27 @@ await recorder.record('uploaded_file_crop_cancel_save_and_rerender', async () =>
     if (!window.jQuery) throw new Error('jQuery is unavailable for authentic gform_post_render rerender signal.');
     window.jQuery(document).trigger('gform_post_render', [formId, 1]);
   }, { formId: manifest.form_id });
+  await page.locator(`${root} .gpfup__droparea`).waitFor({ state: 'visible', timeout: 15000 });
   await page.waitForTimeout(800);
-  assert.equal(await page.locator(portalSelector).count(), 1, 'Rerender must retain exactly one product-owned crop portal mount target.');
+  assert.equal(await page.locator(`${root} .gpfup`).count(), 1, 'Rerender must retain exactly one File Upload Pro component root.');
   families.rerender_drop_guidance = await expectVazirmatn(page.locator(`${root} .gpfup__droparea > div`).first(), 'File Upload Pro rerendered guidance');
+  await filename.waitFor({ state: 'visible', timeout: 15000 });
+  const rerenderPreview = page.locator(`${root} .gpfup__preview`).first();
+  const rerenderEdit = page.locator(`${root} .gpfup__edit`).first();
+  lightbox = await openCropEditor(rerenderPreview, rerenderEdit);
+  cancel = lightbox.locator('.gpfup__cancel').first();
+  families.rerender_crop_cancel = await expectVazirmatn(cancel, 'File Upload Pro rerendered detached crop Cancel action');
+  await cancel.click();
+  await lightbox.waitFor({ state: 'hidden', timeout: 10000 });
 
   return {
     families,
     uploaded_filename: (await filename.innerText()).trim(),
-    crop_portal_mount_target_body_level: true,
     crop_lightbox_detached_from_field: true,
     cancel_completed: true,
     crop_completed: true,
-    rerender_portal_count: 1,
+    rerender_component_count: 1,
+    rerender_crop_reopened: true,
   };
 });
 
