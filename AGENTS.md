@@ -115,6 +115,8 @@ The standalone Settings adapter uses capability-based production admission. Pres
 
 Gravity Perks remains authoritative for routing, Settings rendering, saving, controls, notices, scripts, and host styles. Production admission is capability-based, while compatibility evidence is version-bound: current licensed browser/runtime qualification covers exact Gravity Perks `2.3.16`. Other Gravity Perks releases remain `NOT_PROVEN` until separately exercised. On exact `2.3.16`, the generated Documentation URL dispatches to the Settings handler and remains `NOT_REACHABLE_AS_DOCUMENTATION`; unreachable legacy source is not runtime support evidence.
 
+Frontend add-on evidence is independent from the standalone Settings adapter. Exact GP Advanced Select `1.1.21` and GP File Upload Pro `1.5.13` browser/runtime qualification resolves through native Vazirmatn inheritance and therefore admits **no add-on-specific production repair**. Their exact versions are evidence identities only; production code must not whitelist them. The dedicated evidence contract is documented in `docs/GRAVITY-PERKS-FRONTEND-CHARACTERIZATION.md`. Future add-on versions remain `NOT_PROVEN` until separately exercised.
+
 ### GravityView
 
 The View-block editor adapter is capability-based and intentionally narrower than a general GravityView integration. Preserve these invariants:
@@ -145,24 +147,29 @@ Repository stubs and unlicensed CI do **not** count as licensed Gravity Forms/Fl
 | `includes/class-vazirfont-selector-boundary.php` | Internal lexical qualification for target-relative Gravity descendant exclusion guards |
 | `includes/class-vazirfont-gravityforms-integration.php` | Optional Gravity Forms compatibility adapter |
 | `includes/class-vazirfont-gravityflow-integration.php` | Capability-bounded Gravity Flow typography adapter |
-| `includes/class-vazirfont-gravityperks-integration.php` | Capability-bounded Gravity Perks standalone Settings typography adapter |
+| `includes/class-vazirfont-gravityperks-integration.php` | Capability-bounded Gravity Perks standalone Settings adapter |
 | `includes/class-vazirfont-gravityview-integration.php` | Capability-bounded GravityView View-block editor typography adapter |
 | `assets/fonts/` | Pinned Vazirmatn WOFF2 binaries, upstream license/authors, and provenance |
 | `assets/css/` | Shared/static CSS assets |
 | `assets/js/` | Admin-side JavaScript |
 | `languages/` | Translation template/resources |
 | `tests/version-schema-contract.php` | Deterministic release-version vs persisted-schema migration boundary contract |
+| `tests/gravity-version-neutrality-contract.php` | Deterministic guard that keeps evidence-only Gravity/Perk versions out of production admission logic |
 | `tests/gravityflow-runtime-contract.php` | Deterministic Gravity Flow admission/adapter contract |
 | `tests/gravityperks-runtime-contract.php` | Deterministic Gravity Perks standalone Settings admission/exclusion contract |
 | `tests/gravityview-runtime-contract.php` | Deterministic GravityView View-block editor admission/exclusion contract |
 | `tests/gravity-descendant-exclusion-contract.php` | Cross-adapter deterministic relative-safety/fail-closed exclusion contract |
 | `tests/gravityforms-evidence-lab/` | Deep Gravity Forms exact-runtime/browser profile and selector-admission manifest |
-| `tests/product-evidence-lab/` | Shared licensed package/runtime core plus Gravity Flow, GravityView, Gravity Perks, and combined-stack profiles |
+| `tests/product-evidence-lab/` | Shared licensed package/runtime core plus Gravity Forms, Flow, View, Perks, add-on, and combined-stack profiles |
+| `tests/product-evidence-lab/profiles/gp-advanced-select/` | Exact-version GP Advanced Select frontend source/runtime/browser qualification |
+| `tests/product-evidence-lab/profiles/gp-file-upload-pro/` | Exact-version GP File Upload Pro frontend upload/crop/rerender qualification |
+| `tests/product-evidence-lab/profiles/gravity-addons-stack/` | Representative coexistence profile with the retained Gravity stack plus both qualified add-ons |
 | `tests/product-evidence-lab/profiles/gravityview/` | Exact-version GravityView qualification plus admitted production-repair characterization |
 | `tests/product-evidence-lab/profiles/gravityperks/` | Exact-version Gravity Perks source/runtime/browser qualification profile |
 | `docs/CHARACTERIZATION.md` | Evidence boundaries and characterization status |
 | `docs/GRAVITYVIEW-CHARACTERIZATION.md` | GravityView 3.3.4 qualification, admitted editor repair, and remaining gaps |
-| `docs/GRAVITY-PERKS-CHARACTERIZATION.md` | Gravity Perks 2.3.16 evidence boundary and production-seam characterization |
+| `docs/GRAVITY-PERKS-CHARACTERIZATION.md` | Gravity Perks 2.3.16 standalone Settings evidence boundary and production-seam characterization |
+| `docs/GRAVITY-PERKS-FRONTEND-CHARACTERIZATION.md` | Exact GP Advanced Select / File Upload Pro native-inheritance evidence and claim ceilings |
 | `RELEASE.md` | Release verification checklist |
 
 ## 7. Local Tooling
@@ -181,7 +188,7 @@ composer lint
 composer compat
 ```
 
-`composer test` runs the standalone core/Gravity Forms contract, the release-version vs persisted-schema migration boundary contract, the Gravity Flow adapter contract for both the currently qualified `3.1.0` identity and a synthetic alternate version identity, the deterministic Gravity Perks standalone Settings contract, the deterministic GravityView editor adapter contract, the shared Gravity descendant-exclusion boundary contract, and PHPUnit repository contracts. The synthetic Flow alternate identity proves only that Flow admission is not version-gated. `composer lint` uses the repository PHPCS ruleset. `composer compat` checks the production PHP surfaces against the configured PHP compatibility range.
+`composer test` runs the standalone core/Gravity Forms contract, the release-version vs persisted-schema migration boundary contract, the Gravity production version-neutrality contract, the Gravity Flow adapter contract for both the currently qualified `3.1.0` identity and a synthetic alternate version identity, the deterministic Gravity Perks standalone Settings contract, the deterministic GravityView editor adapter contract, the shared Gravity descendant-exclusion boundary contract, and PHPUnit repository contracts. The version-neutrality contract prevents exact evidence identities (including the qualified Perk versions) from becoming production admission whitelists. The synthetic Flow alternate identity proves only that Flow admission is not version-gated. `composer lint` uses the repository PHPCS ruleset. `composer compat` checks the production PHP surfaces against the configured PHP compatibility range.
 
 ## 8. Coding Standards
 
@@ -204,13 +211,13 @@ Current CI coverage includes:
 - standards: `composer lint` and `composer compat`;
 - WordPress smoke: `6.7/PHP 7.4`, `7.1/PHP 8.3`, `7.1/PHP 8.5`;
 - Chromium computed-style characterization on WordPress `7.1` with Twenty Twenty-One and Twenty Twenty-Five;
-- a separately diagnosable Product-Wide Reproducible Evidence Lab targeting WordPress `7.1`, PHP `8.3`, Chromium, and licensed profiles `gravityforms`, `gravityflow`, `gravityview`, `gravityperks`, and `gravity-stack`; the GravityView lane executes qualification first, then the bounded production-repair interaction/exclusion characterization.
+- a separately diagnosable Product-Wide Reproducible Evidence Lab targeting WordPress `7.1`, PHP `8.3`, Chromium, and licensed profiles `gravityforms`, `gravityflow`, `gravityview`, `gravityperks`, `gp-advanced-select`, `gp-file-upload-pro`, `gravity-stack`, and `gravity-addons-stack`; the GravityView lane executes qualification first, then the bounded production-repair interaction/exclusion characterization.
 
 The existing generic WordPress browser fixture remains the `wordpress` profile authority and is not duplicated inside the licensed matrix.
 
 The product evidence lab must fail closed unless every required Owner-supplied package matches its exact expected byte size, SHA-256, archive safety rules, entrypoint, plugin identity, and version. Licensed ZIPs must never be committed or uploaded as CI artifacts. A configured profile is not evidence by itself: claims require an actually executed exact-Head run, and unavailable runner/package conditions remain `ENVIRONMENT_UNAVAILABLE`/`NOT_PROVEN`, not PASS.
 
-A PASS belongs only to the profile and scenarios that executed. Gravity Forms PASS does not prove Gravity Flow, GravityView, or Gravity Perks, and combined-stack PASS is representative coexistence evidence rather than exhaustive compatibility.
+A PASS belongs only to the profile and scenarios that executed. Gravity Forms PASS does not prove Gravity Flow, GravityView, Gravity Perks, GP Advanced Select, or GP File Upload Pro. The `gravity-stack` and `gravity-addons-stack` PASS states are representative coexistence evidence rather than exhaustive compatibility.
 
 ## 10. Testing Rules for Changes
 
@@ -222,6 +229,10 @@ A PASS belongs only to the profile and scenarios that executed. Gravity Forms PA
 - A source declaration in `admin-components.min.css`, `preview.css`, or Legacy CSS is only risk evidence. Production repair requires a rendered exact-runtime failure on the actual text-bearing node; already-correct components must not receive speculative broad fixes.
 - Gravity Flow admission changes require deterministic coverage separating version identity from actual host capabilities. Real Gravity Flow typography claims still require the licensed `gravityflow` profile to measure the actual rendered inner AG Grid/Flatpickr component, not only `.gflow-inbox`. Wrapper PASS must not be promoted to proof of inner AG Grid typography.
 - Gravity Perks admission or standalone Settings typography changes require deterministic coverage of the capability-gated `print_styles_array` / registered-`gwp-admin` boundary, unchanged host style-handle ownership, exclusion semantics, and fail-closed behavior. Real Gravity Perks Settings typography, save-lifecycle, font-request, or Documentation-alias claims require the licensed `gravityperks` profile. Current runtime/browser evidence is bound to exact Gravity Perks `2.3.16`; other releases remain `NOT_PROVEN` until separately exercised.
+- GP Advanced Select frontend typography or interaction claims require the licensed `gp-advanced-select` profile against exact `1.1.21`. The current disposition is native inheritance with no production repair; GP Populate Anything lazy-loaded options remain separately `NOT_PROVEN`.
+- GP File Upload Pro frontend upload/crop/rerender typography claims require the licensed `gp-file-upload-pro` profile against exact `1.5.13`. The current disposition is native inheritance with no production repair; unrendered textual crop-heading/progress surfaces must remain `NOT_REACHABLE` rather than inferred.
+- Claims that both add-ons coexist with the retained Gravity stack require the `gravity-addons-stack` profile. Its PASS is representative coexistence evidence only.
+- Exact Perk/package versions used by licensed evidence must remain outside production admission logic; preserve `tests/gravity-version-neutrality-contract.php` whenever production Gravity bootstrap/adapters change.
 - GravityView production changes require deterministic coverage of the `enqueue_block_editor_assets` + registered `gk-gravityview-blocks-view-editor-style` boundary, exact admitted selectors, toggles, exclusions, missing-capability fail-closed behavior, and portal non-assumption. Real React Select/Datepicker computed-family and interaction claims require the licensed `gravityview` profile against exact GravityView `3.3.4`; frontend, portal, oEmbed, and icon dispositions must remain independently reported.
 - Keep exact-Head CI evidence bound to the commit and profile being evaluated.
 
@@ -243,7 +254,7 @@ At minimum:
 - run all repository checks;
 - verify packaged font URLs/assets;
 - run WordPress computed-style characterization;
-- run the relevant licensed product profile for any Gravity Forms/Flow/Perks/View compatibility claim made by the release;
+- run the relevant licensed product/add-on profile for any Gravity Forms/Flow/Perks/View compatibility claim made by the release;
 - do not promote unavailable, stub-only, wrapper-only, synthetic-version, or different-profile evidence to PASS;
 - build the production artifact without development-only tooling unless explicitly required;
 - publish only with Owner authorization.
