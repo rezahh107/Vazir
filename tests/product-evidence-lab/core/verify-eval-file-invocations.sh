@@ -8,8 +8,8 @@ workflow="$repo_root/.github/workflows/product-evidence-lab.yml"
 
 mapfile -t invocations < <(grep -nE '(^|[[:space:]])wp eval-file ' "$workflow" || true)
 [[ "${#invocations[@]}" -gt 0 ]] || { echo "No Product Evidence Lab wp eval-file invocations found." >&2; exit 1; }
-[[ "${#invocations[@]}" -eq 16 ]] || {
-  printf 'Expected 16 current Product Evidence Lab wp eval-file invocations, found %s.\n' "${#invocations[@]}" >&2
+[[ "${#invocations[@]}" -eq 28 ]] || {
+  printf 'Expected 28 current Product Evidence Lab wp eval-file invocations, found %s.\n' "${#invocations[@]}" >&2
   printf '%s\n' "${invocations[@]}" >&2
   exit 1
 }
@@ -23,11 +23,14 @@ done
 
 declare -A expected_counts=(
   ["tests/product-evidence-lab/core/capture-runtime.php"]=1
-  ["tests/gravityforms-evidence-lab/setup-fixtures.php"]=2
-  ["tests/product-evidence-lab/profiles/gravityflow/setup-fixtures.php"]=2
-  ["tests/product-evidence-lab/profiles/gravityview/setup-fixtures.php"]=2
+  ["tests/gravityforms-evidence-lab/setup-fixtures.php"]=3
+  ["tests/product-evidence-lab/profiles/gravityflow/setup-fixtures.php"]=3
+  ["tests/product-evidence-lab/profiles/gravityview/setup-fixtures.php"]=3
   ["tests/product-evidence-lab/profiles/gravityview/closure-setup-fixtures.php"]=1
-  ["tests/product-evidence-lab/profiles/gravityperks/setup-fixtures.php"]=1
+  ["tests/product-evidence-lab/profiles/gravityperks/setup-fixtures.php"]=2
+  ["tests/product-evidence-lab/profiles/gp-advanced-select/setup-fixtures.php"]=2
+  ["tests/product-evidence-lab/profiles/gp-file-upload-pro/setup-fixtures.php"]=2
+  ["tests/product-evidence-lab/profiles/gravity-addons-stack/setup-fixtures.php"]=1
   ["tests/gravityforms-evidence-lab/runtime-contract.php"]=1
   ["tests/product-evidence-lab/profiles/gravityflow/runtime-contract.php"]=1
   ["tests/product-evidence-lab/profiles/gravityview/runtime-contract.php"]=1
@@ -35,6 +38,9 @@ declare -A expected_counts=(
   ["tests/product-evidence-lab/profiles/gravityperks/runtime-contract.php"]=1
   ["tests/product-evidence-lab/profiles/gravityperks/source-probe.php"]=1
   ["tests/product-evidence-lab/profiles/gravity-stack/runtime-contract.php"]=1
+  ["tests/product-evidence-lab/profiles/gp-advanced-select/runtime-contract.php"]=1
+  ["tests/product-evidence-lab/profiles/gp-file-upload-pro/runtime-contract.php"]=1
+  ["tests/product-evidence-lab/profiles/gravity-addons-stack/runtime-contract.php"]=1
 )
 
 for harness in "${!expected_counts[@]}"; do
