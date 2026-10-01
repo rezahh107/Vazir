@@ -24,6 +24,7 @@ const browser = await chromium.launch();
 const context = await browser.newContext();
 const page = await context.newPage();
 const root = `#field_${manifest.form_id}_${manifest.file_field_id}`;
+const portalSelector = `#gpfup-cropper-portal-${manifest.form_id}-${manifest.file_field_id}`;
 const fileInputSelector = `${root} input[type="file"]`;
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAFAAAAA8CAIAAAB+RarbAAAAY0lEQVR4nO3PAQ3AIADAMEASmhCLrLv4k71VsM179viT9XXA2wzXGa4zXGe4znCd4TrDdYbrDNcZrjNcZ7jOcJ3hOsN1husM1xmuM1xnuM5wneE6w3WG6wzXGa4zXGe4znDdA7I0AdZ4WGfhAAAAAElFTkSuQmCC', 'base64');
 
@@ -67,6 +68,10 @@ await recorder.record('uploaded_file_crop_cancel_save_and_rerender', async () =>
   const sizeNode = page.locator(`${root} .gpfup__filesize`).first();
   if (await sizeNode.count()) families.filesize = await expectVazirmatn(sizeNode, 'File Upload Pro uploaded file size');
 
+  const portal = page.locator(portalSelector);
+  assert.equal(await portal.count(), 1, 'Product-owned crop portal mount target must exist exactly once before opening the editor.');
+  assert.equal(await portal.evaluate(el => el.parentElement === document.body), true, 'Product-owned crop portal mount target must be emitted at the authentic body-level location.');
+
   const preview = page.locator(`${root} .gpfup__preview`).first();
   await preview.waitFor({ state: 'visible', timeout: 30000 });
   await preview.hover();
@@ -74,16 +79,23 @@ await recorder.record('uploaded_file_crop_cancel_save_and_rerender', async () =>
   await edit.waitFor({ state: 'visible', timeout: 10000 });
   await edit.click();
 
-  const portal = page.locator(`#gpfup-cropper-portal-${manifest.form_id}-${manifest.file_field_id}`);
-  const lightbox = portal.locator('.cropper__lightbox').first();
+  // PortalVue's MountingPortal(target-slim) owns the detached render semantics.
+  // Measure the actual visible lightbox globally after first proving the exact
+  // product-owned mount target, rather than assuming the rendered child must
+  // remain a DOM descendant of that target.
+  const lightbox = page.locator('.cropper__lightbox:visible').first();
   await lightbox.waitFor({ state: 'visible', timeout: 15000 });
+  assert.equal(
+    await lightbox.evaluate((el, fieldSelector) => el.closest(fieldSelector) === null, root),
+    true,
+    'Authentic crop lightbox must be detached from the Gravity Forms field ancestry.'
+  );
   const cancel = lightbox.locator('.gpfup__cancel').first();
   const save = lightbox.locator('.gpfup__crop').first();
   families.crop_cancel = await expectVazirmatn(cancel, 'File Upload Pro detached crop Cancel action');
   families.crop_save = await expectVazirmatn(save, 'File Upload Pro detached crop Save/Crop action');
   const count = lightbox.locator('.gpfup__cropper_count').first();
   if (await count.count() && await count.isVisible()) families.crop_count = await expectVazirmatn(count, 'File Upload Pro detached crop count');
-  assert.equal(await portal.evaluate(el => el.parentElement === document.body), true, 'Crop portal must be measured in its authentic body-level detached location.');
 
   await cancel.click();
   await lightbox.waitFor({ state: 'hidden', timeout: 10000 });
@@ -100,13 +112,14 @@ await recorder.record('uploaded_file_crop_cancel_save_and_rerender', async () =>
     window.jQuery(document).trigger('gform_post_render', [formId, 1]);
   }, { formId: manifest.form_id });
   await page.waitForTimeout(800);
-  assert.equal(await page.locator(`#gpfup-cropper-portal-${manifest.form_id}-${manifest.file_field_id}`).count(), 1, 'Rerender must retain exactly one product-owned crop portal.');
+  assert.equal(await page.locator(portalSelector).count(), 1, 'Rerender must retain exactly one product-owned crop portal mount target.');
   families.rerender_drop_guidance = await expectVazirmatn(page.locator(`${root} .gpfup__droparea > div`).first(), 'File Upload Pro rerendered guidance');
 
   return {
     families,
     uploaded_filename: (await filename.innerText()).trim(),
-    crop_portal_detached_to_body: true,
+    crop_portal_mount_target_body_level: true,
+    crop_lightbox_detached_from_field: true,
     cancel_completed: true,
     crop_completed: true,
     rerender_portal_count: 1,
